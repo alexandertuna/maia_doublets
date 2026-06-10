@@ -3,12 +3,12 @@ import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 
-from constants import LS_DZ_CUT, LS_DR_CUT
-from constants import LS_DTHETA_RZ_CUT, LS_DTHETA_XY_CUT, LS_CHI2_XY_CUT
-from constants import BYTE_TO_MB, NO_MCP
-from constants import N_LS_PHI_SLICES
-from constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
-from constants import N_T4_PHI_SLICES, N_T4_ETA_SLICES
+from maia_doublets.constants import LS_DZ_CUT, LS_DR_CUT
+from maia_doublets.constants import LS_DTHETA_RZ_CUT, LS_DTHETA_XY_CUT, LS_CHI2_XY_CUT
+from maia_doublets.constants import BYTE_TO_MB, NO_MCP
+from maia_doublets.constants import N_LS_PHI_SLICES
+from maia_doublets.constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
+from maia_doublets.constants import N_T4_PHI_SLICES, N_T4_ETA_SLICES
 
 class LineSegment:
 

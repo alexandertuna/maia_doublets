@@ -7,17 +7,17 @@ import multiprocessing as mp
 import logging
 logger = logging.getLogger(__name__)
 
-from constants import OUTSIDE_BOUNDS, INSIDE_BOUNDS, UNDEFINED_BOUNDS, BOUNDS
-from constants import EPSILON, MCPARTICLE, PARTICLES_OF_INTEREST, SPEED_OF_LIGHT
-from constants import MM_TO_CM, CM_TO_MM
-from constants import XML
-from constants import INNER_TRACKER_BARREL_COLLECTION, OUTER_TRACKER_BARREL_COLLECTION
-from constants import INNER_TRACKER_BARREL_HITS, OUTER_TRACKER_BARREL_HITS
-from constants import INNER_TRACKER_BARREL_RELATIONS, OUTER_TRACKER_BARREL_RELATIONS
-from constants import BYTE_TO_MB, NO_MCP
-from constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
-from constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
-from constants import NICKNAMES
+from maia_doublets.constants import OUTSIDE_BOUNDS, INSIDE_BOUNDS, UNDEFINED_BOUNDS, BOUNDS
+from maia_doublets.constants import EPSILON, MCPARTICLE, PARTICLES_OF_INTEREST, SPEED_OF_LIGHT
+from maia_doublets.constants import MM_TO_CM, CM_TO_MM
+from maia_doublets.constants import XML
+from maia_doublets.constants import INNER_TRACKER_BARREL_COLLECTION, OUTER_TRACKER_BARREL_COLLECTION
+from maia_doublets.constants import INNER_TRACKER_BARREL_HITS, OUTER_TRACKER_BARREL_HITS
+from maia_doublets.constants import INNER_TRACKER_BARREL_RELATIONS, OUTER_TRACKER_BARREL_RELATIONS
+from maia_doublets.constants import BYTE_TO_MB, NO_MCP
+from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
+from maia_doublets.constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
+from maia_doublets.constants import NICKNAMES
 
 _detector = None
 _surfman = None

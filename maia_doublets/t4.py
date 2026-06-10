@@ -11,9 +11,9 @@ import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 
-from constants import BYTE_TO_MB, NO_MCP
-from constants import T4_DZ_CUT, T4_DR_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT
-from constants import N_T4_PHI_SLICES
+from maia_doublets.constants import BYTE_TO_MB, NO_MCP
+from maia_doublets.constants import T4_DZ_CUT, T4_DR_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT
+from maia_doublets.constants import N_T4_PHI_SLICES
 
 class T4Maker:
 

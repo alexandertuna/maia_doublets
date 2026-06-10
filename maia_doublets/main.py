@@ -9,13 +9,13 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-from constants import SIGNAL, NO_MCP
-from datasets import get_filepaths, parse_filepaths
-from slcio import HitMaker
-from md import DoubletMaker
-from t2 import LineSegment
-from t4 import T4Maker
-from plot import Plotter
+from maia_doublets.constants import SIGNAL, NO_MCP
+from maia_doublets.datasets import get_filepaths, parse_filepaths
+from maia_doublets.slcio import HitMaker
+from maia_doublets.md import DoubletMaker
+from maia_doublets.t2 import LineSegment
+from maia_doublets.t4 import T4Maker
+from maia_doublets.plot import Plotter
 
 
 def main():

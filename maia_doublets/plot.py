@@ -31,19 +31,19 @@ rcParams.update({
     "figure.subplot.top": 0.95,
 })
 
-from constants import MUON
-from constants import BARREL_TRACKER_MAX_ETA
-from constants import BARREL_TRACKER_MAX_RADIUS
-from constants import ONE_POINT_FIVE_GEV, ONE_MM, ZERO_POINT_ZERO_ONE_MM
-from constants import NICKNAMES, OUTER_TRACKER_BARREL
-from constants import MD_DZ_CUT, MD_DR_CUT
-from constants import REQ_PASSTHROUGH, REQ_RZ, REQ_XY, REQ_RZ_XY
-from constants import DOUBLET_REQS, NO_MCP
-from constants import LS_REQS, LS_REQ_DR_POS, LS_REQ_DZ_POS, LS_REQ_XY_CHI2, LS_REQ_RZ_ANG, LS_REQ_ALL
-from constants import LS_DZ_CUT, LS_DR_CUT, LS_DTHETA_RZ_CUT, LS_DTHETA_XY_CUT, LS_CHI2_XY_CUT
-from constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
-from constants import N_LS_PHI_SLICES
-from constants import T4_DR_CUT, T4_DZ_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT
+from maia_doublets.constants import MUON
+from maia_doublets.constants import BARREL_TRACKER_MAX_ETA
+from maia_doublets.constants import BARREL_TRACKER_MAX_RADIUS
+from maia_doublets.constants import ONE_POINT_FIVE_GEV, ONE_MM, ZERO_POINT_ZERO_ONE_MM
+from maia_doublets.constants import NICKNAMES, OUTER_TRACKER_BARREL
+from maia_doublets.constants import MD_DZ_CUT, MD_DR_CUT
+from maia_doublets.constants import REQ_PASSTHROUGH, REQ_RZ, REQ_XY, REQ_RZ_XY
+from maia_doublets.constants import DOUBLET_REQS, NO_MCP
+from maia_doublets.constants import LS_REQS, LS_REQ_DR_POS, LS_REQ_DZ_POS, LS_REQ_XY_CHI2, LS_REQ_RZ_ANG, LS_REQ_ALL
+from maia_doublets.constants import LS_DZ_CUT, LS_DR_CUT, LS_DTHETA_RZ_CUT, LS_DTHETA_XY_CUT, LS_CHI2_XY_CUT
+from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
+from maia_doublets.constants import N_LS_PHI_SLICES
+from maia_doublets.constants import T4_DR_CUT, T4_DZ_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT
 
 
 class Plotter:

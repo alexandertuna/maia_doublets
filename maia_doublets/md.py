@@ -4,10 +4,10 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-from constants import MD_DZ_CUT, MD_DR_CUT
-from constants import MAGNETIC_FIELD, SPEED_OF_LIGHT
-from constants import BYTE_TO_MB, MEV_TO_GEV, NO_MCP
-from constants import N_LS_PHI_SLICES, N_LS_ETA_SLICES, DETECTOR_MAX_ETA, DETECTOR_MAX_PHI
+from maia_doublets.constants import MD_DZ_CUT, MD_DR_CUT
+from maia_doublets.constants import MAGNETIC_FIELD, SPEED_OF_LIGHT
+from maia_doublets.constants import BYTE_TO_MB, MEV_TO_GEV, NO_MCP
+from maia_doublets.constants import N_LS_PHI_SLICES, N_LS_ETA_SLICES, DETECTOR_MAX_ETA, DETECTOR_MAX_PHI
 
 class DoubletMaker:
 
