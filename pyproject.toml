@@ -1,0 +1,16 @@
+[project]
+name = "maia_doublets"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "pandas",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+maia_doublets = "maia_doublets.main:main"
