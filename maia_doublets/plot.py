@@ -94,13 +94,13 @@ class Plotter:
             # self.plot_layer_occupancy_2d(pdf)
             self.plot_radius_vs_layer(pdf)
             # self.plot_doublet_occupancy(pdf)
-            # self.plot_doublet_features(pdf)
-            # self.plot_linesegment_features(pdf)
+            self.plot_doublet_features(pdf)
+            self.plot_linesegment_features(pdf)
             # self.plot_t4_features(pdf)
             if self.signal:
                 self.write_denominator_info(pdf)
-                self.plot_detectable_efficiency_vs_kinematics(pdf)
-                self.plot_doublet_efficiency_vs_kinematics_2(pdf)
+                # self.plot_detectable_efficiency_vs_kinematics(pdf)
+                # self.plot_doublet_efficiency_vs_kinematics_2(pdf)
                 # self.plot_doublet_efficiency_vs_kinematics(pdf)
                 # self.write_doublet_denominator_info(pdf)
                 # self.plot_doublet_quality_efficiency(pdf)
@@ -728,8 +728,8 @@ class Plotter:
             "mc_pt": r"MC pT [GeV]",
         }
         formatting = {
-            "doublet_dz": ".1f",
-            "doublet_dr": ".0f",
+            "doublet_dz": ".2f",
+            "doublet_dr": ".1f",
             "doublet_dphi": ".3f",
             "doublet_pt": ".1f",
             "doublet_qoverpt": ".3f",
