@@ -207,7 +207,8 @@ class Plotter:
     def plot_numbers_for_comparison_background(self, pdf: PdfPages):
         layers = [0, 1]
         # layers = [2, 3]
-        the_doublelayer = layers[0] // 2
+        dl = layers[0] // 2
+        sy = OUTER_TRACKER_BARREL
 
         # part 1: simhits
         mask = np.ones(len(self.simhits), dtype=bool)
@@ -242,12 +243,12 @@ class Plotter:
         # number of doublets
         mask = np.ones(len(self.doublets), dtype=bool)
         for [req, label] in [
-            [self.doublets["doublet_system"] == OUTER_TRACKER_BARREL, "Doublets in OTB"],
-            [self.doublets["doublet_doublelayer"] == the_doublelayer, f"Doublets in layers {layers}"],
+            [self.doublets["doublet_system"] == sy, "Doublets in OTB"],
+            [self.doublets["doublet_doublelayer"] == dl, f"Doublets in layers {layers}"],
             # [self.doublets["doublet_sensor"] == 20, "z-sensor 20"],
             # [self.doublets["doublet_module"] == 0, "phi-module 0"],
-            [np.abs(self.doublets["doublet_dz"]) < self.MD_DZ_CUT[the_doublelayer], f"Doublets with |dz| < {self.MD_DZ_CUT[the_doublelayer]}mm"],
-            [np.abs(self.doublets["doublet_dr"]) < self.MD_DR_CUT[the_doublelayer], f"Doublets with |dr| < {self.MD_DR_CUT[the_doublelayer]}mm"],
+            [np.abs(self.doublets["doublet_dz"]) < self.MD_DZ_CUT[sy, dl], f"Doublets with |dz| < {self.MD_DZ_CUT[sy, dl]}mm"],
+            [np.abs(self.doublets["doublet_dr"]) < self.MD_DR_CUT[sy, dl], f"Doublets with |dr| < {self.MD_DR_CUT[sy, dl]}mm"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -258,12 +259,12 @@ class Plotter:
         else:
             mask = np.ones(len(self.linesegments), dtype=bool)
             for [req, label] in [
-                [self.linesegments["ls_system"] == OUTER_TRACKER_BARREL, "LS in OTB"],
-                [self.linesegments["ls_doublelayer"] == the_doublelayer, f"LS starting on layer {the_doublelayer}"],
-                [np.abs(self.linesegments["ls_dz"]) < self.T2_DZ_CUT[the_doublelayer], f"LS with |dz| < {self.T2_DZ_CUT[the_doublelayer]}mm"],
-                [np.abs(self.linesegments["ls_dr"]) < self.T2_DR_CUT[the_doublelayer], f"LS with |dr| < {self.T2_DR_CUT[the_doublelayer]}mm"],
-                [np.abs(self.linesegments["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[the_doublelayer], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[the_doublelayer]}"],
-                [np.abs(self.linesegments["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[the_doublelayer], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[the_doublelayer]}"],
+                [self.linesegments["ls_system"] == sy, "LS in OTB"],
+                [self.linesegments["ls_doublelayer"] == dl, f"LS starting on layer {dl}"],
+                [np.abs(self.linesegments["ls_dz"]) < self.T2_DZ_CUT[sy, dl], f"LS with |dz| < {self.T2_DZ_CUT[sy, dl]}mm"],
+                [np.abs(self.linesegments["ls_dr"]) < self.T2_DR_CUT[sy, dl], f"LS with |dr| < {self.T2_DR_CUT[sy, dl]}mm"],
+                [np.abs(self.linesegments["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[sy, dl]}"],
+                [np.abs(self.linesegments["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
             ]:
                 mask &= req
                 logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -1184,25 +1185,29 @@ class Plotter:
 
     def segment_requirements(self, df: pd.DataFrame, req: str) -> tuple[str, pd.DataFrame]:
         # return description and mask
-        doublelayer = df["ls_doublelayer"]
-        if len(doublelayer.unique()) != 1:
-            raise ValueError(f"Multiple doublelayers found: {doublelayer.unique()}")
-        doublelayer = doublelayer.iloc[0]
+        sy = df["ls_system"]
+        dl = df["ls_doublelayer"]
+        if len(sy.unique()) != 1:
+            raise ValueError(f"Multiple systems found: {sy.unique()}")
+        if len(dl.unique()) != 1:
+            raise ValueError(f"Multiple doublelayers found: {dl.unique()}")
+        sy = sy.iloc[0]
+        dl = dl.iloc[0]
         if req == REQ_PASSTHROUGH:
             text = "No requirement"
             mask = np.ones(len(df), dtype=bool)
         elif req == T2_REQ_DR_POS:
-            text = f"|dr| < {self.T2_DR_CUT[doublelayer]}mm"
-            mask = np.abs(df["ls_dr"]) < self.T2_DR_CUT[doublelayer]
+            text = f"|dr| < {self.T2_DR_CUT[sy, dl]}mm"
+            mask = np.abs(df["ls_dr"]) < self.T2_DR_CUT[sy, dl]
         elif req == T2_REQ_DZ_POS:
-            text = f"|dz| < {self.T2_DZ_CUT[doublelayer]}mm"
-            mask = np.abs(df["ls_dz"]) < self.T2_DZ_CUT[doublelayer]
+            text = f"|dz| < {self.T2_DZ_CUT[sy, dl]}mm"
+            mask = np.abs(df["ls_dz"]) < self.T2_DZ_CUT[sy, dl]
         elif req == T2_REQ_RZ_ANG:
-            text = f"|dtheta(rz)| < {self.T2_DTHETA_RZ_CUT[doublelayer]}rad"
-            mask = np.abs(df["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[doublelayer]
+            text = f"|dtheta(rz)| < {self.T2_DTHETA_RZ_CUT[sy, dl]}rad"
+            mask = np.abs(df["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
         elif req == T2_REQ_XY_CHI2:
-            text = f"Chi2(xy,012) < {self.T2_CHI2_XY_CUT[doublelayer]}"
-            mask = np.abs(df["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[doublelayer]
+            text = f"Chi2(xy,012) < {self.T2_CHI2_XY_CUT[sy, dl]}"
+            mask = np.abs(df["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl]
         elif req == T2_REQ_ALL:
             text = f"All LS requirements"
             mask = df["ls_ok"]

@@ -293,10 +293,26 @@ NICKNAMES = {
 # We multiply by 2 to speed up the processing (fewer slices)
 DETECTOR_MAX_PHI = np.pi
 DETECTOR_MAX_ETA = 2.5 # Must include all background hits
-MAX_T2_DPHI = 0.10 * 2
-MAX_T2_DETA = 0.01 * 2
-N_T2_PHI_SLICES = int(2 * DETECTOR_MAX_PHI / MAX_T2_DPHI)
-N_T2_ETA_SLICES = int(2 * DETECTOR_MAX_ETA / MAX_T2_DETA)
+MAX_T2_DPHI = np.array([
+    2 * DETECTOR_MAX_PHI,
+    2 * DETECTOR_MAX_PHI,
+    2 * DETECTOR_MAX_PHI,
+    2 * DETECTOR_MAX_PHI,
+    2 * DETECTOR_MAX_PHI,
+    0.10 * 2,
+    2 * DETECTOR_MAX_PHI,
+])
+MAX_T2_DETA = np.array([
+    2 * DETECTOR_MAX_ETA,
+    2 * DETECTOR_MAX_ETA,
+    2 * DETECTOR_MAX_ETA,
+    2 * DETECTOR_MAX_ETA,
+    2 * DETECTOR_MAX_ETA,
+    0.01 * 2,
+    2 * DETECTOR_MAX_ETA,
+])
+N_T2_PHI_SLICES = (2 * DETECTOR_MAX_PHI / MAX_T2_DPHI).astype(int)
+N_T2_ETA_SLICES = (2 * DETECTOR_MAX_ETA / MAX_T2_DETA).astype(int)
 MAX_T4_DPHI = 0.25 * 2
 MAX_T4_DETA = 0.025 * 2
 N_T4_PHI_SLICES = int(2 * DETECTOR_MAX_PHI / MAX_T4_DPHI)

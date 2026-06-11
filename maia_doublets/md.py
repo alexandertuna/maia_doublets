@@ -115,8 +115,12 @@ class MDMaker:
             doublets["doublet_phi"] = np.arctan2(doublets["doublet_y"], doublets["doublet_x"])
             doublets["doublet_theta"] = np.arctan2(doublets["doublet_r"], doublets["doublet_z"])
             doublets["doublet_eta"] = -np.log(np.tan(doublets["doublet_theta"] / 2))
-            doublets["doublet_phi_slice"] = np.floor((doublets["doublet_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * N_T2_PHI_SLICES).astype(np.int16)
-            doublets["doublet_eta_slice"] = np.floor((doublets["doublet_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T2_ETA_SLICES).astype(np.int16)
+
+            # divide the eta/phi space into slices, to be used in T2 seeding
+            n_phi_slices = N_T2_PHI_SLICES[doublets["doublet_system"]]
+            n_eta_slices = N_T2_ETA_SLICES[doublets["doublet_system"]]
+            doublets["doublet_phi_slice"] = np.floor((doublets["doublet_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * n_phi_slices).astype(np.int16)
+            doublets["doublet_eta_slice"] = np.floor((doublets["doublet_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * n_eta_slices).astype(np.int16)
 
             # guess charge from dphi:
             # positively charged particles have negative dphi, and vice versa

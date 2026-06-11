@@ -153,6 +153,7 @@ class T2Maker:
             for i_group, (cols, df) in enumerate(self.doublets.groupby(groupby_cols[start])):
 
                 group_cutflows = []
+                group_system = df["doublet_system"].iloc[0]
 
                 # progress bar
                 if (self.signal and i_group % 10 == 0) or (not self.signal):
@@ -182,7 +183,7 @@ class T2Maker:
                         # get upper data for the same phi slice
                         eta_ok = np.array([eta_slice-1, eta_slice, eta_slice+1]).astype(np.int16)
                         phi_ok = np.array([phi_slice-1, phi_slice, phi_slice+1]).astype(np.int16)
-                        phi_ok = phi_ok % N_T2_PHI_SLICES
+                        phi_ok = phi_ok % N_T2_PHI_SLICES[group_system]
                         ok = (
                             entire_upper["doublet_eta_slice"].isin(eta_ok) &
                             entire_upper["doublet_phi_slice"].isin(phi_ok)
@@ -198,7 +199,8 @@ class T2Maker:
                         suffixes=("_lower", "_upper"),
                     )
 
-                    # the doublelayer
+                    # the system and doublelayer
+                    segments["ls_system"] = segments["doublet_system"]
                     segments["ls_doublelayer"] = segments["doublet_doublelayer_lower"]
 
                     # rz projection
@@ -215,9 +217,10 @@ class T2Maker:
 
                     # cut some segments? do this early to save computations
                     if self.cut_line_segments:
+                        sy = segments["ls_system"]
                         dl = segments["ls_doublelayer"]
-                        segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.T2_DZ_CUT[dl]
-                        segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.T2_DR_CUT[dl]
+                        segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.T2_DZ_CUT[sy, dl]
+                        segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.T2_DR_CUT[sy, dl]
                         segments = segments[segments["ls_ok_dz"] & segments["ls_ok_dr"]]
 
                     # assign truth info
@@ -296,7 +299,6 @@ class T2Maker:
 
                     # rename some things
                     rename = {
-                        "doublet_system": "ls_system",
                         "doublet_doublelayer_lower": "ls_doublelayer_lower",
                         "doublet_doublelayer_upper": "ls_doublelayer_upper",
                         "doublet_module_lower": "ls_module_lower",
@@ -354,7 +356,7 @@ class T2Maker:
 
                     # progress bar and stats from this group
                     if i_subgroup > 0 and i_subgroup % 100 == 0:
-                        logger.info(f"Processed subgroup {i_subgroup} / {n_subgroup} which has {len(segments)} line segments ...")
+                        logger.info(f"Processed subgroup {i_subgroup} / {n_subgroup} which has {len(segments)} T2s ...")
 
                     # save them
                     group_cutflows.append(cutflow)
@@ -364,11 +366,11 @@ class T2Maker:
                 # group cutflow
                 cutflow = pd.DataFrame(group_cutflows)
                 for col in cutflow.columns:
-                    logger.info(f"Line segments cutflow (group), {col}: {cutflow[col].sum()}")
+                    logger.info(f"T2s cutflow (group), {col}: {cutflow[col].sum()}")
 
 
         # merge them
-        logger.info(f"Merging {len(all_linesegments)} groups of line segments ...")
+        logger.info(f"Merging {len(all_linesegments)} groups of T2s ...")
         self.df = pd.concat(all_linesegments, ignore_index=True)
 
         # sort them
@@ -386,11 +388,14 @@ class T2Maker:
 
         # announce memory
         memory = self.df.memory_usage(deep=True).sum() * BYTE_TO_MB
-        logger.info(f"Memory usage of line segments: {memory:.1f} MB")
+        logger.info(f"Memory usage of T2s: {memory:.1f} MB")
 
         # cutflow
         cutflow = pd.DataFrame(all_cutflows)
         for col in cutflow.columns:
-            logger.info(f"Line segments cutflow, {col}: {cutflow[col].sum()}")
+            logger.info(f"T2s cutflow, {col}: {cutflow[col].sum()}")
+        if not self.cut_line_segments:
+            col = "ls_ok"
+            logger.info(f"T2s cutflow, {col}: {self.df[col].sum()}")
 
 
