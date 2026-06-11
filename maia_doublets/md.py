@@ -9,7 +9,7 @@ from maia_doublets.constants import MAGNETIC_FIELD, SPEED_OF_LIGHT
 from maia_doublets.constants import BYTE_TO_MB, MEV_TO_GEV, NO_MCP
 from maia_doublets.constants import N_T2_PHI_SLICES, N_T2_ETA_SLICES, DETECTOR_MAX_ETA, DETECTOR_MAX_PHI
 
-class DoubletMaker:
+class MDMaker:
 
 
     def __init__(self, geometry_version: str, sim: bool, smear: str, signal: bool, cut_doublets: bool, simhits: pd.DataFrame):

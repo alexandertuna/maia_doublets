@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 from maia_doublets.constants import SIGNAL, NO_MCP
 from maia_doublets.datasets import get_filepaths, parse_filepaths
 from maia_doublets.slcio import HitMaker
-from maia_doublets.md import DoubletMaker
+from maia_doublets.md import MDMaker
 from maia_doublets.t2 import T2Maker
 from maia_doublets.t4 import T4Maker
 from maia_doublets.plot import Plotter
@@ -109,7 +109,7 @@ def main():
             doublets = pd.read_pickle(ops.read_mds)
         else:
             # make mini-doublets from hits
-            doublets = DoubletMaker(
+            doublets = MDMaker(
                 geometry_version=ops.geo,
                 signal=signal,
                 sim=ops.sim,
