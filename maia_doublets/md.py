@@ -76,9 +76,10 @@ class DoubletMaker:
             mask = {}
 
             # record some cut results
+            sy = doublets["simhit_system"]
             dl = doublets["simhit_layer_div_2"]
-            mask["dr"] = np.abs(doublets["doublet_dr"]) < self.MD_DR_CUT[dl]
-            mask["dz"] = np.abs(doublets["doublet_dz"]) < self.MD_DZ_CUT[dl]
+            mask["dr"] = np.abs(doublets["doublet_dr"]) < self.MD_DR_CUT[sy, dl]
+            mask["dz"] = np.abs(doublets["doublet_dz"]) < self.MD_DZ_CUT[sy, dl]
             mask["and"] = mask["dr"] & mask["dz"]
             doublets["doublet_ok"] = mask["and"].astype(bool)
 

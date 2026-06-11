@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from maia_doublets.constants import LS_DZ_CUT, LS_DR_CUT
-from maia_doublets.constants import LS_DTHETA_RZ_CUT, LS_DTHETA_XY_CUT, LS_CHI2_XY_CUT
+from maia_doublets.constants import LS_DTHETA_RZ_CUT, LS_CHI2_XY_CUT
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_LS_PHI_SLICES
 from maia_doublets.constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
@@ -31,7 +31,6 @@ class LineSegment:
         self.LS_DZ_CUT = LS_DZ_CUT[key]
         self.LS_DR_CUT = LS_DR_CUT[key]
         self.LS_DTHETA_RZ_CUT = LS_DTHETA_RZ_CUT[key]
-        self.LS_DTHETA_XY_CUT = LS_DTHETA_XY_CUT[key]
         self.LS_CHI2_XY_CUT = LS_CHI2_XY_CUT[key]
 
         self.doublets = doublets.copy()
@@ -329,13 +328,13 @@ class LineSegment:
                     cutflow = {"all": len(segments)}
 
                     # record some cut results
+                    sy = segments["ls_system"]
                     dl = segments["ls_doublelayer"]
-                    segments["ls_ok_dtheta_rz"] = np.abs(segments["ls_dtheta_rz"]) < self.LS_DTHETA_RZ_CUT[dl]
-                    segments["ls_ok_dtheta_xy"] = np.abs(segments["ls_dtheta_xy"]) < self.LS_DTHETA_XY_CUT[dl]
-                    segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.LS_DZ_CUT[dl]
-                    segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.LS_DR_CUT[dl]
+                    segments["ls_ok_dtheta_rz"] = np.abs(segments["ls_dtheta_rz"]) < self.LS_DTHETA_RZ_CUT[sy, dl]
+                    segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.LS_DZ_CUT[sy, dl]
+                    segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.LS_DR_CUT[sy, dl]
                     segments["ls_ok_dphi"] = np.abs(segments["ls_dphi"]) < np.pi / 2.0
-                    segments["ls_ok_chi2_xy"] = np.abs(segments["ls_chi2_012"]) < self.LS_CHI2_XY_CUT[dl]
+                    segments["ls_ok_chi2_xy"] = np.abs(segments["ls_chi2_012"]) < self.LS_CHI2_XY_CUT[sy, dl]
                     segments["ls_ok_drdz"] = segments["ls_ok_dz"] & segments["ls_ok_dr"] & segments["ls_ok_dphi"]
                     segments["ls_ok_drdzdthetarz"] = segments["ls_ok_dz"] & segments["ls_ok_dr"] & segments["ls_ok_dphi"] & segments["ls_ok_dtheta_rz"]
                     segments["ls_ok"] = (

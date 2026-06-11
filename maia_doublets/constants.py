@@ -60,15 +60,35 @@ OUTER_TRACKER_BARREL_RELATIONS = "OBTrackerHitsRelations"
 INNER_TRACKER_BARREL_HITS = "IBTrackerHits"
 OUTER_TRACKER_BARREL_HITS = "OBTrackerHits"
 
+NOT_USED = 0
+VERTEX_TRACKER_BARREL = 1
+VERTEX_TRACKER_ENDCAP = 2
 INNER_TRACKER_BARREL = 3
+INNER_TRACKER_ENDCAP = 4
 OUTER_TRACKER_BARREL = 5
+OUTER_TRACKER_ENDCAP = 6
+
+#
+# np.arrays below are indexed by (system, doublelayer)
+# i.e.:
+#   [dl0, dl1, dl2, dl3], # NOT_USED
+#   [dl0, dl1, dl2, dl3], # VERTEX_TRACKER_BARREL
+#   [dl0, dl1, dl2, dl3], # VERTEX_TRACKER_ENDCAP
+#   [dl0, dl1, dl2, dl3], # INNER_TRACKER_BARREL
+#   [dl0, dl1, dl2, dl3], # INNER_TRACKER_ENDCAP
+#   [dl0, dl1, dl2, dl3], # OUTER_TRACKER_BARREL
+#   [dl0, dl1, dl2, dl3], # OUTER_TRACKER_ENDCAP
+#
 
 MD_DZ_CUT = {
     ("v01", "sim"): np.array([
-        22, # mm # doublelayer 0
-        29, # mm # doublelayer 1
-        112, # mm # doublelayer 2
-        137, # mm # doublelayer 3
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [22, 29, 112, 137],
+        [0, 0, 0, 0],
     ]),
     ("v01", "digi", "00um"): np.array([
         22, # mm # doublelayer 0
@@ -85,10 +105,13 @@ MD_DZ_CUT = {
 }
 MD_DR_CUT = {
     ("v01", "sim"): np.array([
-        260, # mm # doublelayer 0
-        313, # mm # doublelayer 1
-        718, # mm # doublelayer 2
-        806, # mm # doublelayer 3
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [260, 313, 718, 806],
+        [0, 0, 0, 0],
     ]),
     ("v01", "digi", "00um"): np.array([
         260, # mm # doublelayer 0
@@ -106,9 +129,13 @@ MD_DR_CUT = {
 
 LS_DZ_CUT = {
     ("v01", "sim"): np.array([
-        24, # mm # doublelayer 0
-        0.0, # mm # doublelayer 1
-        120, # mm # doublelayer 2
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [24, 0, 120, 0],
+        [0, 0, 0, 0],
     ]),
     ("v01", "digi", "00um"): np.array([
         24, # mm # doublelayer 0
@@ -123,9 +150,13 @@ LS_DZ_CUT = {
 }
 LS_DR_CUT = {
     ("v01", "sim"): np.array([
-        281, # mm # doublelayer 0
-        0.0, # mm # doublelayer 1
-        757, # mm # doublelayer 2
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [281, 0, 757, 0],
+        [0, 0, 0, 0],
     ]),
     ("v01", "digi", "00um"): np.array([
         281, # mm # doublelayer 0
@@ -140,9 +171,13 @@ LS_DR_CUT = {
 }
 LS_DTHETA_RZ_CUT = {
     ("v01", "sim"): np.array([
-        0.0075, # doublelayer 0
-        0.0000, # 0.0453, # doublelayer 1
-        0.0130, # doublelayer 2
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0.0075, 0.0, 0.0130, 0.0],
+        [0, 0, 0, 0],
     ]),
     ("v01", "digi", "00um"): np.array([
         0.0075, # doublelayer 0
@@ -155,28 +190,15 @@ LS_DTHETA_RZ_CUT = {
         0.0130, # doublelayer 2
     ]),
 }
-LS_DTHETA_XY_CUT = {
-    ("v01", "sim"): np.array([
-        0.070, # doublelayer 0
-        0.000, # 0.396, # doublelayer 1
-        0.078, # doublelayer 2
-    ]),
-    ("v01", "digi", "00um"): np.array([
-        0.070, # doublelayer 0
-        0.000, # 0.396, # doublelayer 1
-        0.078, # doublelayer 2
-    ]),
-    ("v05", "sim"): np.array([
-        0.000, # doublelayer 0
-        0.000, # doublelayer 1
-        0.000, # doublelayer 2
-    ]),
-}
 LS_CHI2_XY_CUT = {
     ("v01", "sim"): np.array([
-        0.040, # doublelayer 0
-        0.000, # doublelayer 1
-        0.040, # doublelayer 2
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0.04, 0.0, 0.04, 0.0],
+        [0, 0, 0, 0],
     ]),
     ("v01", "digi", "00um"): np.array([
         0.040, # doublelayer 0
