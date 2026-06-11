@@ -714,7 +714,7 @@ class Plotter:
             "doublet_dphi": np.linspace(-1.0, 1.0, 201) if self.signal else np.linspace(-3.2, 3.2, 201),
             "doublet_pt": np.linspace(0, 10, 101),
             "doublet_qoverpt": np.linspace(-0.8, 0.8, 161),
-            "doublet_phi_slice": np.linspace(-1, N_T2_PHI_SLICES+1, N_T2_PHI_SLICES+3),
+            "doublet_phi_slice": np.linspace(0, 100, 101),
             "mcp_qoverpt": np.linspace(-0.8, 0.8, 161),
             "mc_pt": np.linspace(0, 10, 101),
         }
@@ -755,6 +755,8 @@ class Plotter:
                 for ((system, doublelayer), group) in self.doublets[baseline].groupby(["doublet_system",
                                                                                        "doublet_doublelayer",
                                                                                        ]):
+
+                        bins["doublet_phi_slice"] = np.linspace(-1, N_T2_PHI_SLICES[system]+1, N_T2_PHI_SLICES[system]+3)
 
                         # logger.info(f"Plotting signal doublet feature {feature}, system {system}, doublelayer {doublelayer} ...")
                         layers = [doublelayer * 2, doublelayer * 2 + 1]
