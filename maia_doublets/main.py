@@ -13,7 +13,7 @@ from maia_doublets.constants import SIGNAL, NO_MCP
 from maia_doublets.datasets import get_filepaths, parse_filepaths
 from maia_doublets.slcio import HitMaker
 from maia_doublets.md import DoubletMaker
-from maia_doublets.t2 import LineSegment
+from maia_doublets.t2 import T2Maker
 from maia_doublets.t4 import T4Maker
 from maia_doublets.plot import Plotter
 
@@ -130,7 +130,7 @@ def main():
             t2s = pd.read_pickle(ops.read_t2s)
         else:
             # make T2s (line segments) from mini-doublets
-            t2s = LineSegment(
+            t2s = T2Maker(
                 geometry_version=ops.geo,
                 sim=ops.sim,
                 smear=ops.smear,

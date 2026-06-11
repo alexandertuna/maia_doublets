@@ -10,7 +10,7 @@ from maia_doublets.constants import N_T2_PHI_SLICES
 from maia_doublets.constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
 from maia_doublets.constants import N_T4_PHI_SLICES, N_T4_ETA_SLICES
 
-class LineSegment:
+class T2Maker:
 
     #
     # To make doublets, we do 2 groupbys:
