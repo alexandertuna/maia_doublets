@@ -39,10 +39,10 @@ from maia_doublets.constants import NICKNAMES, OUTER_TRACKER_BARREL
 from maia_doublets.constants import MD_DZ_CUT, MD_DR_CUT
 from maia_doublets.constants import REQ_PASSTHROUGH, REQ_RZ, REQ_XY, REQ_RZ_XY
 from maia_doublets.constants import DOUBLET_REQS, NO_MCP
-from maia_doublets.constants import LS_REQS, LS_REQ_DR_POS, LS_REQ_DZ_POS, LS_REQ_XY_CHI2, LS_REQ_RZ_ANG, LS_REQ_ALL
-from maia_doublets.constants import LS_DZ_CUT, LS_DR_CUT, LS_DTHETA_RZ_CUT, LS_CHI2_XY_CUT
+from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_RZ_ANG, T2_REQ_ALL
+from maia_doublets.constants import T2_DZ_CUT, T2_DR_CUT, T2_DTHETA_RZ_CUT, T2_CHI2_XY_CUT
 from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
-from maia_doublets.constants import N_LS_PHI_SLICES
+from maia_doublets.constants import N_T2_PHI_SLICES
 from maia_doublets.constants import T4_DR_CUT, T4_DZ_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT
 
 
@@ -73,10 +73,10 @@ class Plotter:
         key = (geometry_version, "sim") if sim else (geometry_version, "digi", smear)
         self.MD_DZ_CUT = MD_DZ_CUT[key]
         self.MD_DR_CUT = MD_DR_CUT[key]
-        self.LS_DZ_CUT = LS_DZ_CUT[key]
-        self.LS_DR_CUT = LS_DR_CUT[key]
-        self.LS_DTHETA_RZ_CUT = LS_DTHETA_RZ_CUT[key]
-        self.LS_CHI2_XY_CUT = LS_CHI2_XY_CUT[key]
+        self.T2_DZ_CUT = T2_DZ_CUT[key]
+        self.T2_DR_CUT = T2_DR_CUT[key]
+        self.T2_DTHETA_RZ_CUT = T2_DTHETA_RZ_CUT[key]
+        self.T2_CHI2_XY_CUT = T2_CHI2_XY_CUT[key]
         self.T4_DR_CUT = T4_DR_CUT[key]
         self.T4_DZ_CUT = T4_DZ_CUT[key]
         self.T4_DTHETA_RZ_CUT = T4_DTHETA_RZ_CUT[key]
@@ -260,10 +260,10 @@ class Plotter:
             for [req, label] in [
                 [self.linesegments["ls_system"] == OUTER_TRACKER_BARREL, "LS in OTB"],
                 [self.linesegments["ls_doublelayer"] == the_doublelayer, f"LS starting on layer {the_doublelayer}"],
-                [np.abs(self.linesegments["ls_dz"]) < self.LS_DZ_CUT[the_doublelayer], f"LS with |dz| < {self.LS_DZ_CUT[the_doublelayer]}mm"],
-                [np.abs(self.linesegments["ls_dr"]) < self.LS_DR_CUT[the_doublelayer], f"LS with |dr| < {self.LS_DR_CUT[the_doublelayer]}mm"],
-                [np.abs(self.linesegments["ls_dtheta_rz"]) < self.LS_DTHETA_RZ_CUT[the_doublelayer], f"LS with |dtheta_rz| < {self.LS_DTHETA_RZ_CUT[the_doublelayer]}"],
-                [np.abs(self.linesegments["ls_chi2_012"]) < self.LS_CHI2_XY_CUT[the_doublelayer], f"LS with |chi2_xy| < {self.LS_CHI2_XY_CUT[the_doublelayer]}"],
+                [np.abs(self.linesegments["ls_dz"]) < self.T2_DZ_CUT[the_doublelayer], f"LS with |dz| < {self.T2_DZ_CUT[the_doublelayer]}mm"],
+                [np.abs(self.linesegments["ls_dr"]) < self.T2_DR_CUT[the_doublelayer], f"LS with |dr| < {self.T2_DR_CUT[the_doublelayer]}mm"],
+                [np.abs(self.linesegments["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[the_doublelayer], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[the_doublelayer]}"],
+                [np.abs(self.linesegments["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[the_doublelayer], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[the_doublelayer]}"],
             ]:
                 mask &= req
                 logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -295,18 +295,18 @@ class Plotter:
             * |dz| < {self.MD_DZ_CUT[3]} mm (DL3)
 
             Quality cuts for T2s:
-            * |dr| < {self.LS_DR_CUT[0]} mm (DL0)
-            * |dr| < {self.LS_DR_CUT[1]} mm (DL1)
-            * |dr| < {self.LS_DR_CUT[2]} mm (DL2)
-            * |dz| < {self.LS_DZ_CUT[0]} mm (DL0)
-            * |dz| < {self.LS_DZ_CUT[1]} mm (DL1)
-            * |dz| < {self.LS_DZ_CUT[2]} mm (DL2)
-            * |dtheta_rz| < {self.LS_DTHETA_RZ_CUT[0]} (DL0)
-            * |dtheta_rz| < {self.LS_DTHETA_RZ_CUT[1]} (DL1)
-            * |dtheta_rz| < {self.LS_DTHETA_RZ_CUT[2]} (DL2)
-            * |chi2_xy| < {self.LS_CHI2_XY_CUT[0]} (DL0)
-            * |chi2_xy| < {self.LS_CHI2_XY_CUT[1]} (DL1)
-            * |chi2_xy| < {self.LS_CHI2_XY_CUT[2]} (DL2)
+            * |dr| < {self.T2_DR_CUT[0]} mm (DL0)
+            * |dr| < {self.T2_DR_CUT[1]} mm (DL1)
+            * |dr| < {self.T2_DR_CUT[2]} mm (DL2)
+            * |dz| < {self.T2_DZ_CUT[0]} mm (DL0)
+            * |dz| < {self.T2_DZ_CUT[1]} mm (DL1)
+            * |dz| < {self.T2_DZ_CUT[2]} mm (DL2)
+            * |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[0]} (DL0)
+            * |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[1]} (DL1)
+            * |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[2]} (DL2)
+            * |chi2_xy| < {self.T2_CHI2_XY_CUT[0]} (DL0)
+            * |chi2_xy| < {self.T2_CHI2_XY_CUT[1]} (DL1)
+            * |chi2_xy| < {self.T2_CHI2_XY_CUT[2]} (DL2)
 
             Quality cuts for T4s:
             * |dr| < {self.T4_DR_CUT[0]} mm (DL0)
@@ -713,7 +713,7 @@ class Plotter:
             "doublet_dphi": np.linspace(-1.0, 1.0, 201) if self.signal else np.linspace(-3.2, 3.2, 201),
             "doublet_pt": np.linspace(0, 10, 101),
             "doublet_qoverpt": np.linspace(-0.8, 0.8, 161),
-            "doublet_phi_slice": np.linspace(-1, N_LS_PHI_SLICES+1, N_LS_PHI_SLICES+3),
+            "doublet_phi_slice": np.linspace(-1, N_T2_PHI_SLICES+1, N_T2_PHI_SLICES+3),
             "mcp_qoverpt": np.linspace(-0.8, 0.8, 161),
             "mc_pt": np.linspace(0, 10, 101),
         }
@@ -1152,7 +1152,7 @@ class Plotter:
                 layer = doublelayer * 2
                 layers = range(layer, layer + 4)
 
-                for req in LS_REQS:
+                for req in T2_REQS:
                     req_text, req_mask = self.segment_requirements(group, req)
                     denom = group
                     numer = group[req_mask]
@@ -1191,19 +1191,19 @@ class Plotter:
         if req == REQ_PASSTHROUGH:
             text = "No requirement"
             mask = np.ones(len(df), dtype=bool)
-        elif req == LS_REQ_DR_POS:
-            text = f"|dr| < {self.LS_DR_CUT[doublelayer]}mm"
-            mask = np.abs(df["ls_dr"]) < self.LS_DR_CUT[doublelayer]
-        elif req == LS_REQ_DZ_POS:
-            text = f"|dz| < {self.LS_DZ_CUT[doublelayer]}mm"
-            mask = np.abs(df["ls_dz"]) < self.LS_DZ_CUT[doublelayer]
-        elif req == LS_REQ_RZ_ANG:
-            text = f"|dtheta(rz)| < {self.LS_DTHETA_RZ_CUT[doublelayer]}rad"
-            mask = np.abs(df["ls_dtheta_rz"]) < self.LS_DTHETA_RZ_CUT[doublelayer]
-        elif req == LS_REQ_XY_CHI2:
-            text = f"Chi2(xy,012) < {self.LS_CHI2_XY_CUT[doublelayer]}"
-            mask = np.abs(df["ls_chi2_012"]) < self.LS_CHI2_XY_CUT[doublelayer]
-        elif req == LS_REQ_ALL:
+        elif req == T2_REQ_DR_POS:
+            text = f"|dr| < {self.T2_DR_CUT[doublelayer]}mm"
+            mask = np.abs(df["ls_dr"]) < self.T2_DR_CUT[doublelayer]
+        elif req == T2_REQ_DZ_POS:
+            text = f"|dz| < {self.T2_DZ_CUT[doublelayer]}mm"
+            mask = np.abs(df["ls_dz"]) < self.T2_DZ_CUT[doublelayer]
+        elif req == T2_REQ_RZ_ANG:
+            text = f"|dtheta(rz)| < {self.T2_DTHETA_RZ_CUT[doublelayer]}rad"
+            mask = np.abs(df["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[doublelayer]
+        elif req == T2_REQ_XY_CHI2:
+            text = f"Chi2(xy,012) < {self.T2_CHI2_XY_CUT[doublelayer]}"
+            mask = np.abs(df["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[doublelayer]
+        elif req == T2_REQ_ALL:
             text = f"All LS requirements"
             mask = df["ls_ok"]
         else:

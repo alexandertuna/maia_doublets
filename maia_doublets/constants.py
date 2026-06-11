@@ -127,7 +127,7 @@ MD_DR_CUT = {
     ]),
 }
 
-LS_DZ_CUT = {
+T2_DZ_CUT = {
     ("v01", "sim"): np.array([
         [0, 0, 0, 0],
         [0, 0, 0, 0],
@@ -148,7 +148,7 @@ LS_DZ_CUT = {
         120, # mm # doublelayer 2
     ]),
 }
-LS_DR_CUT = {
+T2_DR_CUT = {
     ("v01", "sim"): np.array([
         [0, 0, 0, 0],
         [0, 0, 0, 0],
@@ -169,7 +169,7 @@ LS_DR_CUT = {
         757, # mm # doublelayer 2
     ]),
 }
-LS_DTHETA_RZ_CUT = {
+T2_DTHETA_RZ_CUT = {
     ("v01", "sim"): np.array([
         [0, 0, 0, 0],
         [0, 0, 0, 0],
@@ -190,7 +190,7 @@ LS_DTHETA_RZ_CUT = {
         0.0130, # doublelayer 2
     ]),
 }
-LS_CHI2_XY_CUT = {
+T2_CHI2_XY_CUT = {
     ("v01", "sim"): np.array([
         [0, 0, 0, 0],
         [0, 0, 0, 0],
@@ -267,20 +267,20 @@ DOUBLET_REQS = [
     REQ_RZ_XY,
 ]
 
-LS_REQ_DR_POS = "dr req."
-LS_REQ_DZ_POS = "dz req."
-LS_REQ_XY_ANG = "dtheta xy req."
-LS_REQ_XY_CHI2 = "xy chi2 req."
-LS_REQ_RZ_ANG = "dtheta rz req."
-LS_REQ_ALL = "all reqs"
-LS_REQS = [
+T2_REQ_DR_POS = "dr req."
+T2_REQ_DZ_POS = "dz req."
+T2_REQ_XY_ANG = "dtheta xy req."
+T2_REQ_XY_CHI2 = "xy chi2 req."
+T2_REQ_RZ_ANG = "dtheta rz req."
+T2_REQ_ALL = "all reqs"
+T2_REQS = [
     REQ_PASSTHROUGH,
-    LS_REQ_DR_POS,
-    LS_REQ_DZ_POS,
-    # LS_REQ_XY_ANG,
-    LS_REQ_XY_CHI2,
-    LS_REQ_RZ_ANG,
-    LS_REQ_ALL,
+    T2_REQ_DR_POS,
+    T2_REQ_DZ_POS,
+    # T2_REQ_XY_ANG,
+    T2_REQ_XY_CHI2,
+    T2_REQ_RZ_ANG,
+    T2_REQ_ALL,
 ]
 
 NICKNAMES = {
@@ -293,10 +293,10 @@ NICKNAMES = {
 # We multiply by 2 to speed up the processing (fewer slices)
 DETECTOR_MAX_PHI = np.pi
 DETECTOR_MAX_ETA = 2.5 # Must include all background hits
-MAX_LS_DPHI = 0.10 * 2
-MAX_LS_DETA = 0.01 * 2
-N_LS_PHI_SLICES = int(2 * DETECTOR_MAX_PHI / MAX_LS_DPHI)
-N_LS_ETA_SLICES = int(2 * DETECTOR_MAX_ETA / MAX_LS_DETA)
+MAX_T2_DPHI = 0.10 * 2
+MAX_T2_DETA = 0.01 * 2
+N_T2_PHI_SLICES = int(2 * DETECTOR_MAX_PHI / MAX_T2_DPHI)
+N_T2_ETA_SLICES = int(2 * DETECTOR_MAX_ETA / MAX_T2_DETA)
 MAX_T4_DPHI = 0.25 * 2
 MAX_T4_DETA = 0.025 * 2
 N_T4_PHI_SLICES = int(2 * DETECTOR_MAX_PHI / MAX_T4_DPHI)

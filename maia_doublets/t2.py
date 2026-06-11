@@ -3,10 +3,10 @@ import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import LS_DZ_CUT, LS_DR_CUT
-from maia_doublets.constants import LS_DTHETA_RZ_CUT, LS_CHI2_XY_CUT
+from maia_doublets.constants import T2_DZ_CUT, T2_DR_CUT
+from maia_doublets.constants import T2_DTHETA_RZ_CUT, T2_CHI2_XY_CUT
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
-from maia_doublets.constants import N_LS_PHI_SLICES
+from maia_doublets.constants import N_T2_PHI_SLICES
 from maia_doublets.constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
 from maia_doublets.constants import N_T4_PHI_SLICES, N_T4_ETA_SLICES
 
@@ -28,10 +28,10 @@ class LineSegment:
         logger.info(f"Making linesegments with doublets memory {memory:.1f} MB ...")
 
         key = (geometry_version, "sim") if sim else (geometry_version, "digi", smear)
-        self.LS_DZ_CUT = LS_DZ_CUT[key]
-        self.LS_DR_CUT = LS_DR_CUT[key]
-        self.LS_DTHETA_RZ_CUT = LS_DTHETA_RZ_CUT[key]
-        self.LS_CHI2_XY_CUT = LS_CHI2_XY_CUT[key]
+        self.T2_DZ_CUT = T2_DZ_CUT[key]
+        self.T2_DR_CUT = T2_DR_CUT[key]
+        self.T2_DTHETA_RZ_CUT = T2_DTHETA_RZ_CUT[key]
+        self.T2_CHI2_XY_CUT = T2_CHI2_XY_CUT[key]
 
         self.doublets = doublets.copy()
         self.prep_doublets()
@@ -182,7 +182,7 @@ class LineSegment:
                         # get upper data for the same phi slice
                         eta_ok = np.array([eta_slice-1, eta_slice, eta_slice+1]).astype(np.int16)
                         phi_ok = np.array([phi_slice-1, phi_slice, phi_slice+1]).astype(np.int16)
-                        phi_ok = phi_ok % N_LS_PHI_SLICES
+                        phi_ok = phi_ok % N_T2_PHI_SLICES
                         ok = (
                             entire_upper["doublet_eta_slice"].isin(eta_ok) &
                             entire_upper["doublet_phi_slice"].isin(phi_ok)
@@ -216,8 +216,8 @@ class LineSegment:
                     # cut some segments? do this early to save computations
                     if self.cut_line_segments:
                         dl = segments["ls_doublelayer"]
-                        segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.LS_DZ_CUT[dl]
-                        segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.LS_DR_CUT[dl]
+                        segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.T2_DZ_CUT[dl]
+                        segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.T2_DR_CUT[dl]
                         segments = segments[segments["ls_ok_dz"] & segments["ls_ok_dr"]]
 
                     # assign truth info
@@ -330,11 +330,11 @@ class LineSegment:
                     # record some cut results
                     sy = segments["ls_system"]
                     dl = segments["ls_doublelayer"]
-                    segments["ls_ok_dtheta_rz"] = np.abs(segments["ls_dtheta_rz"]) < self.LS_DTHETA_RZ_CUT[sy, dl]
-                    segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.LS_DZ_CUT[sy, dl]
-                    segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.LS_DR_CUT[sy, dl]
+                    segments["ls_ok_dtheta_rz"] = np.abs(segments["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
+                    segments["ls_ok_dz"] = np.abs(segments["ls_dz"]) < self.T2_DZ_CUT[sy, dl]
+                    segments["ls_ok_dr"] = np.abs(segments["ls_dr"]) < self.T2_DR_CUT[sy, dl]
                     segments["ls_ok_dphi"] = np.abs(segments["ls_dphi"]) < np.pi / 2.0
-                    segments["ls_ok_chi2_xy"] = np.abs(segments["ls_chi2_012"]) < self.LS_CHI2_XY_CUT[sy, dl]
+                    segments["ls_ok_chi2_xy"] = np.abs(segments["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl]
                     segments["ls_ok_drdz"] = segments["ls_ok_dz"] & segments["ls_ok_dr"] & segments["ls_ok_dphi"]
                     segments["ls_ok_drdzdthetarz"] = segments["ls_ok_dz"] & segments["ls_ok_dr"] & segments["ls_ok_dphi"] & segments["ls_ok_dtheta_rz"]
                     segments["ls_ok"] = (
