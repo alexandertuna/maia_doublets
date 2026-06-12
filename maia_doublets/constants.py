@@ -213,10 +213,17 @@ T2_CHI2_XY_CUT = {
 }
 T4_DZ_CUT = {
     ("v01", "sim"): np.array([
-        54.0, # doublelayer 0
+        54.0, # gdoublelayer 0
+        54.0, # gdoublelayer 1
+        54.0, # gdoublelayer 2
+        54.0, # gdoublelayer 3
+        54.0, # gdoublelayer 4
+        54.0, # gdoublelayer 5
+        54.0, # gdoublelayer 6
+        54.0, # gdoublelayer 7
     ]),
     ("v01", "digi", "00um"): np.array([
-        54.0, # doublelayer 0
+        54.0, # gdoublelayer 0
     ]),
     ("v05", "sim"): np.array([
         0.0, # doublelayer 0
@@ -224,35 +231,56 @@ T4_DZ_CUT = {
 }
 T4_DR_CUT = {
     ("v01", "sim"): np.array([
-        459.0, # doublelayer 0
+        459.0, # gdoublelayer 0
+        459.0, # gdoublelayer 1
+        459.0, # gdoublelayer 2
+        459.0, # gdoublelayer 3
+        459.0, # gdoublelayer 4
+        459.0, # gdoublelayer 5
+        459.0, # gdoublelayer 6
+        459.0, # gdoublelayer 7
     ]),
     ("v01", "digi", "00um"): np.array([
-        459.0, # doublelayer 0
+        459.0, # gdoublelayer 0
     ]),
     ("v05", "sim"): np.array([
-        0.0, # doublelayer 0
+        0.0, # gdoublelayer 0
     ]),
 }
 T4_DTHETA_RZ_CUT = {
     ("v01", "sim"): np.array([
-        0.053, # doublelayer 0
+        0.053, # gdoublelayer 0
+        0.053, # gdoublelayer 1
+        0.053, # gdoublelayer 2
+        0.053, # gdoublelayer 3
+        0.053, # gdoublelayer 4
+        0.053, # gdoublelayer 5
+        0.053, # gdoublelayer 6
+        0.053, # gdoublelayer 7
     ]),
     ("v01", "digi", "00um"): np.array([
-        0.053, # doublelayer 0
+        0.053, # gdoublelayer 0
     ]),
     ("v05", "sim"): np.array([
-        0.0, # doublelayer 0
+        0.0, # gdoublelayer 0
     ]),
 }
 T4_CHI2_XY_CUT = {
     ("v01", "sim"): np.array([
-        0.352, # doublelayer 0
+        0.352, # gdoublelayer 0
+        0.352, # gdoublelayer 1
+        0.352, # gdoublelayer 2
+        0.352, # gdoublelayer 3
+        0.352, # gdoublelayer 4
+        0.352, # gdoublelayer 5
+        0.352, # gdoublelayer 6
+        0.352, # gdoublelayer 7
     ]),
     ("v01", "digi", "00um"): np.array([
-        0.352, # doublelayer 0
+        0.352, # gdoublelayer 0
     ]),
     ("v05", "sim"): np.array([
-        0.0, # doublelayer 0
+        0.0, # gdoublelayer 0
     ]),
 }
 
