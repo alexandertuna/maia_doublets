@@ -44,12 +44,27 @@ signal_filepaths = {
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v05/muonGun_pT_2p0_2p1/muonGun_pT_2p0_2p1_sim_107.slcio",
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v05/muonGun_pT_2p0_2p1/muonGun_pT_2p0_2p1_sim_108.slcio",
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v05/muonGun_pT_2p0_2p1/muonGun_pT_2p0_2p1_sim_109.slcio",
-    ]
+    ],
+    ("v01", "digi", "10um"): [
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_300.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_301.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_302.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_303.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_304.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_305.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_306.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_307.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_308.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_309.slcio",
+    ],
 }
 
 background100_filepaths = {
     ("v01", "sim"): [
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun_n5_p15/neutrinoGun_digi_3.slcio",
+    ],
+    ("v01", "digi", "10um"): [
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun/10um/neutrinoGun_digi_3.slcio",
     ],
 }
 
