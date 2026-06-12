@@ -118,7 +118,7 @@ class T4Maker:
 
 
 
-    def make_t4s_from_lower_upper(self, lower: pd.DataFrame, upper: pd.DataFrame) -> pd.DataFrame:
+    def make_t4s_from_lower_upper(self, lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
         """
         Given an lower df and upper df, make T4s from their combinations
             For example, lower df could be T2s which span OT layers 0-3 (global doublelayer 4),
