@@ -288,8 +288,7 @@ NICKNAMES = {
     OUTER_TRACKER_BARREL: "OTB",
 }
 NICKNAME_TO_SYSTEM = {
-    "ITB": INNER_TRACKER_BARREL,
-    "OTB": OUTER_TRACKER_BARREL,
+    value: key for key, value in NICKNAMES.items()
 }
 
 # Do not change this easily
