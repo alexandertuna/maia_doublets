@@ -86,7 +86,7 @@ class Plotter:
     def plot(self):
         logger.info(f"Writing plots to {self.pdf} ...")
         with PdfPages(self.pdf) as pdf:
-            self.plot_numbers_for_comparison(pdf)
+            # self.plot_numbers_for_comparison(pdf)
             self.write_date(pdf)
             self.write_quality_cuts(pdf)
             self.plot_time(pdf)
@@ -94,8 +94,8 @@ class Plotter:
             # self.plot_layer_occupancy_2d(pdf)
             self.plot_radius_vs_layer(pdf)
             # self.plot_doublet_occupancy(pdf)
-            self.plot_doublet_features(pdf)
-            self.plot_linesegment_features(pdf)
+            # self.plot_doublet_features(pdf)
+            # self.plot_linesegment_features(pdf)
             # self.plot_t4_features(pdf)
             if self.signal:
                 self.write_denominator_info(pdf)
@@ -106,6 +106,7 @@ class Plotter:
                 # self.plot_doublet_quality_efficiency(pdf)
                 # self.plot_segment_efficiency_vs_kinematics(pdf)
                 # self.plot_segment_quality_efficiency(pdf)
+                self.plot_t4_efficiency_vs_kinematics_overall(pdf)
                 # self.plot_t4_efficiency_vs_kinematics(pdf)
                 # self.plot_t4_quality_efficiency(pdf)
 
@@ -1312,6 +1313,65 @@ class Plotter:
                         logger.info(f"{NICKNAMES[system]} doublelayer {doublelayer} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
+
+
+    def plot_t4_efficiency_vs_kinematics_overall(self, pdf: PdfPages):
+
+        if self.t4s is None or len(self.t4s) == 0:
+            logger.info("No T4s to plot")
+            return
+
+        bins = {
+            "mcp_pt": np.linspace(0.0, 10.0, 21),
+            "mcp_eta": np.linspace(-0.7, 0.7, 281),
+            "mcp_phi": np.linspace(-3.2, 3.2, 321),
+        }
+        xlabel = {
+            "mcp_pt": r"Muon $p_T$ [GeV]",
+            "mcp_eta": r"Muon $\eta$",
+            "mcp_phi": r"Muon $\phi$ [rad]",
+        }
+
+        # denominator
+        dmask = self.get_denominator_mask()
+        denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_pt", "mcp_eta", "mcp_phi"]]
+        if denom.duplicated().any():
+            raise ValueError("Denominator has duplicated rows!")
+
+        # numerator
+        numer_cols = [
+            "file", # the file
+            "i_event", # the event
+            "i_mcp", # the parent mc particle
+        ]
+
+        # filter doublets to only those with same parent mcp
+        same_parent = self.t4s["i_mcp"] != NO_MCP
+        t4s = self.t4s[same_parent][numer_cols].drop_duplicates()
+
+        # check if t4s's [file, i_event, i_mcp] is in denominator
+        for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
+
+            merged = denom.merge(t4s, on=numer_cols, how="inner")
+            n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
+            n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+            efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
+            centers = 0.5 * (edges[1:] + edges[:-1])
+            fig, ax = plt.subplots()
+            ax.plot(
+                centers,
+                efficiency,
+                marker="o",
+                markersize=1,
+                linestyle="-",
+                color="dodgerblue",
+            )
+            ax.set_xlabel(xlabel[kin])
+            ax.set_ylabel("T4 finding efficiency")
+            ax.set_title(f"Considering all T4s")
+            ax.set_ylim(0.7, 1.03)
+            pdf.savefig()
+            plt.close()
 
 
     def plot_t4_efficiency_vs_kinematics(self, pdf: PdfPages):
