@@ -97,6 +97,7 @@ class MDMaker:
                 "simhit_module": "doublet_module",
             }
             doublets = doublets.rename(columns=rename)
+            doublets["doublet_glayer"] = doublets["simhit_glayer_lower"]
 
             # doublet feature, xy dphi
             phi_local = np.arctan2(doublets["simhit_y_upper"] - doublets["simhit_y_lower"],

@@ -17,7 +17,7 @@ from maia_doublets.constants import INNER_TRACKER_BARREL_RELATIONS, OUTER_TRACKE
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
-from maia_doublets.constants import NICKNAMES
+from maia_doublets.constants import NICKNAMES, LAYER_OFFSET
 
 _detector = None
 _surfman = None
@@ -381,6 +381,7 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
     df["simhit_sensor"] = np.right_shift(df["simhit_cellid0"], 24) & 0b1111_1111
     df["simhit_layer_div_2"] = df["simhit_layer"] // 2
     df["simhit_layer_mod_2"] = df["simhit_layer"] % 2
+    df["simhit_glayer"] = df["simhit_layer"] + LAYER_OFFSET[df["simhit_system"]]
     # df["simhit_theta"] = np.maximum(np.arctan2(df["simhit_r"], df["simhit_z"]), EPSILON)
     # df["simhit_eta"] = -np.log(np.tan(df["simhit_theta"] / 2))
     # df["simhit_phi"] = np.arctan2(df["simhit_y"], df["simhit_x"])
@@ -418,6 +419,7 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
     df["simhit_side"] = df["simhit_side"].astype(np.uint8)
     df["simhit_system"] = df["simhit_system"].astype(np.uint8)
     df["simhit_layer"] = df["simhit_layer"].astype(np.uint8)
+    df["simhit_glayer"] = df["simhit_glayer"].astype(np.uint8)
     df["simhit_layer_div_2"] = df["simhit_layer_div_2"].astype(np.uint8)
     df["simhit_layer_mod_2"] = df["simhit_layer_mod_2"].astype(np.uint8)
     df["simhit_module"] = df["simhit_module"].astype(np.uint16)

@@ -301,6 +301,8 @@ class T2Maker:
                     rename = {
                         "doublet_doublelayer_lower": "ls_doublelayer_lower",
                         "doublet_doublelayer_upper": "ls_doublelayer_upper",
+                        "doublet_glayer_lower": "ls_glayer_lower",
+                        "doublet_glayer_upper": "ls_glayer_upper",
                         "doublet_module_lower": "ls_module_lower",
                         "doublet_module_upper": "ls_module_upper",
                         "doublet_sensor_lower": "ls_sensor_lower",
@@ -314,9 +316,11 @@ class T2Maker:
                     }
                     segments = segments.rename(columns=rename)
 
-                    # assign module and sensor from lower doublet (arbitrary choice)
+                    # assign features from lower doublet (arbitrary choice)
                     segments["ls_module"] = segments["ls_module_lower"]
                     segments["ls_sensor"] = segments["ls_sensor_lower"]
+                    segments["ls_glayer"] = segments["ls_glayer_lower"]
+                    segments["ls_glayer_div_2"] = segments["ls_glayer"] // 2
 
                     # and drop other cols
                     dropcols = ["i_mcp_lower", "i_mcp_upper"]

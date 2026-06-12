@@ -291,6 +291,17 @@ NICKNAME_TO_SYSTEM = {
     value: key for key, value in NICKNAMES.items()
 }
 
+# For converting system layer to global layer
+LAYER_OFFSET = np.array([
+    0, # NOT_USED
+    0, # VERTEX_TRACKER_BARREL
+    0, # VERTEX_TRACKER_ENDCAP
+    0, # INNER_TRACKER_BARREL
+    0, # INNER_TRACKER_ENDCAP
+    8, # OUTER_TRACKER_BARREL
+    0, # OUTER_TRACKER_ENDCAP
+])
+
 # Do not change this easily
 # Its measured for 2 GeV muons
 # We multiply by 2 to speed up the processing (fewer slices)
