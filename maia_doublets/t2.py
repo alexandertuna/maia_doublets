@@ -320,7 +320,7 @@ class T2Maker:
                     segments["ls_module"] = segments["ls_module_lower"]
                     segments["ls_sensor"] = segments["ls_sensor_lower"]
                     segments["ls_glayer"] = segments["ls_glayer_lower"]
-                    segments["ls_glayer_div_2"] = segments["ls_glayer"] // 2
+                    segments["ls_gdoublelayer"] = segments["ls_glayer"] // 2
 
                     # and drop other cols
                     dropcols = ["i_mcp_lower", "i_mcp_upper"]
