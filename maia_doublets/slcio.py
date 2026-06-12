@@ -31,16 +31,12 @@ class HitMaker:
             load_geometry: bool,
             signal: bool,
             sim: bool,
-            inner: bool,
-            outer: bool,
-            layers: list[int],
+            layers: dict[int, set[int]],
         ):
         self.slcio_file_paths = slcio_file_paths
         self.load_geometry = load_geometry
         self.signal = signal
         self.sim = sim
-        self.inner = inner
-        self.outer = outer
         self.layers = layers
 
 
@@ -71,8 +67,6 @@ class HitMaker:
             load_geometry = [self.load_geometry]*n_map
             signal = [self.signal]*n_map
             sim = [self.sim]*n_map
-            inner = [self.inner]*n_map
-            outer = [self.outer]*n_map
             layers = [self.layers]*n_map
             results = pool.starmap(
                 convert_one_file,
@@ -81,8 +75,6 @@ class HitMaker:
                     load_geometry,
                     signal,
                     sim,
-                    inner,
-                    outer,
                     layers,
                 )
             )
@@ -120,9 +112,7 @@ def convert_one_file(
         load_geometry: bool,
         signal: bool,
         use_sim: bool,
-        inner: bool,
-        outer: bool,
-        layers: list[int],
+        layers: dict[int, set[int]],
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # import here to avoid:
@@ -139,6 +129,32 @@ def convert_one_file(
         msg = f"File {slcio_file_path} does not exist"
         logger.error(msg)
         raise FileNotFoundError(msg)
+
+    # collections to process
+    if use_sim:
+        collections = [
+            # Sim hits
+            INNER_TRACKER_BARREL_COLLECTION,
+            OUTER_TRACKER_BARREL_COLLECTION,
+        ]
+    else:
+        if signal:
+            collections = [
+                # Relations, which contain sim hits and digi hits
+                INNER_TRACKER_BARREL_RELATIONS,
+                OUTER_TRACKER_BARREL_RELATIONS,
+            ]
+        else:
+            collections = [
+                # Digi hits
+                INNER_TRACKER_BARREL_HITS,
+                OUTER_TRACKER_BARREL_HITS,
+            ]
+
+    if len(collections) == 0:
+        msg = f"No tracker collections selected for file {os.path.basename(slcio_file_path)}"
+        logger.error(msg)
+        raise ValueError(msg)
 
     # open the SLCIO file
     logger.info(f"Processing file {slcio_file_path} ...")
@@ -190,29 +206,6 @@ def convert_one_file(
                 'mcp_endpoint_z': mcp_endpoint_z[i_mcp],
             })
 
-        # choose trackers
-        collections = []
-        if inner:
-            if use_sim:
-                collections.append(INNER_TRACKER_BARREL_COLLECTION)
-            else:
-                if signal:
-                    collections.append(INNER_TRACKER_BARREL_RELATIONS)
-                else:
-                    collections.append(INNER_TRACKER_BARREL_HITS)
-        if outer:
-            if use_sim:
-                collections.append(OUTER_TRACKER_BARREL_COLLECTION)
-            else:
-                if signal:
-                    collections.append(OUTER_TRACKER_BARREL_RELATIONS)
-                else:
-                    collections.append(OUTER_TRACKER_BARREL_HITS)
-        if len(collections) == 0:
-            msg = f"No tracker collections selected for file {os.path.basename(slcio_file_path)}"
-            logger.error(msg)
-            raise ValueError(msg)
-
         # inspect tracking detectors
         for collection in collections:
 
@@ -238,8 +231,11 @@ def convert_one_file(
 
                 # consider a particular set of layers
                 cellid0 = simhit.getCellID0() if use_sim else hit.getCellID0()
+                system = np.right_shift(cellid0, 0) & 0b1_1111
                 layer = np.right_shift(cellid0, 7) & 0b11_1111
-                if layer not in layers:
+                if system not in layers:
+                    continue
+                if layer not in layers[system]:
                     continue
                 # module 0 only, sensor 20 only?
                 # if (np.right_shift(hit.getCellID0(), 13) & 0b111_1111_1111) != 0:

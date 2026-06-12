@@ -9,7 +9,7 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import SIGNAL, NO_MCP
+from maia_doublets.constants import SIGNAL, NICKNAME_TO_SYSTEM
 from maia_doublets.datasets import get_filepaths, parse_filepaths
 from maia_doublets.slcio import HitMaker
 from maia_doublets.md import MDMaker
@@ -44,13 +44,14 @@ def main():
         )
     if not fnames:
         raise ValueError("No input files found")
+    if not ops.layers:
+        raise ValueError("At least one layer must be specified")
+    layers = parse_layers(ops.layers)
     geometry = ops.geometry
     signal = any(SIGNAL in os.path.basename(fname) for fname in fnames) or ops.signal
     cut_mds = ops.cut_mds or not signal
     cut_t2s = ops.cut_t2s or not signal
     cut_t4s = ops.cut_t4s or not signal
-    if not ops.inner and not ops.outer:
-        raise ValueError("At least one of --inner or --outer must be specified")
     if not ops.sim and not ops.digi:
         raise ValueError("At least one of --sim or --digi must be specified")
     if ops.sim and ops.digi:
@@ -59,9 +60,8 @@ def main():
     # log some info
     logger.info(f"Detected {'signal' if signal else 'background'} files")
     logger.info(f"Found {len(fnames)} files")
-    logger.info(f"Inner tracker: {ops.inner}")
-    logger.info(f"Outer tracker: {ops.outer}")
-    logger.info(f"Layers to consider: {ops.layers}")
+    logger.info(f"Layers provided: {ops.layers}")
+    logger.info(f"Layers decoded: {layers}")
     logger.info(f"Cut MDs: {cut_mds}")
     logger.info(f"Cut T2s: {cut_t2s}")
     logger.info(f"Cut T4s: {cut_t4s}")
@@ -88,9 +88,7 @@ def main():
                                 load_geometry=geometry,
                                 signal=signal,
                                 sim=ops.sim,
-                                inner=ops.inner,
-                                outer=ops.outer,
-                                layers=ops.layers,
+                                layers=layers,
                                 )
             mcps, simhits = converter.convert()
 
@@ -193,12 +191,15 @@ def main():
 
 
 def options():
+    preset = [
+        "ITB4", "ITB5", "ITB6", "ITB7",
+        "OTB0", "OTB1", "OTB2", "OTB3",
+        "OTB4", "OTB5", "OTB6", "OTB7",
+    ]
     parser = argparse.ArgumentParser(usage=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-i", default=[], help="Input slcio file or glob pattern")
-    parser.add_argument("--layers", nargs="+", type=int, default=[0, 1, 2, 3, 4, 5, 6, 7], help="List of layers to consider")
     parser.add_argument("--geometry", action="store_true", help="Load compact geometry from xml")
-    parser.add_argument("--inner", action="store_true", help="Include inner tracker hits in the analysis")
-    parser.add_argument("--outer", action="store_true", help="Include outer tracker hits in the analysis")
+    parser.add_argument("--layers", nargs="+", type=str, default=preset, help="List of layers to consider")
     parser.add_argument("--sim", action="store_true", help="Use sim hits in the analysis")
     parser.add_argument("--digi", action="store_true", help="Use digi hits in the analysis")
     parser.add_argument("--plot", action="store_true", help="Include plots in the analysis")
@@ -220,6 +221,30 @@ def options():
     parser.add_argument("--background100", action="store_true", help="Use background files (100 percent) in the analysis")
     parser.add_argument("--debug", action="store_true", help="Print some debug information")
     return parser.parse_args()
+
+
+def parse_layers(layers_str_list: list[str]) -> dict[int, set[int]]:
+    """
+    Parse layers like ITB4, OTB3, etc. into a dict of {system: set of layers}
+    e.g. ["ITB4", "OTB3"] -> {INNER_TRACKER_BARREL: {4}, OUTER_TRACKER_BARREL: {3}}
+    """
+    dict_of_system_layer_pairs = {}
+    for layer_str in layers_str_list:
+        if len(layer_str) != len("ITB4"):
+            raise ValueError(f"Invalid layer specified: {layer_str}")
+        layer = int(layer_str[-1])
+        system_str = layer_str[:-1]
+        system = parse_system(system_str)
+        if system not in dict_of_system_layer_pairs:
+            dict_of_system_layer_pairs[system] = set()
+        dict_of_system_layer_pairs[system].add(layer)
+    return dict_of_system_layer_pairs
+
+
+def parse_system(system_str: str) -> int:
+    if len(system_str) != len("OTB"):
+        raise ValueError(f"Invalid system specified: {system_str}")
+    return NICKNAME_TO_SYSTEM[system_str]
 
 
 def debug_statements(
