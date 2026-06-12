@@ -287,6 +287,10 @@ NICKNAMES = {
     INNER_TRACKER_BARREL: "ITB",
     OUTER_TRACKER_BARREL: "OTB",
 }
+NICKNAME_TO_SYSTEM = {
+    "ITB": INNER_TRACKER_BARREL,
+    "OTB": OUTER_TRACKER_BARREL,
+}
 
 # Do not change this easily
 # Its measured for 2 GeV muons
