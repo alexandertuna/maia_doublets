@@ -39,17 +39,9 @@ class T4Maker:
             "ls_eta_slice",
         ]
 
-        self.prep_t2s()
         self.filter_t2s()
         self.sort_t2s()
         self.make_t4s()
-
-
-
-    def prep_t2s(self) -> None:
-        logger.info("Preprocessing T2s for T4 making ...")
-        self.t2s["ls_doublelayer_div_4"] = self.t2s["ls_doublelayer"] // 4
-        self.t2s["ls_doublelayer_mod_4"] = self.t2s["ls_doublelayer"] % 4
 
 
     def filter_t2s(self):
@@ -94,9 +86,11 @@ class T4Maker:
         all_t4s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
             logger.info(f"Making T4s from gdl={lower} and gdl={upper} ...")
-            lower = t2s[lower]
-            upper = t2s[upper]
-            t4s, cutflow = self.make_t4s_from_lower_upper(lower, upper)
+            lower_df = t2s[lower]
+            upper_df = t2s[upper]
+            t4s, cutflow = self.make_t4s_from_lower_upper(lower_df, upper_df)
+            for col in cutflow:
+                logger.info(f"T4s cutflow, gdl={lower}-{upper}, {col}: {cutflow[col]}")
             all_t4s.append(t4s)
             all_cutflows.append(cutflow)
 
@@ -108,9 +102,6 @@ class T4Maker:
         cutflow = pd.DataFrame(all_cutflows)
         for col in cutflow.columns:
             logger.info(f"T4s cutflow, {col}: {cutflow[col].sum()}")
-        if not self.cut_t4s:
-            col = "t4_ok"
-            logger.info(f"T4s cutflow, {col}: {self.df[col].sum()}")
 
         # announce memory
         memory = self.df.memory_usage(deep=True).sum() * BYTE_TO_MB
@@ -274,9 +265,9 @@ class T4Maker:
         )
 
         # remove as desired
+        for cut in [col for col in t4s.columns if col.startswith("t4_ok")]:
+            cutflow[cut] = np.sum(t4s[cut])
         if self.cut_t4s:
-            for cut in [col for col in t4s.columns if col.startswith("t4_ok")]:
-                cutflow[cut] = np.sum(t4s[cut])
             t4s = t4s[t4s["t4_ok"]]
 
         # fin
