@@ -88,14 +88,14 @@ class Plotter:
         with PdfPages(self.pdf) as pdf:
             # self.plot_numbers_for_comparison(pdf)
             self.write_date(pdf)
-            self.write_quality_cuts(pdf)
+            # self.write_quality_cuts(pdf)
             self.plot_time(pdf)
             # self.plot_layer_occupancy_1d(pdf)
             # self.plot_layer_occupancy_2d(pdf)
             self.plot_radius_vs_layer(pdf)
             # self.plot_doublet_occupancy(pdf)
-            # self.plot_doublet_features(pdf)
-            # self.plot_linesegment_features(pdf)
+            self.plot_md_features(pdf)
+            self.plot_t2_features(pdf)
             # self.plot_t4_features(pdf)
             if self.signal:
                 self.write_denominator_info(pdf)
@@ -106,7 +106,7 @@ class Plotter:
                 # self.plot_doublet_quality_efficiency(pdf)
                 # self.plot_segment_efficiency_vs_kinematics(pdf)
                 # self.plot_segment_quality_efficiency(pdf)
-                self.plot_t4_efficiency_vs_kinematics_overall(pdf)
+                # self.plot_t4_efficiency_vs_kinematics_overall(pdf)
                 # self.plot_t4_efficiency_vs_kinematics(pdf)
                 # self.plot_t4_quality_efficiency(pdf)
 
@@ -705,7 +705,7 @@ class Plotter:
         return mask
 
 
-    def plot_doublet_features(self, pdf: PdfPages):
+    def plot_md_features(self, pdf: PdfPages):
         logger.info("Plotting doublet features ...")
         baseline = self.baseline_doublet_mask() if self.signal else np.ones(len(self.doublets), dtype=bool)
 
@@ -934,7 +934,7 @@ class Plotter:
         )
 
 
-    def plot_linesegment_features(self, pdf: PdfPages):
+    def plot_t2_features(self, pdf: PdfPages):
         logger.info("Plotting linesegment features ...")
         baseline = self.baseline_linesegment_mask() if self.signal else np.ones(len(self.linesegments), dtype=bool)
 
