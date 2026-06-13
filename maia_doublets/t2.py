@@ -81,7 +81,7 @@ class T2Maker:
 
         # make T2s from neighboring doublelayers
         gdoublelayer_pairs = [
-            # (2, 3),
+            (2, 3),
             (4, 5),
             (6, 7),
         ]
@@ -91,9 +91,11 @@ class T2Maker:
             if lower not in mds or upper not in mds:
                 logger.warning(f"Missing gdl={lower} or gdl={upper}, skipping ...")
                 continue
-            lower = mds[lower]
-            upper = mds[upper]
-            t2s, cutflow = self.make_t2s_from_lower_upper(lower, upper)
+            lower_df = mds[lower]
+            upper_df = mds[upper]
+            t2s, cutflow = self.make_t2s_from_lower_upper(lower_df, upper_df)
+            for col in cutflow:
+                logger.info(f"T2s cutflow, gdl={lower}-{upper}, {col}: {cutflow[col]}")
             all_t2s.append(t2s)
             all_cutflows.append(cutflow)
 
@@ -105,9 +107,6 @@ class T2Maker:
         cutflow = pd.DataFrame(all_cutflows)
         for col in cutflow.columns:
             logger.info(f"T2s cutflow, {col}: {cutflow[col].sum()}")
-        if not self.cut_line_segments and not self.df.empty:
-            col = "ls_ok"
-            logger.info(f"T2s cutflow, {col}: {self.df[col].sum()}")
 
         # announce memory
         memory = self.df.memory_usage(deep=True).sum() * BYTE_TO_MB
@@ -315,9 +314,9 @@ class T2Maker:
         )
 
         # remove as desired
+        for cut in [col for col in segments.columns if col.startswith("ls_ok")]:
+            cutflow[cut] = np.sum(segments[cut])
         if self.cut_line_segments:
-            for cut in [col for col in segments.columns if col.startswith("ls_ok")]:
-                cutflow[cut] = np.sum(segments[cut])
             segments = segments[segments["ls_ok"]]
 
         # fin
