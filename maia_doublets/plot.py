@@ -96,7 +96,7 @@ class Plotter:
             # self.plot_doublet_occupancy(pdf)
             self.plot_md_features(pdf)
             self.plot_t2_features(pdf)
-            # self.plot_t4_features(pdf)
+            self.plot_t4_features(pdf)
             if self.signal:
                 self.write_denominator_info(pdf)
                 # self.plot_detectable_efficiency_vs_kinematics(pdf)
@@ -1283,10 +1283,10 @@ class Plotter:
                 # True,
             ]:
 
-                groupby_cols = ["t4_system", "t4_doublelayer"]
-                for ((system, doublelayer), group) in self.t4s[baseline].groupby(groupby_cols):
+                # groupby_cols = ["t4_system", "t4_doublelayer"]
+                # for ((system, doublelayer), group) in self.t4s[baseline].groupby(groupby_cols):
 
-                        # logger.info(f"Plotting signal linesegment feature {feature}, system {system}, doublelayer {doublelayer} ...")
+                for (gdoublelayer, group) in self.t4s[baseline].groupby("t4_gdoublelayer"):
 
                         fig, ax = plt.subplots()
                         ax.hist(
@@ -1308,9 +1308,9 @@ class Plotter:
                         ax.set_ylim(0.8 if ax.get_yscale() == "log" else 0, None)
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("T4s")
-                        ax.set_title(f"{NICKNAMES[system]}. DL={doublelayer}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+                        ax.set_title(f"GDL={gdoublelayer}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
                         ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
-                        logger.info(f"{NICKNAMES[system]} doublelayer {doublelayer} {feature}: 99.7% in {p997:{fmt}}")
+                        logger.info(f"GDL {gdoublelayer} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
 
