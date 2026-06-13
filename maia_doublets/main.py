@@ -145,14 +145,14 @@ def main():
     # make t4s
     with Timer() as t4_time:
         t4s = None
-        # t4s = T4Maker(
-        #     geometry_version=ops.geo,
-        #     sim=ops.sim,
-        #     smear=ops.smear,
-        #     signal=signal,
-        #     t2s=t2s,
-        #     cut_t4s=cut_t4s,
-        # ).df
+        t4s = T4Maker(
+            geometry_version=ops.geo,
+            sim=ops.sim,
+            smear=ops.smear,
+            signal=signal,
+            t2s=t2s,
+            cut_t4s=cut_t4s,
+        ).df
 
     # plot stuff
     with Timer() as plot_time:
