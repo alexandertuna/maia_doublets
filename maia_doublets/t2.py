@@ -88,6 +88,9 @@ class T2Maker:
         all_t2s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
             logger.info(f"Making T2s from gdl={lower} and gdl={upper} ...")
+            if lower not in mds or upper not in mds:
+                logger.warning(f"Missing gdl={lower} or gdl={upper}, skipping ...")
+                continue
             lower = mds[lower]
             upper = mds[upper]
             t2s, cutflow = self.make_t2s_from_lower_upper(lower, upper)
@@ -96,13 +99,13 @@ class T2Maker:
 
         # merge dataframes
         logger.info(f"Merging {len(all_t2s)} groups of T2s ...")
-        self.df = pd.concat(all_t2s, ignore_index=True)
+        self.df = pd.concat(all_t2s, ignore_index=True) if len(all_t2s) > 0 else pd.DataFrame()
 
         # merge cutflow
         cutflow = pd.DataFrame(all_cutflows)
         for col in cutflow.columns:
             logger.info(f"T2s cutflow, {col}: {cutflow[col].sum()}")
-        if not self.cut_line_segments:
+        if not self.cut_line_segments and not self.df.empty:
             col = "ls_ok"
             logger.info(f"T2s cutflow, {col}: {self.df[col].sum()}")
 
