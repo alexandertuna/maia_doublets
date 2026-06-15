@@ -18,6 +18,7 @@ from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
 from maia_doublets.constants import NICKNAMES, LAYER_OFFSET
+from maia_doublets.constants import MUON, ONE_POINT_FIVE_GEV, BARREL_TRACKER_MAX_ETA, ZERO_POINT_ZERO_ONE_MM
 
 _detector = None
 _surfman = None
@@ -394,6 +395,15 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
         df["simhit_costheta"] = (df["simhit_x"] * df["simhit_px"] +
                                  df["simhit_y"] * df["simhit_py"] +
                                  df["simhit_z"] * df["simhit_pz"]) / (df["simhit_R"] * df["simhit_p"])
+        df["simhit_from_fiducial_mcp"] = (
+            (df["i_mcp"] != NO_MCP) &
+            (np.abs(df["mcp_pdg"]) == MUON) &
+            (df["mcp_q"] != 0) &
+            (df["mcp_pt"] > ONE_POINT_FIVE_GEV) &
+            (np.abs(df["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &
+            (df["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
+            (np.abs(df["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM)
+        )
         df["simhit_first_exit"] = (
             (df["simhit_t_corrected"] < MAX_TIME) &
             (df["simhit_costheta"] > MIN_COSTHETA) &
@@ -426,6 +436,7 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
     df["simhit_sensor"] = df["simhit_sensor"].astype(np.uint16)
     if signal:
         df["simhit_first_exit"] = df["simhit_first_exit"].astype(bool)
+        df["simhit_from_fiducial_mcp"] = df["simhit_from_fiducial_mcp"].astype(bool)
 
     # sort columns alphabetically
     return df[sorted(df.columns)]

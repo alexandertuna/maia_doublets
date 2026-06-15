@@ -150,6 +150,7 @@ class MDMaker:
             doublets["i_mcp"] = doublets["i_mcp_lower"].where(mcp_ok, NO_MCP)
             if self.signal:
                 doublets["doublet_first_exit"] = doublets["simhit_first_exit_lower"] & doublets["simhit_first_exit_upper"]
+                doublets["doublet_from_fiducial_mcp"] = doublets["simhit_from_fiducial_mcp_lower"] & doublets["simhit_from_fiducial_mcp_upper"]
                 for attr in [
                     "mcp_pt",
                     "mcp_eta",

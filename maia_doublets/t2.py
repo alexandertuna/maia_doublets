@@ -211,6 +211,7 @@ class T2Maker:
         segments["i_mcp"] = segments["i_mcp_lower"].where(mcp_ok, NO_MCP)
         if self.signal:
             segments["ls_first_exit"] = segments["doublet_first_exit_lower"] & segments["doublet_first_exit_upper"]
+            segments["ls_from_fiducial_mcp"] = segments["doublet_from_fiducial_mcp_lower"] & segments["doublet_from_fiducial_mcp_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",

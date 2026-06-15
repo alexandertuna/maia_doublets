@@ -117,6 +117,8 @@ class T4Maker:
         """
         # get combinations of lower and upper
         # within neighboring phi/eta slices
+        logger.info(f"Total number of lower T2s: {len(lower)}")
+        logger.info(f"Total number of upper T2s: {len(upper)}")
         cands = []
         for phi_shift in (-1, 0, 1):
             for eta_shift in (-1, 0, 1):
@@ -156,6 +158,7 @@ class T4Maker:
         t4s["i_mcp"] = t4s["i_mcp_lower"].where(mcp_ok, NO_MCP)
         if self.signal:
             t4s["t4_first_exit"] = t4s["ls_first_exit_lower"] & t4s["ls_first_exit_upper"]
+            t4s["t4_from_fiducial_mcp"] = t4s["ls_from_fiducial_mcp_lower"] & t4s["ls_from_fiducial_mcp_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",
@@ -263,6 +266,21 @@ class T4Maker:
             t4s["t4_ok_chi2xy"] &
             np.ones(len(t4s), dtype=bool)
         )
+        if self.signal:
+            t4s["t4_ok_mcp"] = t4s["i_mcp"] != NO_MCP
+            t4s["t4_ok_first_exit"] = t4s["t4_first_exit"] == True
+            t4s["t4_ok_from_fiducial_mcp"] = t4s["t4_from_fiducial_mcp"] == True
+            t4s["t4_ok_yanxi"] = (
+                t4s["t4_ok_dphi"] &
+                t4s["t4_ok_dz"] &
+                t4s["t4_ok_dr"] &
+                t4s["t4_ok_dthetarz"] &
+                t4s["t4_ok_chi2xy"] &
+                t4s["t4_ok_first_exit"] &
+                t4s["t4_ok_from_fiducial_mcp"] &
+                t4s["t4_ok_mcp"] &
+                np.ones(len(t4s), dtype=bool)
+            )
 
         # remove as desired
         for cut in [col for col in t4s.columns if col.startswith("t4_ok")]:
