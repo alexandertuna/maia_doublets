@@ -225,7 +225,7 @@ def convert_one_file(
                     else:
                         simhit, hit = None, obj
 
-                if i_obj > 0 and i_obj % 1000000 == 0:
+                if i_obj > 0 and i_obj % 1e6 == 0:
                     logger.info(f"Processing file {os.path.basename(slcio_file_path)} "
                                 f"event {i_event} collection {collection} "
                                 f"hit {i_obj}/{n_obj} ...")
@@ -411,8 +411,11 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
         )
 
     # remove unused columns
+    drop_cols = [
+        "simhit_cellid0",
+    ]
     if signal:
-        drop_cols = [
+        drop_cols += [
             "simhit_px",
             "simhit_py",
             "simhit_pz",
@@ -424,7 +427,6 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
     df["file"] = df["file"].astype(np.uint32)
     df["i_event"] = df["i_event"].astype(np.uint32)
     df["i_mcp"] = df["i_mcp"].astype(np.uint32)
-    df["simhit_cellid0"] = df["simhit_cellid0"].astype(np.uint32)
     df["simhit_inside_bounds"] = df["simhit_inside_bounds"].astype(np.uint8)
     df["simhit_side"] = df["simhit_side"].astype(np.uint8)
     df["simhit_system"] = df["simhit_system"].astype(np.uint8)
@@ -434,6 +436,11 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
     df["simhit_layer_mod_2"] = df["simhit_layer_mod_2"].astype(np.uint8)
     df["simhit_module"] = df["simhit_module"].astype(np.uint16)
     df["simhit_sensor"] = df["simhit_sensor"].astype(np.uint16)
+    df["simhit_x"] = df["simhit_x"].astype(np.float32)
+    df["simhit_y"] = df["simhit_y"].astype(np.float32)
+    df["simhit_z"] = df["simhit_z"].astype(np.float32)
+    df["simhit_r"] = df["simhit_r"].astype(np.float32)
+    df["simhit_t_corrected"] = df["simhit_t_corrected"].astype(np.float32)
     if signal:
         df["simhit_first_exit"] = df["simhit_first_exit"].astype(bool)
         df["simhit_from_fiducial_mcp"] = df["simhit_from_fiducial_mcp"].astype(bool)
