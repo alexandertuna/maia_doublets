@@ -107,6 +107,69 @@ def init_worker():
         _maps = {name: _surfman.map(det.name()) for name, det in dets.items()}
 
 
+def convert_one_root_file(
+        root_file_path: str,
+        file_number: int,
+        load_geometry: bool,
+        signal: bool,
+        use_sim: bool,
+        layers: dict[int, set[int]],
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Parse a ROOT file for MCParticles and simhits, returning two DataFrames.
+    This is an alternative to convert_one_file that uses uproot instead of pyLCIO.
+    """
+
+    import uproot
+
+    rf = uproot.open(root_file_path)
+    evs = rf["events"]
+
+    if not use_sim:
+        raise NotImplementedError("ROOT file parsing is not implemented for digi hits or relations")
+
+    names = {
+        "MCParticle.momentum.x": "mcp_px",
+        "MCParticle.momentum.y": "mcp_py",
+        "MCParticle.momentum.z": "mcp_pz",
+        "MCParticle.mass": "mcp_m",
+        "MCParticle.charge": "mcp_q",
+        "MCParticle.PDG": "mcp_pdg",
+        "MCParticle.vertex.x": "mcp_vertex_x",
+        "MCParticle.vertex.y": "mcp_vertex_y",
+        "MCParticle.vertex.z": "mcp_vertex_z",
+        "MCParticle.endpoint.x": "mcp_endpoint_x",
+        "MCParticle.endpoint.y": "mcp_endpoint_y",
+        "MCParticle.endpoint.z": "mcp_endpoint_z",
+    }
+    data = evs.arrays(list(names.keys()), library="np")
+
+    # metadata: event number and mcp index within event
+    i_events, i_mcps = [], []
+    for i_event, branch in enumerate(data["MCParticle.PDG"]):
+        n_mcps = len(branch)
+        i_events.extend([i_event]*n_mcps)
+        i_mcps.extend(list(range(n_mcps)))
+
+    # numpify the data
+    for key in names:
+        data[key] = np.concatenate(data[key])
+
+    # convert to DataFrame
+    mcps = pd.DataFrame(data).rename(columns=names)
+    mcps["file"] = file_number
+    mcps["i_event"] = i_events
+    mcps["i_mcp"] = i_mcps
+
+    # only keep muons for now
+    mask = np.abs(mcps["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)
+    mcps = mcps[mask].reset_index(drop=True)
+
+    # post-process
+    mcps = postprocess_mcps(mcps)
+    return mcps, pd.DataFrame()  # dummy simhits DataFrame for now
+
+
 def convert_one_file(
         slcio_file_path: str,
         file_number: int,
@@ -367,6 +430,8 @@ def postprocess_mcps(df: pd.DataFrame) -> pd.DataFrame:
     df["file"] = df["file"].astype(np.uint32)
     df["i_event"] = df["i_event"].astype(np.uint32)
     df["i_mcp"] = df["i_mcp"].astype(np.uint32)
+    df["mcp_pdg"] = df["mcp_pdg"].astype(np.int32)
+    df["mcp_q"] = df["mcp_q"].astype(np.float32)
 
     # sort columns alphabetically
     return df[sorted(df.columns)]
