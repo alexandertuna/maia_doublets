@@ -3,6 +3,7 @@ import os
 import sys
 import numpy as np
 import pandas as pd
+import uproot
 import multiprocessing as mp
 import logging
 logger = logging.getLogger(__name__)
@@ -54,6 +55,15 @@ class HitMaker:
         ]).size()
         for (system, layer), total in counts.items():
             logger.info(f"N(simhits) in system {system} layer {layer}: {total}")
+        # tmp debug
+        # fname = self.slcio_file_paths[0] + ".root"
+        # root_mcps, root_hits = convert_one_root_file(fname, 0, self.load_geometry, self.signal, self.sim, self.layers)
+        # lcio_mcps = mcps
+        # lcio_hits = simhits
+        # print("root_hits\n", root_hits)
+        # print("lcio_hits\n", lcio_hits)
+        # raise NotImplementedError("Testing purposes")
+        # end tmp debug
         return mcps, simhits
 
 
@@ -119,15 +129,75 @@ def convert_one_root_file(
     Parse a ROOT file for MCParticles and simhits, returning two DataFrames.
     This is an alternative to convert_one_file that uses uproot instead of pyLCIO.
     """
-
-    import uproot
-
     rf = uproot.open(root_file_path)
     evs = rf["events"]
 
     if not use_sim:
         raise NotImplementedError("ROOT file parsing is not implemented for digi hits or relations")
 
+    logger.info(f"Converting ROOT file {root_file_path} to mcps ...")
+    mcps = convert_one_root_file_to_mcps(evs, file_number)
+
+    logger.info(f"Converting ROOT file {root_file_path} to hits ...")
+    hits = convert_one_root_file_to_hits(evs, file_number, signal, layers)
+
+    # get mcp information for each hit
+    pass
+
+    # post-process
+    logger.info(f"Post-processing DataFrames for ROOT file {root_file_path} ...")
+    mcps = postprocess_mcps(mcps)
+    # hits = postprocess_mcps(hits)
+    # hits = postprocess_simhtis(hits)
+
+    return mcps, hits
+
+
+def convert_one_root_file_to_hits(evs: uproot.TTree,
+                                  file_number: int,
+                                  signal: bool,
+                                  layers: dict[int, set[int]],
+                                  ) -> pd.DataFrame:
+
+    col = INNER_TRACKER_BARREL_COLLECTION
+    names = {
+        f"{col}.position.x": "simhit_x",
+        f"{col}.position.y": "simhit_y",
+        f"{col}.position.z": "simhit_z",
+        f"{col}.time": "simhit_time",
+        f"{col}.cellID": "simhit_cellid0",
+    }
+    if signal:
+        names |= {
+            f"_{col}_particle.index": "i_mcp",
+            f"{col}.momentum.x": "simhit_px",
+            f"{col}.momentum.y": "simhit_py",
+            f"{col}.momentum.z": "simhit_pz",
+            f"{col}.eDep": "simhit_e",
+            f"{col}.pathLength": "simhit_pathlength",
+        }
+    data = evs.arrays(list(names.keys()), library="np")
+
+    # metadata: event number
+    i_events = []
+    for i_event, branch in enumerate(data[f"{col}.time"]):
+        i_events.extend([i_event]*len(branch))
+
+    # numpify the data
+    for key in names:
+        data[key] = np.concatenate(data[key])
+
+    # convert to DataFrame
+    hits = pd.DataFrame(data).rename(columns=names)
+    hits["file"] = file_number
+    hits["i_event"] = i_events
+
+    return hits
+
+
+def convert_one_root_file_to_mcps(evs: uproot.TTree,
+                                  file_number: int,
+                                  ) -> pd.DataFrame:
     names = {
         "MCParticle.momentum.x": "mcp_px",
         "MCParticle.momentum.y": "mcp_py",
@@ -166,8 +236,7 @@ def convert_one_root_file(
     mcps = mcps[mask].reset_index(drop=True)
 
     # post-process
-    mcps = postprocess_mcps(mcps)
-    return mcps, pd.DataFrame()  # dummy simhits DataFrame for now
+    return mcps
 
 
 def convert_one_file(
