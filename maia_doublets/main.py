@@ -107,6 +107,7 @@ def main():
             doublets = pd.read_pickle(ops.read_mds)
         else:
             # make mini-doublets from hits
+            doublets = None
             doublets = MDMaker(
                 geometry_version=ops.geo,
                 signal=signal,
@@ -128,6 +129,7 @@ def main():
             t2s = pd.read_pickle(ops.read_t2s)
         else:
             # make T2s (line segments) from mini-doublets
+            t2s = None
             t2s = T2Maker(
                 geometry_version=ops.geo,
                 sim=ops.sim,
@@ -192,6 +194,7 @@ def main():
 
 def options():
     preset = [
+        # "ITB0", "ITB1", "ITB2", "ITB3",
         "ITB4", "ITB5", "ITB6", "ITB7",
         "OTB0", "OTB1", "OTB2", "OTB3",
         "OTB4", "OTB5", "OTB6", "OTB7",
