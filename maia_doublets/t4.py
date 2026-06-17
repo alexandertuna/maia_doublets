@@ -79,7 +79,7 @@ class T4Maker:
 
         # make T4s from neighboring doublelayers
         gdoublelayer_pairs = [
-            (2, 4),
+            # (2, 4),
             (4, 6),
             # (2, 6),
         ]
@@ -252,12 +252,13 @@ class T4Maker:
         cutflow = {"all": len(t4s)}
 
         # record some cut results
-        gdl = t4s["t4_gdoublelayer"]
+        gdl_l = t4s["t4_gdoublelayer_lower"]
+        gdl_u = t4s["t4_gdoublelayer_upper"]
         t4s["t4_ok_dphi"] = np.abs(t4s["t4_dphi"]) < np.pi / 2.0
-        t4s["t4_ok_dz"] = np.abs(t4s["t4_dz"]) < self.T4_DZ_CUT[gdl]
-        t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl]
-        t4s["t4_ok_dthetarz"] = np.abs(t4s["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl]
-        t4s["t4_ok_chi2xy"] = np.abs(t4s[f"t4_chi2_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl]
+        t4s["t4_ok_dz"] = np.abs(t4s["t4_dz"]) < self.T4_DZ_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_dthetarz"] = np.abs(t4s["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2xy"] = np.abs(t4s[f"t4_chi2_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
         t4s["t4_ok"] = (
             t4s["t4_ok_dphi"] &
             t4s["t4_ok_dz"] &
