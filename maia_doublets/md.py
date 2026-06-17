@@ -129,7 +129,7 @@ class MDMaker:
             doublets["doublet_q"] = (-1*np.sign(doublets["doublet_dphi"])).astype(np.int8)
 
             # pass-through the simhit positions
-            for coord in ["x", "y", "r"]:
+            for coord in ["x", "y", "r", "z"]:
                 doublets[f"doublet_{coord}_0"] = doublets[f"simhit_{coord}_lower"]
                 doublets[f"doublet_{coord}_1"] = doublets[f"simhit_{coord}_upper"]
 

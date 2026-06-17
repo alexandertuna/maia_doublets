@@ -244,7 +244,7 @@ class T2Maker:
         segments["ls_dqoverpt"] = segments["doublet_qoverpt_upper"] - segments["doublet_qoverpt_lower"]
 
         # pass-through the simhit positions
-        for coord in ["x", "y", "r"]:
+        for coord in ["x", "y", "r", "z"]:
             segments[f"ls_{coord}_0"] = segments[f"doublet_{coord}_0_lower"]
             segments[f"ls_{coord}_1"] = segments[f"doublet_{coord}_1_lower"]
             segments[f"ls_{coord}_2"] = segments[f"doublet_{coord}_0_upper"]
