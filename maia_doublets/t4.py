@@ -79,9 +79,9 @@ class T4Maker:
 
         # make T4s from neighboring doublelayers
         gdoublelayer_pairs = [
-            # (2, 4),
+            (2, 4),
             (4, 6),
-            # (2, 6),
+            (2, 6),
         ]
         all_t4s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
@@ -172,7 +172,7 @@ class T4Maker:
                 t4s[attr] = t4s[f"{attr}_lower"].where(mcp_ok, 0)
 
         # pass-through the simhit positions
-        for coord in ["x", "y", "r"]:
+        for coord in ["x", "y", "r", "z"]:
             t4s[f"t4_{coord}_0"] = t4s[f"ls_{coord}_0_lower"]
             t4s[f"t4_{coord}_1"] = t4s[f"ls_{coord}_1_lower"]
             t4s[f"t4_{coord}_2"] = t4s[f"ls_{coord}_2_lower"]
@@ -191,7 +191,7 @@ class T4Maker:
         t4s["t4_dtheta_rz"] = t4s["ls_theta_rz_upper"] - t4s["ls_theta_rz_lower"]
         t4s["t4_dtheta_rz"] = (t4s["t4_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
 
-        # find the circle (radius, x_center, y_center) formed from the first three hits
+        # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
         i0, i1, i2 = 0, 4, 7
         ixs = [1, 2, 3, 5, 6]
@@ -210,13 +210,48 @@ class T4Maker:
         circle_ok = circle_d != 0
         if np.any(~circle_ok):
             logger.warning(f"Found {np.sum(~circle_ok)} invalid circles with circle_d = 0")
-        for ix in ixs:
-            circle_diff = np.sqrt((t4s[f"t4_x_{ix}"] - circle_x)**2 + (t4s[f"t4_y_{ix}"] - circle_y)**2) - circle_r
-            t4s[f"t4_chi2_{i0}{i1}{i2}_vs_{ix}"] = np.where(circle_ok, circle_diff**2, BAD_CHI2)
 
         # calculate the average diff
-        chi2cols = [f"t4_chi2_{i0}{i1}{i2}_vs_{ix}" for ix in ixs]
-        t4s[f"t4_chi2_{i0}{i1}{i2}"] = t4s[chi2cols].sum(axis=1)
+        diff2s = []
+        for ix in ixs:
+            circle_diff = np.sqrt((t4s[f"t4_x_{ix}"] - circle_x)**2 + (t4s[f"t4_y_{ix}"] - circle_y)**2) - circle_r
+            diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
+        t4s[f"t4_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
+
+        # calculate chi2 for sz fit, where s is the arc length along the circle
+        phi_i0 = np.arctan2(t4s[f"t4_y_{i0}"] - circle_y, t4s[f"t4_x_{i0}"] - circle_x)
+        phi_i1 = np.arctan2(t4s[f"t4_y_{i1}"] - circle_y, t4s[f"t4_x_{i1}"] - circle_x)
+        phi_i2 = np.arctan2(t4s[f"t4_y_{i2}"] - circle_y, t4s[f"t4_x_{i2}"] - circle_x)
+        dphi_00 = (phi_i0 - phi_i0 + np.pi) % (2 * np.pi) - np.pi
+        dphi_01 = (phi_i1 - phi_i0 + np.pi) % (2 * np.pi) - np.pi
+        dphi_02 = (phi_i2 - phi_i0 + np.pi) % (2 * np.pi) - np.pi
+        s_i0 = circle_r * dphi_00
+        s_i1 = circle_r * dphi_01
+        s_i2 = circle_r * dphi_02
+
+        # -------------------------- <Claude derivation> --------------------------
+        # stack per-point columns -> (N_tracks, 3)
+        S = np.stack([s_i0, s_i1, s_i2], axis=1)                      # arc lengths (s_i0 is all zeros)
+        Z = np.stack([t4s[f"t4_z_{i0}"],
+                      t4s[f"t4_z_{i1}"],
+                      t4s[f"t4_z_{i2}"]], axis=1)                     # z positions
+
+        # row-wise least-squares line  z = z0_ref + tanlambda * s
+        s_mean = S.mean(axis=1, keepdims=True)
+        z_mean = Z.mean(axis=1, keepdims=True)
+        ds, dz = S - s_mean, Z - z_mean
+
+        Sss = (ds * ds).sum(axis=1)                                  # (N,)
+        Ssz = (ds * dz).sum(axis=1)                                  # (N,)
+
+        tanlambda = Ssz / Sss                                        # (N,)
+        z0_ref    = z_mean.ravel() - tanlambda * s_mean.ravel()      # (N,)
+
+        # residuals + quality metric, one per track
+        resid = Z - (z0_ref[:, None] + tanlambda[:, None] * S)       # (N, 3)
+        t4s[f"t4_chi2_sz_{i0}{i1}{i2}"] = (resid ** 2).sum(axis=1)   # (N,)
+        # -------------------------- </Claude derivation> --------------------------
+
 
         # rename some things
         rename = {
@@ -258,13 +293,13 @@ class T4Maker:
         t4s["t4_ok_dz"] = np.abs(t4s["t4_dz"]) < self.T4_DZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dthetarz"] = np.abs(t4s["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
-        t4s["t4_ok_chi2xy"] = np.abs(t4s[f"t4_chi2_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2_xy"] = np.abs(t4s[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
         t4s["t4_ok"] = (
             t4s["t4_ok_dphi"] &
             t4s["t4_ok_dz"] &
             t4s["t4_ok_dr"] &
             t4s["t4_ok_dthetarz"] &
-            t4s["t4_ok_chi2xy"] &
+            t4s["t4_ok_chi2_xy"] &
             np.ones(len(t4s), dtype=bool)
         )
         if self.signal:
@@ -276,7 +311,7 @@ class T4Maker:
                 t4s["t4_ok_dz"] &
                 t4s["t4_ok_dr"] &
                 t4s["t4_ok_dthetarz"] &
-                t4s["t4_ok_chi2xy"] &
+                t4s["t4_ok_chi2_xy"] &
                 t4s["t4_ok_first_exit"] &
                 t4s["t4_ok_from_fiducial_mcp"] &
                 t4s["t4_ok_mcp"] &
@@ -445,11 +480,11 @@ class T4Maker:
                     logger.warning(f"Found {np.sum(~circle_ok)} invalid circles with circle_d = 0")
                 for ix in ixs:
                     circle_diff = np.sqrt((t4s[f"t4_x_{ix}"] - circle_x)**2 + (t4s[f"t4_y_{ix}"] - circle_y)**2) - circle_r
-                    t4s[f"t4_chi2_{i0}{i1}{i2}_vs_{ix}"] = np.where(circle_ok, circle_diff**2, BAD_CHI2)
+                    t4s[f"t4_chi2_xy_{i0}{i1}{i2}_vs_{ix}"] = np.where(circle_ok, circle_diff**2, BAD_CHI2)
 
                 # calculate the average diff
-                chi2cols = [f"t4_chi2_{i0}{i1}{i2}_vs_{ix}" for ix in ixs]
-                t4s[f"t4_chi2_{i0}{i1}{i2}"] = t4s[chi2cols].sum(axis=1)
+                chi2cols = [f"t4_chi2_xy_{i0}{i1}{i2}_vs_{ix}" for ix in ixs]
+                t4s[f"t4_chi2_xy_{i0}{i1}{i2}"] = t4s[chi2cols].sum(axis=1)
 
                 # rename some things
                 rename = {
@@ -488,7 +523,7 @@ class T4Maker:
                 t4s["t4_ok_dz"] = np.abs(t4s["t4_dz"]) < self.T4_DZ_CUT[dl]
                 t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[dl]
                 t4s["t4_ok_dthetarz"] = np.abs(t4s["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[dl]
-                t4s["t4_ok_chi2xy"] = np.abs(t4s[f"t4_chi2_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[dl]
+                t4s["t4_ok_chi2xy"] = np.abs(t4s[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[dl]
                 t4s["t4_ok"] = (
                     t4s["t4_ok_dphi"] &
                     t4s["t4_ok_dz"] &
