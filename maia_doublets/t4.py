@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
-from maia_doublets.constants import T4_DZ_CUT, T4_DR_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT
+from maia_doublets.constants import T4_DZ_CUT, T4_DR_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT, T4_CHI2_SZ_CUT
 from maia_doublets.constants import N_T4_PHI_SLICES
 
 class T4Maker:
@@ -30,6 +30,7 @@ class T4Maker:
         self.T4_DR_CUT = T4_DR_CUT[key]
         self.T4_DTHETA_RZ_CUT = T4_DTHETA_RZ_CUT[key]
         self.T4_CHI2_XY_CUT = T4_CHI2_XY_CUT[key]
+        self.T4_CHI2_SZ_CUT = T4_CHI2_SZ_CUT[key]
 
         # how to merge lower and upper T2s into T4s
         self.merge_keys = [
@@ -79,9 +80,9 @@ class T4Maker:
 
         # make T4s from neighboring doublelayers
         gdoublelayer_pairs = [
-            (2, 4),
+            # (2, 4),
             (4, 6),
-            (2, 6),
+            # (2, 6),
         ]
         all_t4s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
@@ -186,6 +187,10 @@ class T4Maker:
         t4s["t4_deta"] = t4s["ls_eta_upper"] - t4s["ls_eta_lower"]
         t4s["t4_dphi"] = t4s["ls_phi_upper"] - t4s["ls_phi_lower"]
         t4s["t4_dphi"] = (t4s["t4_dphi"] + np.pi) % (2 * np.pi) - np.pi
+        t4s["t4_eta"] = 0.5 * (t4s["ls_eta_upper"] + t4s["ls_eta_lower"])
+        t4s["t4_x"] = 0.5 * (t4s["ls_x_upper"] + t4s["ls_x_lower"])
+        t4s["t4_y"] = 0.5 * (t4s["ls_y_upper"] + t4s["ls_y_lower"])
+        t4s["t4_phi"] = np.arctan2(t4s["t4_y"], t4s["t4_x"])
 
         # angle differences (handle wraparound)
         t4s["t4_dtheta_rz"] = t4s["ls_theta_rz_upper"] - t4s["ls_theta_rz_lower"]
@@ -229,12 +234,25 @@ class T4Maker:
         s_i1 = circle_r * dphi_01
         s_i2 = circle_r * dphi_02
 
+        # -------------------------- temporary: save the s_i --------------------------
+        _phis = [ np.arctan2(t4s[f"t4_y_{it}"] - circle_y, t4s[f"t4_x_{it}"] - circle_x) for it in range(8) ]
+        _dphis = [ (phi - _phis[0] + np.pi) % (2 * np.pi) - np.pi for phi in _phis ]
+        _ss = [ circle_r * dphi for dphi in _dphis ]
+        for it in range(8):
+            t4s[f"t4_s_{it}"] = _ss[it]
+
         # -------------------------- <Claude derivation> --------------------------
         # stack per-point columns -> (N_tracks, 3)
-        S = np.stack([s_i0, s_i1, s_i2], axis=1)                      # arc lengths (s_i0 is all zeros)
-        Z = np.stack([t4s[f"t4_z_{i0}"],
-                      t4s[f"t4_z_{i1}"],
-                      t4s[f"t4_z_{i2}"]], axis=1)                     # z positions
+        S = np.stack([
+            s_i0,
+            s_i1,
+            s_i2,
+        ], axis=1)                      # arc lengths (s_i0 is all zeros)
+        Z = np.stack([
+            t4s[f"t4_z_{i0}"],
+            t4s[f"t4_z_{i1}"],
+            t4s[f"t4_z_{i2}"],
+        ], axis=1)                     # z positions
 
         # row-wise least-squares line  z = z0_ref + tanlambda * s
         s_mean = S.mean(axis=1, keepdims=True)
@@ -248,14 +266,18 @@ class T4Maker:
         z0_ref    = z_mean.ravel() - tanlambda * s_mean.ravel()      # (N,)
 
         # residuals + quality metric, one per track
+        # raise NotImplementedError("Finish this sz chi2 calculation: calculate residuals wrt points not used")
         resid = Z - (z0_ref[:, None] + tanlambda[:, None] * S)       # (N, 3)
-        t4s[f"t4_chi2_sz_{i0}{i1}{i2}"] = (resid ** 2).sum(axis=1)   # (N,)
+        resid2 = (resid ** 2).sum(axis=1)
+        t4s[f"t4_chi2_sz_{i0}{i1}{i2}"] = np.where(circle_ok, resid2, BAD_CHI2)   # (N,)
         # -------------------------- </Claude derivation> --------------------------
 
 
         # rename some things
         rename = {
             "ls_system": "t4_system",
+            "ls_system_lower": "t4_system_lower",
+            "ls_system_upper": "t4_system_upper",
             "ls_doublelayer_lower": "t4_doublelayer_lower",
             "ls_doublelayer_upper": "t4_doublelayer_upper",
             "ls_gdoublelayer_lower": "t4_gdoublelayer_lower",
@@ -294,12 +316,14 @@ class T4Maker:
         t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dthetarz"] = np.abs(t4s["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok_chi2_xy"] = np.abs(t4s[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2_sz"] = np.abs(t4s[f"t4_chi2_sz_{i0}{i1}{i2}"]) < self.T4_CHI2_SZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok"] = (
             t4s["t4_ok_dphi"] &
             t4s["t4_ok_dz"] &
             t4s["t4_ok_dr"] &
             t4s["t4_ok_dthetarz"] &
             t4s["t4_ok_chi2_xy"] &
+            # t4s["t4_ok_chi2_sz"] &
             np.ones(len(t4s), dtype=bool)
         )
         if self.signal:
