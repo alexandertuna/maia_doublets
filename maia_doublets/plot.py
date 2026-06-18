@@ -94,8 +94,9 @@ class Plotter:
             # self.plot_layer_occupancy_2d(pdf)
             self.plot_radius_vs_layer(pdf)
             # self.plot_doublet_occupancy(pdf)
-            self.plot_md_features(pdf)
-            self.plot_t2_features(pdf)
+            # self.plot_hit_features(pdf)
+            # self.plot_md_features(pdf)
+            # self.plot_t2_features(pdf)
             self.plot_t4_features(pdf)
             if self.signal:
                 self.write_denominator_info(pdf)
@@ -705,6 +706,74 @@ class Plotter:
         return mask
 
 
+    def plot_hit_features(self, pdf: PdfPages):
+        if not self.signal:
+            return
+        logger.info("Plotting hit features ...")
+
+        md_cols = [
+            "file",
+            "i_event", # the event
+            "i_mcp", # the MCParticle
+            "simhit_system", # the system (IT, OT)
+            # "simhit_doublelayer", # the double layer
+            "simhit_module", # the phi-module
+            "simhit_sensor", # the z-sensor
+        ]
+        bonus_cols = [
+            "simhit_layer",
+            "simhit_x",
+            "simhit_y",
+            "simhit_z",
+            "simhit_r",
+        ]
+
+        logger.info("Making doublets by hand for a sec ...")
+        mask = self.simhits["simhit_first_exit"] & self.simhits["simhit_from_fiducial_mcp"]
+        lower_mask = mask & (self.simhits["simhit_glayer"] == 14)
+        upper_mask = mask & (self.simhits["simhit_glayer"] == 15)
+
+        lower = self.simhits[lower_mask][md_cols + bonus_cols]
+        upper = self.simhits[upper_mask][md_cols + bonus_cols]
+        mds = lower.merge(upper, on=md_cols, how="inner", suffixes=("_lower", "_upper"))
+
+        slope_rz = np.divide(mds["simhit_z_upper"] - mds["simhit_z_lower"],
+                             mds["simhit_r_upper"] - mds["simhit_r_lower"])
+        slope_xy = np.divide(mds["simhit_y_upper"] - mds["simhit_y_lower"],
+                             mds["simhit_x_upper"] - mds["simhit_x_lower"])
+        intercept_xy = mds["simhit_y_lower"] - slope_xy * mds["simhit_x_lower"]
+        mds["doublet_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
+        mds["doublet_dz"] = mds["simhit_z_lower"] - mds["simhit_r_lower"] * slope_rz
+        idx = mds["simhit_system"], mds["simhit_layer_lower"] // 2
+        ok_dr = np.abs(mds["doublet_dr"]) < self.MD_DR_CUT[idx]
+        ok_dz = np.abs(mds["doublet_dz"]) < self.MD_DZ_CUT[idx]
+        ok = ok_dr & ok_dz
+
+        semilogy = True
+        bins = np.linspace(-10, 10, 601)
+
+        fig, ax = plt.subplots()
+        ax.hist(
+            (mds["simhit_z_upper"] - mds["simhit_z_lower"])[ok],
+            bins=bins,
+            histtype="stepfilled",
+            color="pink",
+            edgecolor="black",
+            linewidth=1.0,
+            alpha=0.9,
+        )
+        if semilogy:
+            ax.semilogy()
+        ax.set_ylim(0.8 if semilogy else 0, None)
+        ax.set_xlabel("simhit_z_upper - simhit_z_lower")
+        ax.set_ylabel("Doublets")
+        # ax.set_title(f"{NICKNAMES[system]} layers {layers}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+        # ax.text(0.05, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes)
+        pdf.savefig()
+        plt.close()
+
+
+
     def plot_md_features(self, pdf: PdfPages):
         logger.info("Plotting doublet features ...")
         baseline = self.baseline_doublet_mask() if self.signal else np.ones(len(self.doublets), dtype=bool)
@@ -1248,7 +1317,8 @@ class Plotter:
             "t4_dr": np.linspace(0, 1500, 501) if not self.signal else np.linspace(0, 1000, 401),
             "t4_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
             "t4_dtheta_rz": np.linspace(-0.08, 0.08, 241),
-            "t4_chi2_047": np.linspace(0, 0.5, 201),
+            "t4_chi2_xy_047": np.linspace(0, 0.5, 201),
+            "t4_chi2_sz_047": np.linspace(0, 0.5, 201),
         }
         xlabel = {
             "t4_deta": "upper T2 eta - lower T2 eta",
@@ -1256,7 +1326,8 @@ class Plotter:
             "t4_dr": "T4 dr [mm]",
             "t4_dz": "T4 dz [mm]",
             "t4_dtheta_rz": "upper T2 theta_rz - lower T2 theta_rz",
-            "t4_chi2_047": "Diff^2 between circle(xy, 047) and 12356 [mm^2]",
+            "t4_chi2_xy_047": "Diff^2 between circle(xy, 047) and 12356 [mm^2]",
+            "t4_chi2_sz_047": "Diff^2 for sz fit (047) [mm^2]",
         }
         formatting = {
             "t4_deta": ".5f",
@@ -1264,7 +1335,8 @@ class Plotter:
             "t4_dr": ".1f",
             "t4_dz": ".1f",
             "t4_dtheta_rz": ".5f",
-            "t4_chi2_047": ".5f",
+            "t4_chi2_xy_047": ".5f",
+            "t4_chi2_sz_047": ".5f",
         }
         color = "cornflowerblue" if self.signal else "crimson"
 
@@ -1275,7 +1347,8 @@ class Plotter:
             "t4_dr",
             "t4_dz",
             "t4_dtheta_rz",
-            "t4_chi2_047",
+            "t4_chi2_xy_047",
+            "t4_chi2_sz_047",
         ]:
 
             for semilogy in [
@@ -1286,7 +1359,8 @@ class Plotter:
                 # groupby_cols = ["t4_system", "t4_doublelayer"]
                 # for ((system, doublelayer), group) in self.t4s[baseline].groupby(groupby_cols):
 
-                for (gdoublelayer, group) in self.t4s[baseline].groupby("t4_gdoublelayer"):
+                gdls = ["t4_gdoublelayer_lower", "t4_gdoublelayer_upper"]
+                for ([gdl_l, gdl_u], group) in self.t4s[baseline].groupby(gdls):
 
                         fig, ax = plt.subplots()
                         ax.hist(
@@ -1298,7 +1372,9 @@ class Plotter:
                             linewidth=1.0,
                             alpha=0.9,
                         )
-                        if semilogy or feature in ["t4_chi2_047"]:
+                        if semilogy or feature in ["t4_chi2_xy_047",
+                                                   "t4_chi2_sz_047",
+                                                   ]:
                             ax.semilogy()
                         num = len(group)
                         mean = np.mean(group[feature])
@@ -1308,9 +1384,9 @@ class Plotter:
                         ax.set_ylim(0.8 if ax.get_yscale() == "log" else 0, None)
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("T4s")
-                        ax.set_title(f"GDL={gdoublelayer}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+                        ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
                         ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
-                        logger.info(f"GDL {gdoublelayer} {feature}: 99.7% in {p997:{fmt}}")
+                        logger.info(f"GDL {gdl_l}-{gdl_u} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
 
@@ -1322,11 +1398,13 @@ class Plotter:
             return
 
         bins = {
+            "mcp_q": np.array([-2, 0, 2]),
             "mcp_pt": np.linspace(0.0, 10.0, 21),
             "mcp_eta": np.linspace(-0.7, 0.7, 281),
             "mcp_phi": np.linspace(-3.2, 3.2, 321),
         }
         xlabel = {
+            "mcp_q": "Inclusive",
             "mcp_pt": r"Muon $p_T$ [GeV]",
             "mcp_eta": r"Muon $\eta$",
             "mcp_phi": r"Muon $\phi$ [rad]",
@@ -1334,7 +1412,7 @@ class Plotter:
 
         # denominator
         dmask = self.get_denominator_mask()
-        denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_pt", "mcp_eta", "mcp_phi"]]
+        denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]]
         if denom.duplicated().any():
             raise ValueError("Denominator has duplicated rows!")
 
@@ -1350,7 +1428,7 @@ class Plotter:
         t4s = self.t4s[same_parent][numer_cols].drop_duplicates()
 
         # check if t4s's [file, i_event, i_mcp] is in denominator
-        for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
+        for kin in ["mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]:
 
             merged = denom.merge(t4s, on=numer_cols, how="inner")
             n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
