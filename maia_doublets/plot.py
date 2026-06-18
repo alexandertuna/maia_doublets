@@ -35,7 +35,7 @@ from maia_doublets.constants import MUON
 from maia_doublets.constants import BARREL_TRACKER_MAX_ETA
 from maia_doublets.constants import BARREL_TRACKER_MAX_RADIUS
 from maia_doublets.constants import ONE_POINT_FIVE_GEV, ONE_MM, ZERO_POINT_ZERO_ONE_MM
-from maia_doublets.constants import NICKNAMES, OUTER_TRACKER_BARREL
+from maia_doublets.constants import NICKNAMES, INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
 from maia_doublets.constants import MD_DZ_CUT, MD_DR_CUT
 from maia_doublets.constants import REQ_PASSTHROUGH, REQ_RZ, REQ_XY, REQ_RZ_XY
 from maia_doublets.constants import DOUBLET_REQS, NO_MCP
@@ -89,15 +89,17 @@ class Plotter:
             # self.plot_numbers_for_comparison(pdf)
             self.write_date(pdf)
             # self.write_quality_cuts(pdf)
+            self.plot_multiplicity(pdf)
             self.plot_time(pdf)
             # self.plot_layer_occupancy_1d(pdf)
             # self.plot_layer_occupancy_2d(pdf)
-            self.plot_radius_vs_layer(pdf)
+            # self.plot_radius_vs_layer(pdf)
             # self.plot_doublet_occupancy(pdf)
             # self.plot_hit_features(pdf)
             # self.plot_md_features(pdf)
             # self.plot_t2_features(pdf)
             self.plot_t4_features(pdf)
+            # self.plot_t4_sz_coordinates(pdf, ndisplay=20)
             if self.signal:
                 self.write_denominator_info(pdf)
                 # self.plot_detectable_efficiency_vs_kinematics(pdf)
@@ -323,6 +325,48 @@ class Plotter:
         ax.axis("off")
         pdf.savefig()
         plt.close()
+
+
+    def plot_multiplicity(self, pdf: PdfPages):
+        logger.info(f"Plotting multiplicity")
+        titles = {
+            INNER_TRACKER_BARREL: "Inner tracker, barrel",
+            OUTER_TRACKER_BARREL: "Outer tracker, barrel",
+        }
+        for (system, simhits) in self.simhits.groupby("simhit_system"):
+
+            mask_mds = self.doublets["doublet_system"] == system
+            mask_t2s = self.linesegments["ls_system"] == system
+            mask_t4s = (self.t4s["t4_system_lower"] == system) & (self.t4s["t4_system_upper"] == system)
+
+            YANXI_T8S = 4
+
+            mult = [
+                len(simhits),
+                mask_mds.sum(),
+                mask_t2s.sum(),
+                mask_t4s.sum(),
+                YANXI_T8S,
+            ]
+            bins = np.arange(-0.5, len(mult))
+
+            fig, ax = plt.subplots()
+            ax.hist(
+                ["Hits", "Doublets", "T2s", "T4s", "T8s (w/IT)"],
+                bins=bins,
+                weights=mult,
+                histtype="stepfilled",
+                color="yellow",
+                edgecolor="black",
+                linewidth=1.0,
+            )
+            ax.set_ylabel("Tracking objects per event", labelpad=10)
+            ax.set_title(titles[system])
+            ax.semilogy()
+            ax.set_ylim(0.5, None)
+            ax.text(0.55, 0.85, f"Pure background (BIB)", transform=ax.transAxes, fontsize=16)
+            pdf.savefig()
+            plt.close()
 
 
     def plot_time(self, pdf: PdfPages):
@@ -1304,6 +1348,39 @@ class Plotter:
         )
 
 
+    def plot_t4_sz_coordinates(self, pdf: PdfPages, ndisplay):
+        logger.info(f"Plotting T4 sz coordinates for first {ndisplay} T4s ...")
+        nhits_in_t4 = 8
+
+        for coord in ["s", "r"]:
+
+            for i_row, row in self.t4s.head(ndisplay).iterrows():
+
+                eta, phi = row["t4_eta"], row["t4_phi"]
+                zs = [row[f"t4_z_{it}"] for it in range(nhits_in_t4)]
+                cs = [row[f"t4_{coord}_{it}"] for it in range(nhits_in_t4)]
+
+                fig, ax = plt.subplots()
+                ax.scatter(zs, cs)
+
+                # linear fit
+                coeffs = np.polyfit(zs, cs, 1)
+                z_fit = np.linspace(min(zs), max(zs), 100)
+                c_fit = np.polyval(coeffs, z_fit)
+                ax.plot(z_fit, c_fit, color="orange", linestyle="--")
+
+                xlim = [450, 520]
+                ylim = [-20, 120] if coord == "s" else [800, 920]
+                ax.set_xlim(xlim)
+                ax.set_ylim(ylim)
+
+                ax.set_xlabel("Hit z [mm]")
+                ax.set_ylabel(f"Hit {coord} [mm]")
+                ax.set_title(f"T4 index {i_row}, eta={eta:.2f}, phi={phi:.2f}")
+                pdf.savefig()
+                plt.close()
+
+
     def plot_t4_features(self, pdf: PdfPages):
         logger.info("Plotting t4 features ...")
         if self.t4s is None or len(self.t4s) == 0:
@@ -1318,7 +1395,8 @@ class Plotter:
             "t4_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
             "t4_dtheta_rz": np.linspace(-0.08, 0.08, 241),
             "t4_chi2_xy_047": np.linspace(0, 0.5, 201),
-            "t4_chi2_sz_047": np.linspace(0, 0.5, 201),
+            # "t4_chi2_sz_047": np.linspace(0, 0.5, 201),
+            "t4_chi2_sz_047": np.logspace(-6, 2, 201),
         }
         xlabel = {
             "t4_deta": "upper T2 eta - lower T2 eta",
@@ -1376,6 +1454,8 @@ class Plotter:
                                                    "t4_chi2_sz_047",
                                                    ]:
                             ax.semilogy()
+                        if feature in ["t4_chi2_sz_047"]:
+                            ax.semilogx()
                         num = len(group)
                         mean = np.mean(group[feature])
                         rms = np.sqrt(np.mean((group[feature] - mean) ** 2))
@@ -1384,8 +1464,8 @@ class Plotter:
                         ax.set_ylim(0.8 if ax.get_yscale() == "log" else 0, None)
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("T4s")
-                        ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
-                        ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
+                        # ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+                        # ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
                         logger.info(f"GDL {gdl_l}-{gdl_u} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
