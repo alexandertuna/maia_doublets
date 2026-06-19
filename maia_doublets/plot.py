@@ -1395,8 +1395,8 @@ class Plotter:
             "t4_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
             "t4_dtheta_rz": np.linspace(-0.08, 0.08, 241),
             "t4_chi2_xy_047": np.linspace(0, 0.5, 201),
-            # "t4_chi2_sz_047": np.linspace(0, 0.5, 201),
-            "t4_chi2_sz_047": np.logspace(-6, 2, 201),
+            # "t4_chi2_sz": np.linspace(0, 0.5, 201),
+            "t4_chi2_sz": np.logspace(-5, 2, 201),
         }
         xlabel = {
             "t4_deta": "upper T2 eta - lower T2 eta",
@@ -1405,7 +1405,7 @@ class Plotter:
             "t4_dz": "T4 dz [mm]",
             "t4_dtheta_rz": "upper T2 theta_rz - lower T2 theta_rz",
             "t4_chi2_xy_047": "Diff^2 between circle(xy, 047) and 12356 [mm^2]",
-            "t4_chi2_sz_047": "Diff^2 for sz fit (047) [mm^2]",
+            "t4_chi2_sz": "Diff^2 for sz fit [mm^2]",
         }
         formatting = {
             "t4_deta": ".5f",
@@ -1414,7 +1414,7 @@ class Plotter:
             "t4_dz": ".1f",
             "t4_dtheta_rz": ".5f",
             "t4_chi2_xy_047": ".5f",
-            "t4_chi2_sz_047": ".5f",
+            "t4_chi2_sz": ".5f",
         }
         color = "cornflowerblue" if self.signal else "crimson"
 
@@ -1426,7 +1426,7 @@ class Plotter:
             "t4_dz",
             "t4_dtheta_rz",
             "t4_chi2_xy_047",
-            "t4_chi2_sz_047",
+            "t4_chi2_sz",
         ]:
 
             for semilogy in [
@@ -1451,10 +1451,10 @@ class Plotter:
                             alpha=0.9,
                         )
                         if semilogy or feature in ["t4_chi2_xy_047",
-                                                   "t4_chi2_sz_047",
+                                                   "t4_chi2_sz",
                                                    ]:
                             ax.semilogy()
-                        if feature in ["t4_chi2_sz_047"]:
+                        if feature in ["t4_chi2_sz"]:
                             ax.semilogx()
                         num = len(group)
                         mean = np.mean(group[feature])
@@ -1464,8 +1464,8 @@ class Plotter:
                         ax.set_ylim(0.8 if ax.get_yscale() == "log" else 0, None)
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("T4s")
-                        # ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
-                        # ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
+                        ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+                        ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
                         logger.info(f"GDL {gdl_l}-{gdl_u} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
