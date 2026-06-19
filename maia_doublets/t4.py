@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import T4_DZ_CUT, T4_DR_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT, T4_CHI2_SZ_CUT
 from maia_doublets.constants import N_T4_PHI_SLICES
+from maia_doublets.constants import N_LAYERS_IN_T4
 
 class T4Maker:
 
@@ -80,9 +81,9 @@ class T4Maker:
 
         # make T4s from neighboring doublelayers
         gdoublelayer_pairs = [
-            # (2, 4),
+            (2, 4),
             (4, 6),
-            # (2, 6),
+            (2, 6),
         ]
         all_t4s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
@@ -196,6 +197,9 @@ class T4Maker:
         t4s["t4_dtheta_rz"] = t4s["ls_theta_rz_upper"] - t4s["ls_theta_rz_lower"]
         t4s["t4_dtheta_rz"] = (t4s["t4_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
 
+        # collect new columns
+        newcols = {}
+
         # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
         i0, i1, i2 = 0, 4, 7
@@ -221,57 +225,34 @@ class T4Maker:
         for ix in ixs:
             circle_diff = np.sqrt((t4s[f"t4_x_{ix}"] - circle_x)**2 + (t4s[f"t4_y_{ix}"] - circle_y)**2) - circle_r
             diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
-        t4s[f"t4_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
+        newcols[f"t4_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
 
         # calculate chi2 for sz fit, where s is the arc length along the circle
-        phi_i0 = np.arctan2(t4s[f"t4_y_{i0}"] - circle_y, t4s[f"t4_x_{i0}"] - circle_x)
-        phi_i1 = np.arctan2(t4s[f"t4_y_{i1}"] - circle_y, t4s[f"t4_x_{i1}"] - circle_x)
-        phi_i2 = np.arctan2(t4s[f"t4_y_{i2}"] - circle_y, t4s[f"t4_x_{i2}"] - circle_x)
-        dphi_00 = (phi_i0 - phi_i0 + np.pi) % (2 * np.pi) - np.pi
-        dphi_01 = (phi_i1 - phi_i0 + np.pi) % (2 * np.pi) - np.pi
-        dphi_02 = (phi_i2 - phi_i0 + np.pi) % (2 * np.pi) - np.pi
-        s_i0 = circle_r * dphi_00
-        s_i1 = circle_r * dphi_01
-        s_i2 = circle_r * dphi_02
-
-        # -------------------------- temporary: save the s_i --------------------------
-        _phis = [ np.arctan2(t4s[f"t4_y_{it}"] - circle_y, t4s[f"t4_x_{it}"] - circle_x) for it in range(8) ]
-        _dphis = [ (phi - _phis[0] + np.pi) % (2 * np.pi) - np.pi for phi in _phis ]
-        _ss = [ circle_r * dphi for dphi in _dphis ]
-        for it in range(8):
-            t4s[f"t4_s_{it}"] = _ss[it]
+        phis = [ np.arctan2(t4s[f"t4_y_{it}"] - circle_y, t4s[f"t4_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T4) ]
+        dphis = [ (phi - phis[0] + np.pi) % (2 * np.pi) - np.pi for phi in phis ]
+        pathlengths = [ circle_r * dphi for dphi in dphis ]
+        for it in range(N_LAYERS_IN_T4):
+            newcols[f"t4_s_{it}"] = pathlengths[it]
 
         # -------------------------- <Claude derivation> --------------------------
-        # stack per-point columns -> (N_tracks, 3)
-        S = np.stack([
-            s_i0,
-            s_i1,
-            s_i2,
-        ], axis=1)                      # arc lengths (s_i0 is all zeros)
-        Z = np.stack([
-            t4s[f"t4_z_{i0}"],
-            t4s[f"t4_z_{i1}"],
-            t4s[f"t4_z_{i2}"],
-        ], axis=1)                     # z positions
+        # stack per-hit columns
+        s_all = np.stack(pathlengths, axis=1)
+        z_all = np.stack([ t4s[f"t4_z_{it}"] for it in range(N_LAYERS_IN_T4) ], axis=1)
 
-        # row-wise least-squares line  z = z0_ref + tanlambda * s
-        s_mean = S.mean(axis=1, keepdims=True)
-        z_mean = Z.mean(axis=1, keepdims=True)
-        ds, dz = S - s_mean, Z - z_mean
-
-        Sss = (ds * ds).sum(axis=1)                                  # (N,)
-        Ssz = (ds * dz).sum(axis=1)                                  # (N,)
-
-        tanlambda = Ssz / Sss                                        # (N,)
+        # row-wise least-squares line: z = z0_ref + tanlambda * s
+        s_mean = s_all.mean(axis=1, keepdims=True)
+        z_mean = z_all.mean(axis=1, keepdims=True)
+        ds, dz = s_all - s_mean, z_all - z_mean
+        s_ss = (ds * ds).sum(axis=1)                                 # (N,)
+        s_sz = (ds * dz).sum(axis=1)                                 # (N,)
+        tanlambda = s_sz / s_ss                                      # (N,)
         z0_ref    = z_mean.ravel() - tanlambda * s_mean.ravel()      # (N,)
 
         # residuals + quality metric, one per track
-        # raise NotImplementedError("Finish this sz chi2 calculation: calculate residuals wrt points not used")
-        resid = Z - (z0_ref[:, None] + tanlambda[:, None] * S)       # (N, 3)
+        resid = z_all - (z0_ref[:, None] + tanlambda[:, None] * s_all)
         resid2 = (resid ** 2).sum(axis=1)
-        t4s[f"t4_chi2_sz_{i0}{i1}{i2}"] = np.where(circle_ok, resid2, BAD_CHI2)   # (N,)
+        newcols[f"t4_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
-
 
         # rename some things
         rename = {
@@ -315,8 +296,8 @@ class T4Maker:
         t4s["t4_ok_dz"] = np.abs(t4s["t4_dz"]) < self.T4_DZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dthetarz"] = np.abs(t4s["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
-        t4s["t4_ok_chi2_xy"] = np.abs(t4s[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
-        t4s["t4_ok_chi2_sz"] = np.abs(t4s[f"t4_chi2_sz_{i0}{i1}{i2}"]) < self.T4_CHI2_SZ_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2_xy"] = np.abs(newcols[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2_sz"] = np.abs(newcols[f"t4_chi2_sz"]) < self.T4_CHI2_SZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok"] = (
             t4s["t4_ok_dphi"] &
             t4s["t4_ok_dz"] &
@@ -341,6 +322,9 @@ class T4Maker:
                 t4s["t4_ok_mcp"] &
                 np.ones(len(t4s), dtype=bool)
             )
+
+        # merge new columns into the df
+        t4s = pd.concat([t4s, pd.DataFrame(newcols, index=t4s.index)], axis=1)
 
         # remove as desired
         for cut in [col for col in t4s.columns if col.startswith("t4_ok")]:
