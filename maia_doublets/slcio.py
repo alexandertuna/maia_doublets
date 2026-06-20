@@ -15,7 +15,7 @@ from maia_doublets.constants import XML
 from maia_doublets.constants import INNER_TRACKER_BARREL_COLLECTION, OUTER_TRACKER_BARREL_COLLECTION
 from maia_doublets.constants import INNER_TRACKER_BARREL_HITS, OUTER_TRACKER_BARREL_HITS
 from maia_doublets.constants import INNER_TRACKER_BARREL_RELATIONS, OUTER_TRACKER_BARREL_RELATIONS
-from maia_doublets.constants import BYTE_TO_MB, NO_MCP
+from maia_doublets.constants import BYTE_TO_MB, NO_MCP, PODIO_NO_MCP
 from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
 from maia_doublets.constants import NICKNAMES, LAYER_OFFSET
@@ -42,6 +42,23 @@ class HitMaker:
         self.layers = layers
 
 
+    def convert_debug(self):
+        # tmp debug
+        logger.info("Opening pkl ...")
+        lcio_mcps = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/mcps.pkl")
+        lcio_hits = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/simhits.pkl")
+        logger.info("Converting ROOT file ...")
+        fname = self.slcio_file_paths[0] + ".root"
+        root_mcps, root_hits = convert_one_root_file(fname, 0, self.load_geometry, self.signal, self.sim, self.layers)
+        logger.info("ROOT file converted ...")
+        print("root_hits\n", root_hits)
+        print("lcio_hits\n", lcio_hits)
+        print("x"*40)
+        print("root_hits.equals(lcio_hits):", root_hits.equals(lcio_hits))
+        print("root_mcps.equals(lcio_mcps):", root_mcps.equals(lcio_mcps))
+        print("x"*40)
+        raise NotImplementedError("Testing purposes")
+
     def convert(self) -> pd.DataFrame:
         mcps, simhits = self.convert_all_files()
         mcps = sort_mcps(mcps)
@@ -55,15 +72,6 @@ class HitMaker:
         ]).size()
         for (system, layer), total in counts.items():
             logger.info(f"N(simhits) in system {system} layer {layer}: {total}")
-        # tmp debug
-        # fname = self.slcio_file_paths[0] + ".root"
-        # root_mcps, root_hits = convert_one_root_file(fname, 0, self.load_geometry, self.signal, self.sim, self.layers)
-        # lcio_mcps = mcps
-        # lcio_hits = simhits
-        # print("root_hits\n", root_hits)
-        # print("lcio_hits\n", lcio_hits)
-        # raise NotImplementedError("Testing purposes")
-        # end tmp debug
         return mcps, simhits
 
 
@@ -132,6 +140,8 @@ def convert_one_root_file(
     rf = uproot.open(root_file_path)
     evs = rf["events"]
 
+    if signal:
+        raise NotImplementedError("ROOT file parsing is not implemented for signal")
     if not use_sim:
         raise NotImplementedError("ROOT file parsing is not implemented for digi hits or relations")
 
@@ -139,16 +149,18 @@ def convert_one_root_file(
     mcps = convert_one_root_file_to_mcps(evs, file_number)
 
     logger.info(f"Converting ROOT file {root_file_path} to hits ...")
-    hits = convert_one_root_file_to_hits(evs, file_number, signal, layers)
+    hits = convert_one_root_file_to_hits(evs, file_number, signal, use_sim, layers)
 
-    # get mcp information for each hit
-    pass
+    # connect hits and mcps
+    logger.warning("Need to connect hits to mcps!")
 
     # post-process
     logger.info(f"Post-processing DataFrames for ROOT file {root_file_path} ...")
     mcps = postprocess_mcps(mcps)
-    # hits = postprocess_mcps(hits)
-    # hits = postprocess_simhtis(hits)
+    if signal:
+        hits = postprocess_mcps(hits)
+    hits = postprocess_simhits(hits, signal)
+    hits = sort_simhits(hits)
 
     return mcps, hits
 
@@ -156,41 +168,94 @@ def convert_one_root_file(
 def convert_one_root_file_to_hits(evs: uproot.TTree,
                                   file_number: int,
                                   signal: bool,
+                                  use_sim: bool,
                                   layers: dict[int, set[int]],
                                   ) -> pd.DataFrame:
 
-    col = INNER_TRACKER_BARREL_COLLECTION
+    cols = [
+        INNER_TRACKER_BARREL_COLLECTION,
+        OUTER_TRACKER_BARREL_COLLECTION,
+    ]
+
+    datas = {}
+    for col in cols:
+        datas[col] = convert_one_root_file_to_hits_given_collection(evs, file_number, signal, use_sim, layers, col)
+
+    hits = pd.concat(datas.values(), ignore_index=True)
+    return hits
+
+
+def convert_one_root_file_to_hits_given_collection(
+        evs: uproot.TTree,
+        file_number: int,
+        signal: bool,
+        use_sim: bool,
+        layers: dict[int, set[int]],
+        collection: str,
+        ) -> pd.DataFrame:
+
+    logger.info(f"Converting ROOT file to hits for {collection} ...")
+
     names = {
-        f"{col}.position.x": "simhit_x",
-        f"{col}.position.y": "simhit_y",
-        f"{col}.position.z": "simhit_z",
-        f"{col}.time": "simhit_time",
-        f"{col}.cellID": "simhit_cellid0",
+        f"{collection}.position.x": "simhit_x",
+        f"{collection}.position.y": "simhit_y",
+        f"{collection}.position.z": "simhit_z",
+        f"{collection}.time": "simhit_t",
+        f"{collection}.cellID": "simhit_cellid0",
+        f"_{collection}_particle.index": "i_mcp",
     }
     if signal:
         names |= {
-            f"_{col}_particle.index": "i_mcp",
-            f"{col}.momentum.x": "simhit_px",
-            f"{col}.momentum.y": "simhit_py",
-            f"{col}.momentum.z": "simhit_pz",
-            f"{col}.eDep": "simhit_e",
-            f"{col}.pathLength": "simhit_pathlength",
+            f"{collection}.momentum.x": "simhit_px",
+            f"{collection}.momentum.y": "simhit_py",
+            f"{collection}.momentum.z": "simhit_pz",
+            f"{collection}.eDep": "simhit_e",
+            f"{collection}.pathLength": "simhit_pathlength",
         }
     data = evs.arrays(list(names.keys()), library="np")
 
     # metadata: event number
     i_events = []
-    for i_event, branch in enumerate(data[f"{col}.time"]):
+    for i_event, branch in enumerate(data[f"{collection}.cellID"]):
         i_events.extend([i_event]*len(branch))
 
+    # count them up
+    n_rows = len(i_events)
+    if n_rows == 0:
+        msg = f"No hits found in {collection}"
+        logger.error(msg)
+        raise RuntimeError(msg)
+
     # numpify the data
-    for key in names:
-        data[key] = np.concatenate(data[key])
+    for key, value in names.items():
+        data[value] = np.concatenate(data.pop(key))
+    data["file"] = np.array([file_number]*n_rows)
+    data["i_event"] = np.array(i_events)
+    correction = (np.sqrt(data["simhit_x"]**2 + \
+                          data["simhit_y"]**2 + \
+                          data["simhit_z"]**2) / SPEED_OF_LIGHT) if use_sim else 0.0
+    data["simhit_t_corrected"] = data["simhit_t"] - correction
+    data["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
+    data["simhit_cellid0"] = data["simhit_cellid0"].astype(np.int64)
 
     # convert to DataFrame
-    hits = pd.DataFrame(data).rename(columns=names)
-    hits["file"] = file_number
-    hits["i_event"] = i_events
+    hits = pd.DataFrame(data)
+
+    # adjust the "no MCParticle" value for i_mcp
+    hits["i_mcp"] = hits["i_mcp"].replace(PODIO_NO_MCP, NO_MCP)
+
+    # sanity check
+    hit_system = np.right_shift(hits["simhit_cellid0"], 0) & 0b1_1111
+    if hit_system.nunique() != 1:
+        msg = f"Expected one system in {collection}, found {hit_system.unique()}"
+        logger.error(msg)
+        raise RuntimeError(msg)
+
+    # filter by layer
+    hit_system = hit_system.iloc[0]
+    hit_layer = np.right_shift(hits["simhit_cellid0"], 7) & 0b11_1111
+    mask = hit_layer.isin(layers[hit_system])
+    hits = hits[mask]
 
     return hits
 
@@ -221,15 +286,22 @@ def convert_one_root_file_to_mcps(evs: uproot.TTree,
         i_events.extend([i_event]*n_mcps)
         i_mcps.extend(list(range(n_mcps)))
 
+    # count them up
+    n_rows = len(i_events)
+    if n_rows == 0:
+        msg = f"No MCPs found"
+        logger.error(msg)
+        raise RuntimeError(msg)
+
     # numpify the data
-    for key in names:
-        data[key] = np.concatenate(data[key])
+    for key, value in names.items():
+        data[value] = np.concatenate(data.pop(key))
+    data["file"] = np.array([file_number]*n_rows)
+    data["i_event"] = np.array(i_events)
+    data["i_mcp"] = np.array(i_mcps)
 
     # convert to DataFrame
-    mcps = pd.DataFrame(data).rename(columns=names)
-    mcps["file"] = file_number
-    mcps["i_event"] = i_events
-    mcps["i_mcp"] = i_mcps
+    mcps = pd.DataFrame(data)
 
     # only keep muons for now
     mask = np.abs(mcps["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)
@@ -517,12 +589,6 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
     df["simhit_layer_div_2"] = df["simhit_layer"] // 2
     df["simhit_layer_mod_2"] = df["simhit_layer"] % 2
     df["simhit_glayer"] = df["simhit_layer"] + LAYER_OFFSET[df["simhit_system"]]
-    # df["simhit_theta"] = np.maximum(np.arctan2(df["simhit_r"], df["simhit_z"]), EPSILON)
-    # df["simhit_eta"] = -np.log(np.tan(df["simhit_theta"] / 2))
-    # df["simhit_phi"] = np.arctan2(df["simhit_y"], df["simhit_x"])
-    # df["simhit_pt"] = np.sqrt(df["simhit_px"]**2 + df["simhit_py"]**2)
-    # df["simhit_R"] = np.sqrt(df["simhit_x"]**2 + df["simhit_y"]**2 + df["simhit_z"]**2)
-    # df["simhit_t_corrected"] = df["simhit_t"] - (df["simhit_R"] / SPEED_OF_LIGHT)
     if signal:
         df["simhit_R"] = np.sqrt(df["simhit_x"]**2 + df["simhit_y"]**2 + df["simhit_z"]**2)
         df["simhit_p"] = np.sqrt(df["simhit_px"]**2 + df["simhit_py"]**2 + df["simhit_pz"]**2)
@@ -546,8 +612,10 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
 
     # remove unused columns
     drop_cols = [
-        "simhit_cellid0",
+        # "simhit_cellid0",
     ]
+    if "simhit_t" in df.columns:
+        drop_cols.append("simhit_t")
     if signal:
         drop_cols += [
             "simhit_px",
@@ -555,7 +623,7 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
             "simhit_pz",
             "simhit_R",
         ]
-        df.drop(columns=drop_cols, inplace=True)
+    df.drop(columns=drop_cols, inplace=True)
 
     # downcast to save memory
     df["file"] = df["file"].astype(np.uint32)
