@@ -49,6 +49,8 @@ class HitMaker:
         # lcio_hits = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/simhits.pkl")
         lcio_mcps = pd.read_pickle("../data/signal/mcps.pkl")
         lcio_hits = pd.read_pickle("../data/signal/simhits.pkl")
+        # lcio_mcps = pd.read_pickle("mcps.pkl")
+        # lcio_hits = pd.read_pickle("simhits.pkl")
         logger.info("Converting ROOT files ...")
         fnames = [pat + ".root" for pat in self.slcio_file_paths]
         results = [
@@ -196,23 +198,11 @@ def convert_one_root_file(
 
     # connect hits and mcps
     if signal:
-        on_cols = ["file", "i_event", "i_mcp"]
-        mcp_cols = [
-            "mcp_pdg", "mcp_q",
-            "mcp_px", "mcp_py", "mcp_pz",
-            "mcp_vertex_x", "mcp_vertex_y", "mcp_vertex_z",
-            "mcp_endpoint_x", "mcp_endpoint_y", "mcp_endpoint_z",
-            ]
-        sub_cols = on_cols + mcp_cols
-        hits = hits.merge(mcps[sub_cols], on=on_cols)
-        hits[mcp_cols] = hits[mcp_cols].fillna(0.0)
+        hits = merge_mcp_info_into_hits(hits, mcps)
 
-    # only keep muon mcps for now
+    # keep interesting mcps only
     mask = np.abs(mcps["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)
     mcps = mcps[mask].reset_index(drop=True)
-
-    # manage data types
-    hits["simhit_cellid0"] = hits["simhit_cellid0"].astype(np.int64)
 
     # post-process
     logger.info(f"Post-processing DataFrames for ROOT file {root_file_path} ...")
@@ -373,6 +363,26 @@ def convert_one_root_file_to_mcps(evs: uproot.TTree,
 
     # post-process
     return mcps
+
+
+def merge_mcp_info_into_hits(
+    hits: pd.DataFrame,
+    mcps: pd.DataFrame,
+) -> pd.DataFrame:
+
+    on_cols = ["file", "i_event", "i_mcp"]
+    mcp_cols = [
+        "mcp_pdg", "mcp_q",
+        "mcp_px", "mcp_py", "mcp_pz",
+        "mcp_vertex_x", "mcp_vertex_y", "mcp_vertex_z",
+        "mcp_endpoint_x", "mcp_endpoint_y", "mcp_endpoint_z",
+        ]
+    sub_cols = on_cols + mcp_cols
+
+    hits = hits.merge(mcps[sub_cols], on=on_cols)
+    hits[mcp_cols] = hits[mcp_cols].fillna(0.0)
+
+    return hits
 
 
 def convert_one_file(
