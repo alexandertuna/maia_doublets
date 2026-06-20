@@ -45,18 +45,63 @@ class HitMaker:
     def convert_debug(self):
         # tmp debug
         logger.info("Opening pkl ...")
-        lcio_mcps = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/mcps.pkl")
-        lcio_hits = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/simhits.pkl")
-        logger.info("Converting ROOT file ...")
-        fname = self.slcio_file_paths[0] + ".root"
-        root_mcps, root_hits = convert_one_root_file(fname, 0, self.load_geometry, self.signal, self.sim, self.layers)
-        logger.info("ROOT file converted ...")
+        # lcio_mcps = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/mcps.pkl")
+        # lcio_hits = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/simhits.pkl")
+        lcio_mcps = pd.read_pickle("../data/signal/mcps.pkl")
+        lcio_hits = pd.read_pickle("../data/signal/simhits.pkl")
+        logger.info("Converting ROOT files ...")
+        fnames = [pat + ".root" for pat in self.slcio_file_paths]
+        results = [
+            convert_one_root_file(fnames[i], i, self.load_geometry, self.signal, self.sim, self.layers)
+            for i in range(len(fnames))
+        ]
+        root_mcps = pd.concat([mcps for (mcps, simhits) in results], ignore_index=True)
+        root_hits = pd.concat([simhits for (mcps, simhits) in results], ignore_index=True)
+        logger.info("ROOT files converted ...")
+        # root_mcps, root_hits = convert_one_root_file(fnames[0], 0, self.load_geometry, self.signal, self.sim, self.layers)
+
         print("root_hits\n", root_hits)
         print("lcio_hits\n", lcio_hits)
         print("x"*40)
         print("root_hits.equals(lcio_hits):", root_hits.equals(lcio_hits))
         print("root_mcps.equals(lcio_mcps):", root_mcps.equals(lcio_mcps))
         print("x"*40)
+        for col in root_hits.columns:
+            if not col in lcio_hits.columns:
+                print(f"Column {col} is not in lcio_hits")
+        for col in lcio_hits.columns:
+            if not col in root_hits.columns:
+                print(f"Column {col} is not in root_hits")
+        print("*"*40)
+        from pandas.testing import assert_frame_equal
+        try:
+            assert_frame_equal(root_hits, lcio_hits, check_dtype=False, check_column_type=False)
+            logger.info("Hits dataframes are equal according to assert_frame_equal")
+        except AssertionError as e:
+            logger.error(f"Hits dataframes are not equal: {e}")
+        try:
+            assert_frame_equal(root_mcps, lcio_mcps, check_dtype=False, check_column_type=False)
+            logger.info("MCP dataframes are equal according to assert_frame_equal")
+        except AssertionError as e:
+            logger.error(f"MCP dataframes are not equal: {e}")
+        print("x"*40)
+
+        # check for any non-equal columns in hits
+        for col in root_hits.columns:
+            if not root_hits[col].equals(lcio_hits[col]) and not np.allclose(root_hits[col], lcio_hits[col]):
+                print(f"Column {col} is not equal or close. dtype: root {root_hits[col].dtype}, lcio {lcio_hits[col].dtype}")
+        else:
+            logger.info(f"All columns in hits are either equal or close")
+        print("x"*40)
+
+        # check for any non-equal columns in mcps
+        for col in root_mcps.columns:
+            if not root_mcps[col].equals(lcio_mcps[col]) and not np.allclose(root_mcps[col], lcio_mcps[col]):
+                print(f"Column {col} is not equal or close. dtype: root {root_mcps[col].dtype}, lcio {lcio_mcps[col].dtype}")
+        else:
+            logger.info(f"All columns in mcps are either equal or close")
+        print("x"*40)
+
         raise NotImplementedError("Testing purposes")
 
     def convert(self) -> pd.DataFrame:
@@ -140,8 +185,6 @@ def convert_one_root_file(
     rf = uproot.open(root_file_path)
     evs = rf["events"]
 
-    if signal:
-        raise NotImplementedError("ROOT file parsing is not implemented for signal")
     if not use_sim:
         raise NotImplementedError("ROOT file parsing is not implemented for digi hits or relations")
 
@@ -152,15 +195,37 @@ def convert_one_root_file(
     hits = convert_one_root_file_to_hits(evs, file_number, signal, use_sim, layers)
 
     # connect hits and mcps
-    logger.warning("Need to connect hits to mcps!")
+    if signal:
+        on_cols = ["file", "i_event", "i_mcp"]
+        mcp_cols = [
+            "mcp_pdg", "mcp_q",
+            "mcp_px", "mcp_py", "mcp_pz",
+            "mcp_vertex_x", "mcp_vertex_y", "mcp_vertex_z",
+            "mcp_endpoint_x", "mcp_endpoint_y", "mcp_endpoint_z",
+            ]
+        sub_cols = on_cols + mcp_cols
+        hits = hits.merge(mcps[sub_cols], on=on_cols)
+        hits[mcp_cols] = hits[mcp_cols].fillna(0.0)
+
+    # only keep muon mcps for now
+    mask = np.abs(mcps["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)
+    mcps = mcps[mask].reset_index(drop=True)
+
+    # manage data types
+    hits["simhit_cellid0"] = hits["simhit_cellid0"].astype(np.int64)
 
     # post-process
     logger.info(f"Post-processing DataFrames for ROOT file {root_file_path} ...")
     mcps = postprocess_mcps(mcps)
+    mcps = sort_mcps(mcps)
     if signal:
         hits = postprocess_mcps(hits)
     hits = postprocess_simhits(hits, signal)
     hits = sort_simhits(hits)
+
+    # Bonus features: define if a mcp is "detectable" or not
+    if signal:
+        mcps = add_detectable_columns(mcps, hits)
 
     return mcps, hits
 
@@ -229,6 +294,8 @@ def convert_one_root_file_to_hits_given_collection(
     # numpify the data
     for key, value in names.items():
         data[value] = np.concatenate(data.pop(key))
+
+    # engineer a few columns
     data["file"] = np.array([file_number]*n_rows)
     data["i_event"] = np.array(i_events)
     correction = (np.sqrt(data["simhit_x"]**2 + \
@@ -236,7 +303,8 @@ def convert_one_root_file_to_hits_given_collection(
                           data["simhit_z"]**2) / SPEED_OF_LIGHT) if use_sim else 0.0
     data["simhit_t_corrected"] = data["simhit_t"] - correction
     data["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
-    data["simhit_cellid0"] = data["simhit_cellid0"].astype(np.int64)
+    if signal:
+        data["simhit_distance"] = np.array([-1]*n_rows)
 
     # convert to DataFrame
     hits = pd.DataFrame(data)
@@ -302,10 +370,6 @@ def convert_one_root_file_to_mcps(evs: uproot.TTree,
 
     # convert to DataFrame
     mcps = pd.DataFrame(data)
-
-    # only keep muons for now
-    mask = np.abs(mcps["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)
-    mcps = mcps[mask].reset_index(drop=True)
 
     # post-process
     return mcps
@@ -644,6 +708,9 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
     df["simhit_r"] = df["simhit_r"].astype(np.float32)
     df["simhit_t_corrected"] = df["simhit_t_corrected"].astype(np.float32)
     if signal:
+        df["simhit_p"] = df["simhit_p"].astype(np.float32)
+        df["simhit_e"] = df["simhit_e"].astype(np.float32)
+        df["simhit_pathlength"] = df["simhit_pathlength"].astype(np.float32)
         df["simhit_first_exit"] = df["simhit_first_exit"].astype(bool)
         df["simhit_from_fiducial_mcp"] = df["simhit_from_fiducial_mcp"].astype(bool)
 
