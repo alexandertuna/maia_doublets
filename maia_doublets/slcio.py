@@ -263,19 +263,19 @@ def convert_one_root_file_to_hits(evs: uproot.TTree,
         OUTER_TRACKER_BARREL_RELATIONS
     ]
 
-    datas = {}
+    datas = []
     for (sim_col, digi_col, rel_col) in zip(sim_cols, digi_cols, rel_cols):
-        datas[sim_col] = convert_one_root_file_to_hits_per_system(evs=evs,
-                                                                  file_number=file_number,
-                                                                  signal=signal,
-                                                                  use_sim=use_sim,
-                                                                  layers=layers,
-                                                                  sim_col=sim_col,
-                                                                  digi_col=digi_col,
-                                                                  rel_col=rel_col,
-                                                                  )
+        datas.append(convert_one_root_file_to_hits_per_system(evs=evs,
+                                                              file_number=file_number,
+                                                              signal=signal,
+                                                              use_sim=use_sim,
+                                                              layers=layers,
+                                                              sim_col=sim_col,
+                                                              digi_col=digi_col,
+                                                              rel_col=rel_col,
+                                                              ))
 
-    hits = pd.concat(datas.values(), ignore_index=True)
+    hits = pd.concat(datas, ignore_index=True)
     return hits
 
 
@@ -304,10 +304,7 @@ def convert_one_root_file_to_hits_per_system(
     """
     logger.info(f"Converting ROOT file to hits for {sim_col} ...")
 
-    # names = {}
-    # ancil = {}
-
-    # todo: add comment
+    # mapping branch names to human-readable names
     sim_basics = {
         f"{sim_col}.position.x": "simhit_x",
         f"{sim_col}.position.y": "simhit_y",
