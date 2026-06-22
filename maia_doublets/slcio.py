@@ -47,10 +47,12 @@ class HitMaker:
         logger.info("Opening pkl ...")
         # lcio_mcps = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/mcps.pkl")
         # lcio_hits = pd.read_pickle("/ceph/users/atuna/work/maia/maia_doublets/run/simhits.pkl")
-        lcio_mcps = pd.read_pickle("../data/signal/mcps.pkl")
-        lcio_hits = pd.read_pickle("../data/signal/simhits.pkl")
-        # lcio_mcps = pd.read_pickle("mcps.pkl")
-        # lcio_hits = pd.read_pickle("simhits.pkl")
+        # lcio_mcps = pd.read_pickle("../data/signal/mcps.pkl")
+        # lcio_hits = pd.read_pickle("../data/signal/simhits.pkl")
+        # lcio_mcps = pd.read_pickle("../data/signal_10um/mcps.pkl")
+        # lcio_hits = pd.read_pickle("../data/signal_10um/simhits.pkl")
+        lcio_mcps = pd.read_pickle("mcps.pkl")
+        lcio_hits = pd.read_pickle("simhits.pkl")
         logger.info("Converting ROOT files ...")
         fnames = [pat + ".root" for pat in self.slcio_file_paths]
         results = [
@@ -90,21 +92,31 @@ class HitMaker:
 
         # check for any non-equal columns in hits
         for col in root_hits.columns:
-            if not root_hits[col].equals(lcio_hits[col]) and not np.allclose(root_hits[col], lcio_hits[col]):
+            if not root_hits[col].equals(lcio_hits[col]):
+                if np.allclose(root_hits[col], lcio_hits[col]):
+                    print(f"Column {col} is not exactly equal but close. dtype: root {root_hits[col].dtype}, lcio {lcio_hits[col].dtype}")
+                    continue
                 print(f"Column {col} is not equal or close. dtype: root {root_hits[col].dtype}, lcio {lcio_hits[col].dtype}")
+                break
         else:
             logger.info(f"All columns in hits are either equal or close")
         print("x"*40)
 
         # check for any non-equal columns in mcps
         for col in root_mcps.columns:
-            if not root_mcps[col].equals(lcio_mcps[col]) and not np.allclose(root_mcps[col], lcio_mcps[col]):
+            if not root_mcps[col].equals(lcio_mcps[col]):
+                if np.allclose(root_mcps[col], lcio_mcps[col]):
+                    print(f"Column {col} is not exactly equal but close. dtype: root {root_mcps[col].dtype}, lcio {lcio_mcps[col].dtype}")
+                    continue
                 print(f"Column {col} is not equal or close. dtype: root {root_mcps[col].dtype}, lcio {lcio_mcps[col].dtype}")
+                break
         else:
             logger.info(f"All columns in mcps are either equal or close")
         print("x"*40)
 
-        raise NotImplementedError("Testing purposes")
+        import sys
+        sys.exit("Testing purposes")
+
 
     def convert(self) -> pd.DataFrame:
         mcps, simhits = self.convert_all_files()
@@ -187,9 +199,6 @@ def convert_one_root_file(
     rf = uproot.open(root_file_path)
     evs = rf["events"]
 
-    if not use_sim:
-        raise NotImplementedError("ROOT file parsing is not implemented for digi hits or relations")
-
     logger.info(f"Converting ROOT file {root_file_path} to mcps ...")
     mcps = convert_one_root_file_to_mcps(evs, file_number)
 
@@ -227,95 +236,295 @@ def convert_one_root_file_to_hits(evs: uproot.TTree,
                                   layers: dict[int, set[int]],
                                   ) -> pd.DataFrame:
 
-    cols = [
+    sim_cols = [
         INNER_TRACKER_BARREL_COLLECTION,
         OUTER_TRACKER_BARREL_COLLECTION,
     ]
+    digi_cols = [
+        INNER_TRACKER_BARREL_HITS,
+        OUTER_TRACKER_BARREL_HITS,
+    ]
+    rel_cols = [
+        INNER_TRACKER_BARREL_RELATIONS,
+        OUTER_TRACKER_BARREL_RELATIONS
+    ]
 
     datas = {}
-    for col in cols:
-        datas[col] = convert_one_root_file_to_hits_given_collection(evs, file_number, signal, use_sim, layers, col)
+    for (sim_col, digi_col, rel_col) in zip(sim_cols, digi_cols, rel_cols):
+        datas[sim_col] = convert_one_root_file_to_hits_per_system(evs=evs,
+                                                                  file_number=file_number,
+                                                                  signal=signal,
+                                                                  use_sim=use_sim,
+                                                                  layers=layers,
+                                                                  sim_col=sim_col,
+                                                                  digi_col=digi_col,
+                                                                  rel_col=rel_col,
+                                                                  )
 
     hits = pd.concat(datas.values(), ignore_index=True)
     return hits
 
 
-def convert_one_root_file_to_hits_given_collection(
+def convert_one_root_file_to_hits_per_system(
         evs: uproot.TTree,
         file_number: int,
         signal: bool,
         use_sim: bool,
         layers: dict[int, set[int]],
-        collection: str,
+        sim_col: str,
+        digi_col: str,
+        rel_col: str
         ) -> pd.DataFrame:
+    """
+    If use_sim:
+        We need the sim collections
+        We need the link from sim hit to MCParticle
+    Else:
+        If signal:
+            We need the digi collections
+            We need the sim collections
+            We need the relation from digi hit to sim hit
+            We need the link from sim hit to MCParticle
+        Else:
+            We need the digi collections
+    """
+    logger.info(f"Converting ROOT file to hits for {sim_col} ...")
 
-    logger.info(f"Converting ROOT file to hits for {collection} ...")
+    # names = {}
+    # ancil = {}
 
-    names = {
-        f"{collection}.position.x": "simhit_x",
-        f"{collection}.position.y": "simhit_y",
-        f"{collection}.position.z": "simhit_z",
-        f"{collection}.time": "simhit_t",
-        f"{collection}.cellID": "simhit_cellid0",
-        f"_{collection}_particle.index": "i_mcp",
+    # todo: add comment
+    sim_basics = {
+        f"{sim_col}.position.x": "simhit_x",
+        f"{sim_col}.position.y": "simhit_y",
+        f"{sim_col}.position.z": "simhit_z",
+        f"{sim_col}.time": "simhit_t",
+        f"{sim_col}.cellID": "simhit_cellid0",
     }
-    if signal:
-        names |= {
-            f"{collection}.momentum.x": "simhit_px",
-            f"{collection}.momentum.y": "simhit_py",
-            f"{collection}.momentum.z": "simhit_pz",
-            f"{collection}.eDep": "simhit_e",
-            f"{collection}.pathLength": "simhit_pathlength",
-        }
-    data = evs.arrays(list(names.keys()), library="np")
 
-    # metadata: event number
-    i_events = []
-    for i_event, branch in enumerate(data[f"{collection}.cellID"]):
-        i_events.extend([i_event]*len(branch))
+    digi_basics = {
+        f"{digi_col}.position.x": "simhit_x",
+        f"{digi_col}.position.y": "simhit_y",
+        f"{digi_col}.position.z": "simhit_z",
+        f"{digi_col}.time": "simhit_t",
+        f"{digi_col}.cellID": "simhit_cellid0",
+    }
 
-    # count them up
-    n_rows = len(i_events)
-    if n_rows == 0:
-        msg = f"No hits found in {collection}"
-        logger.error(msg)
-        raise RuntimeError(msg)
+    sim_extra = {
+        f"{sim_col}.momentum.x": "simhit_px",
+        f"{sim_col}.momentum.y": "simhit_py",
+        f"{sim_col}.momentum.z": "simhit_pz",
+        f"{sim_col}.eDep": "simhit_e",
+        f"{sim_col}.pathLength": "simhit_pathlength",
+        f"_{sim_col}_particle.index": "i_mcp",
+    }
 
-    # numpify the data
-    for key, value in names.items():
-        data[value] = np.concatenate(data.pop(key))
+    digi_extra = {
+        f"_{rel_col}_to.index": "i_to",
+        f"_{rel_col}_from.index": "i_from",
+    }
 
-    # engineer a few columns
-    data["file"] = np.array([file_number]*n_rows)
-    data["i_event"] = np.array(i_events)
-    correction = (np.sqrt(data["simhit_x"]**2 + \
-                          data["simhit_y"]**2 + \
-                          data["simhit_z"]**2) / SPEED_OF_LIGHT) if use_sim else 0.0
-    data["simhit_t_corrected"] = data["simhit_t"] - correction
-    data["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
-    if signal:
-        data["simhit_distance"] = np.array([-1]*n_rows)
+    # # basic info
+    # if use_sim:
+    #     names |= {
+    #         f"{sim_col}.position.x": "simhit_x",
+    #         f"{sim_col}.position.y": "simhit_y",
+    #         f"{sim_col}.position.z": "simhit_z",
+    #         f"{sim_col}.time": "simhit_t",
+    #         f"{sim_col}.cellID": "simhit_cellid0",
+    #     }
+    # else:
+    #     names |= {
+    #         f"{digi_col}.position.x": "simhit_x",
+    #         f"{digi_col}.position.y": "simhit_y",
+    #         f"{digi_col}.position.z": "simhit_z",
+    #         f"{digi_col}.time": "simhit_t",
+    #         f"{digi_col}.cellID": "simhit_cellid0",
+    #     }
+    # # more sim hit info
+    # if signal or use_sim:
+    #     sim_features = {
+    #         f"{sim_col}.momentum.x": "simhit_px",
+    #         f"{sim_col}.momentum.y": "simhit_py",
+    #         f"{sim_col}.momentum.z": "simhit_pz",
+    #         f"{sim_col}.eDep": "simhit_e",
+    #         f"{sim_col}.pathLength": "simhit_pathlength",
+    #         f"_{sim_col}_particle.index": "i_mcp",
+    #     }
+    #     if use_sim:
+    #         names |= sim_features
+    #     elif signal:
+    #         ancil |= sim_features
 
-    # convert to DataFrame
-    hits = pd.DataFrame(data)
+    # the relevant data in each circumstance
+    sim_columns = {}
+    digi_columns = {}
+    if use_sim or signal:
+        sim_columns |= sim_basics
+        if signal:
+            sim_columns |= sim_extra
+    if not use_sim:
+        digi_columns |= digi_basics
+        if signal:
+            digi_columns |= digi_extra
 
-    # adjust the "no MCParticle" value for i_mcp
-    hits["i_mcp"] = hits["i_mcp"].replace(PODIO_NO_MCP, NO_MCP)
+    # fetch the data
+    data = {}
+    hits = {}
+    for (col, columns) in [
+        (sim_col, sim_columns),
+        (digi_col, digi_columns),
+    ]:
 
-    # sanity check
-    hit_system = np.right_shift(hits["simhit_cellid0"], 0) & 0b1_1111
-    if hit_system.nunique() != 1:
-        msg = f"Expected one system in {collection}, found {hit_system.unique()}"
-        logger.error(msg)
-        raise RuntimeError(msg)
+        if not columns:
+            continue
 
-    # filter by layer
-    hit_system = hit_system.iloc[0]
-    hit_layer = np.right_shift(hits["simhit_cellid0"], 7) & 0b11_1111
-    mask = hit_layer.isin(layers[hit_system])
-    hits = hits[mask]
+        # fetch data
+        data[col] = evs.arrays(list(columns.keys()), library="np")
 
-    return hits
+        # metadata: event number
+        n_events = len(data[col][f"{col}.cellID"])
+        i_events = np.repeat(np.arange(n_events), [len(arr) for arr in data[col][f"{col}.cellID"]])
+        n_rows = len(i_events)
+
+        # check
+        if n_rows == 0:
+            msg = f"No hits found in {col}"
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        # flatten the data
+        for key, value in columns.items():
+            data[col][value] = np.concatenate(data[col].pop(key))
+
+        # engineer a few columns
+        data[col]["file"] = np.array([file_number]*n_rows)
+        data[col]["i_event"] = np.array(i_events)
+        data[col]["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
+        if col == sim_col:
+            correction = (np.sqrt(data[col]["simhit_x"]**2 + \
+                                  data[col]["simhit_y"]**2 + \
+                                  data[col]["simhit_z"]**2) / SPEED_OF_LIGHT)
+            data[col]["simhit_t_corrected"] = data[col]["simhit_t"] - correction
+        if signal:
+            data[col]["simhit_distance"] = np.array([-1]*n_rows)
+        else:
+            data[col]["i_mcp"] = np.array([NO_MCP]*n_rows)
+
+        # convert to DataFrame
+        hits[col] = pd.DataFrame(data[col])
+
+        # adjust the "no MCParticle" value for i_mcp
+        hits[col]["i_mcp"] = hits[col]["i_mcp"].replace(PODIO_NO_MCP, NO_MCP)
+
+        # sanity check
+        hit_system = np.right_shift(hits[col]["simhit_cellid0"], 0) & 0b1_1111
+        if hit_system.nunique() != 1:
+            msg = f"Expected one system, found {hit_system.unique()}"
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        # filter by layer
+        hit_system = hit_system.iloc[0]
+        hit_layer = np.right_shift(hits[col]["simhit_cellid0"], 7) & 0b11_1111
+        mask = hit_layer.isin(layers[hit_system])
+        hits[col] = hits[col][mask]
+
+
+    # if sim_columns:
+    #     sim_data = evs.arrays(list(sim_columns.keys()), library="np")
+    # if digi_columns:
+    #     digi_data = evs.arrays(list(digi_columns.keys()), library="np")
+
+    # # metadata: event number
+    # meta_col = sim_col if use_sim else digi_col
+    # i_events = []
+    # for i_event, branch in enumerate(sim_data[f"{meta_col}.cellID"]):
+    #     i_events.extend([i_event]*len(branch))
+
+    # # count them up
+    # n_rows = len(i_events)
+    # if n_rows == 0:
+    #     msg = f"No hits found in {sim_col}"
+    #     logger.error(msg)
+    #     raise RuntimeError(msg)
+
+    # # numpify the data
+    # for key, value in sim_columns.items():
+    #     sim_data[value] = np.concatenate(sim_data.pop(key))
+
+    # # engineer a few columns
+    # sim_data["file"] = np.array([file_number]*n_rows)
+    # sim_data["i_event"] = np.array(i_events)
+    # correction = (np.sqrt(sim_data["simhit_x"]**2 + \
+    #                       sim_data["simhit_y"]**2 + \
+    #                       sim_data["simhit_z"]**2) / SPEED_OF_LIGHT) if use_sim else 0.0
+    # sim_data["simhit_t_corrected"] = sim_data["simhit_t"] - correction
+    # sim_data["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
+    # if signal:
+    #     sim_data["simhit_distance"] = np.array([-1]*n_rows)
+    # else:
+    #     sim_data["i_mcp"] = np.array([NO_MCP]*n_rows)
+
+    # engineer a tricky column:
+    # navigate from digi hits to sim hits to mcp index
+    if False and signal and not use_sim:
+        # simhit, hit = getTo(), getFrom()
+        key_to = f"_{rel_col}_to.index"
+        key_from = f"_{rel_col}_from.index"
+        key_mcp = f"_{sim_col}_particle.index"
+        rels = evs.arrays([key_to, key_from, key_mcp], library="np")
+        rel_to = np.concatenate(rels.pop(key_to))
+        rel_from = np.concatenate(rels.pop(key_from))
+        sim_mcp = np.concatenate(rels.pop(key_mcp))
+        # subset = 1880
+        # print("allclose", np.allclose(rel_to[subset-10:subset], rel_from[subset-10:subset]))
+        print("rel_to.shape", rel_to.shape)
+        print("rel_from.shape", rel_from.shape)
+        print("sim_mcp.shape", sim_mcp.shape)
+        print("sim_mcp[rel_to].shape", sim_mcp[rel_to].shape)
+        i_mcp = np.ones_like(rel_to) * NO_MCP
+
+        rel_df = pd.DataFrame({
+            "i_event": data["i_event"],
+            "i_digi":  np.concatenate(rel_from),
+            "i_sim":   np.concatenate(rel_to),
+        })
+
+        for (r_to, r_from) in zip(rel_to, rel_from):
+            i_mcp[r_from] = sim_mcp[r_to]
+        print("i_mcp.shape", i_mcp.shape)
+        print("i_mcp", i_mcp)
+        # print("rel_to[:10]", rel_to[subset-10:subset])
+        # print("rel_from[:10]", rel_from[subset-10:subset])
+
+
+    # # convert to DataFrame
+    # sim_hits = pd.DataFrame(sim_data)
+
+    # # adjust the "no MCParticle" value for i_mcp
+    # sim_hits["i_mcp"] = sim_hits["i_mcp"].replace(PODIO_NO_MCP, NO_MCP)
+
+    # # sanity check
+    # hit_system = np.right_shift(sim_hits["simhit_cellid0"], 0) & 0b1_1111
+    # if hit_system.nunique() != 1:
+    #     msg = f"Expected one system, found {hit_system.unique()}"
+    #     logger.error(msg)
+    #     raise RuntimeError(msg)
+
+    # # filter by layer
+    # hit_system = hit_system.iloc[0]
+    # hit_layer = np.right_shift(sim_hits["simhit_cellid0"], 7) & 0b11_1111
+    # mask = hit_layer.isin(layers[hit_system])
+    # sim_hits = sim_hits[mask]
+
+    if use_sim:
+        return hits[sim_col]
+        # return sim_hits
+    else:
+        raise NotImplementedError("Digi hits are not yet supported in this function")
+
+    # return sim_hits
 
 
 def convert_one_root_file_to_mcps(evs: uproot.TTree,
