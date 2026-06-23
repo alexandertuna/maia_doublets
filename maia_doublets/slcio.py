@@ -307,7 +307,7 @@ def convert_one_root_file_to_hits_per_system(
         Else:
             We need the digi collections
     """
-    logger.info(f"Converting ROOT file to hits for {sim_col} ...")
+    logger.info(f"Converting ROOT file to hits for {sim_col if use_sim else digi_col} ...")
 
     # mapping branch names to human-readable names
     sim_basics = {
