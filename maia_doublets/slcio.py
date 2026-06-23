@@ -323,8 +323,11 @@ def convert_one_root_file_to_hits_per_system(
         f"{digi_col}.position.y": "simhit_y",
         f"{digi_col}.position.z": "simhit_z",
         f"{digi_col}.time": "simhit_t",
-        f"{digi_col}.eDep": "simhit_e",
         f"{digi_col}.cellID": "simhit_cellid0",
+    }
+
+    digi_extra = {
+        f"{digi_col}.eDep": "simhit_e",
     }
 
     sim_extra = {
@@ -352,6 +355,7 @@ def convert_one_root_file_to_hits_per_system(
     if not use_sim:
         digi_columns |= digi_basics
         if signal:
+            digi_columns |= digi_extra
             rel_columns |= rel_basic
 
 
