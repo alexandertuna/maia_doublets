@@ -445,7 +445,15 @@ def convert_one_root_file_to_hits_per_system(
             on=event_keys + ["i_object"], how="left", validate="1:1",
         )
         hits[digi_col]["i_mcp"] = hits[digi_col]["i_mcp"].fillna(NO_MCP).astype(int)
-        hits[digi_col] = hits[digi_col].drop(columns=["i_object"])
+
+    # drop intermediate column(s)
+    for col in [
+        sim_col,
+        digi_col,
+        rel_col,
+    ]:
+        if col in hits and "i_object" in hits[col].columns:
+            hits[col] = hits[col].drop(columns=["i_object"])
 
     # fin
     return hits[sim_col] if use_sim else hits[digi_col]
