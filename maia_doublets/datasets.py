@@ -99,10 +99,9 @@ def parse_filepaths(
     fnames: str | list[str],
 ) -> list[str]:
     names = []
-    if isinstance(fnames, str):
-        fnames = [fnames]
+    fnames = fnames.split(",")
     for fname in fnames:
-        names.extend(glob(fname))
+        names.extend(sorted(glob(fname)))
     return names
 
 def get_filepaths(
