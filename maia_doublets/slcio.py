@@ -150,6 +150,11 @@ class HitMaker:
 
     def convert_all_files(self) -> pd.DataFrame:
         logger.info(f"Converting {len(self.slcio_file_paths)} slcio files to a DataFrame ...")
+        is_root = all([path.endswith("root") for path in self.slcio_file_paths])
+        is_lcio = all([path.endswith("lcio") for path in self.slcio_file_paths])
+        if not is_root and not is_lcio:
+            raise ValueError(f"Files must be all ROOT or all LCIO. Found mixed: {self.slcio_file_paths}")
+        convert_func = convert_one_root_file if is_root else convert_one_lcio_file
         initializer = init_worker if self.load_geometry else init_dummy
         processes = min(mp.cpu_count(), len(self.slcio_file_paths))
         logger.info(f"Using {processes} processes for conversion ...")
@@ -161,7 +166,7 @@ class HitMaker:
             sim = [self.sim]*n_map
             layers = [self.layers]*n_map
             results = pool.starmap(
-                convert_one_file,
+                convert_func,
                 zip(self.slcio_file_paths,
                     file_numbers,
                     load_geometry,
@@ -208,7 +213,7 @@ def convert_one_root_file(
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Parse a ROOT file for MCParticles and simhits, returning two DataFrames.
-    This is an alternative to convert_one_file that uses uproot instead of pyLCIO.
+    This is an alternative to convert_one_lcio_file that uses uproot instead of pyLCIO.
     """
     rf = uproot.open(root_file_path)
     evs = rf["events"]
@@ -513,7 +518,7 @@ def merge_mcp_info_into_hits(
     return hits
 
 
-def convert_one_file(
+def convert_one_lcio_file(
         slcio_file_path: str,
         file_number: int,
         load_geometry: bool,
@@ -876,6 +881,7 @@ def sort_simhits(df: pd.DataFrame) -> pd.DataFrame:
         "simhit_layer",
         "simhit_module",
         "simhit_sensor",
+        "simhit_t_corrected",
     ]
     return df.sort_values(by=columns).reset_index(drop=True)
 
