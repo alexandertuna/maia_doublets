@@ -331,7 +331,7 @@ def convert_one_root_file_to_hits_per_system(
         f"_{sim_col}_particle.index": "i_mcp",
     }
 
-    digi_extra = {
+    rel_basic = {
         f"_{rel_col}_to.index": "i_to",
         f"_{rel_col}_from.index": "i_from",
     }
@@ -339,6 +339,7 @@ def convert_one_root_file_to_hits_per_system(
     # the relevant data in each circumstance
     sim_columns = {}
     digi_columns = {}
+    rel_columns = {}
     if use_sim or signal:
         sim_columns |= sim_basics
         if signal:
@@ -346,13 +347,15 @@ def convert_one_root_file_to_hits_per_system(
     if not use_sim:
         digi_columns |= digi_basics
         if signal:
-            digi_columns |= digi_extra
+            rel_columns |= rel_basic
+
 
     # fetch the data
     data, hits = {}, {}
     for (col, columns) in [
         (sim_col, sim_columns),
         (digi_col, digi_columns),
+        (rel_col, rel_columns)
     ]:
 
         if not columns:
@@ -363,12 +366,12 @@ def convert_one_root_file_to_hits_per_system(
 
         # metadata: event number, hit index within event
         reference_column = f"{col}.cellID"
+        if col == rel_col:
+            reference_column = f"_{col}_to.index"
         n_events = len(data[col][reference_column])
         i_events = np.repeat(np.arange(n_events), [len(arr) for arr in data[col][reference_column]]) # 0,0,0,1,1,1,1,2,2,2,2,2,...
         i_object = np.concatenate([np.arange(len(arr)) for arr in data[col][reference_column]]) # 0,1,2,0,1,2,3,0,1,2,3,4,...
         n_rows = len(i_events)
-
-        # check
         if n_rows == 0:
             msg = f"No hits found in {col}"
             logger.error(msg)
@@ -381,40 +384,24 @@ def convert_one_root_file_to_hits_per_system(
         # engineer a few columns
         data[col]["file"] = np.array([file_number]*n_rows)
         data[col]["i_event"] = np.array(i_events)
-        data[col]["i_object"] = np.array(i_object)
-        data[col]["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
-        correction = (np.sqrt(data[col]["simhit_x"]**2 + \
-                              data[col]["simhit_y"]**2 + \
-                              data[col]["simhit_z"]**2) / SPEED_OF_LIGHT) if col == sim_col else 0.0
-        data[col]["simhit_t_corrected"] = data[col]["simhit_t"] - correction
-        if signal:
-            data[col]["simhit_distance"] = np.array([-1]*n_rows)
-        else:
-            data[col]["i_mcp"] = np.array([NO_MCP]*n_rows)
-
-        # gotcha: relations (rel_col) are not guaranteed to be in the same order as the digi hits (digi_col)
-        # we re-order by "i_from", which is the index of the digi hit
-        if signal and not use_sim and col == digi_col:
-            unsorted_rels = pd.DataFrame({
-                "file": data[col]["file"],
-                "i_event": data[col]["i_event"],
-                "i_to": data[col]["i_to"],
-                "i_from": data[col]["i_from"],
-            })
-            sort_cols = ["file", "i_event", "i_from"]
-            sorted_rels = unsorted_rels.sort_values(by=sort_cols).reset_index(drop=True)
-            data[col]["i_to"] = sorted_rels["i_to"].values
-            data[col]["i_from"] = sorted_rels["i_from"].values
-
-            # sanity check
-            cmp_cols = ["file", "i_event"]
-            if not unsorted_rels[cmp_cols].equals(sorted_rels[cmp_cols]):
-                msg = "Sanity check failed: unsorted_rels[file, i_event] != sorted_rels[file, i_event]"
-                logger.error(msg)
-                raise RuntimeError(msg)
+        if col == sim_col or col == digi_col:
+            data[col]["i_object"] = np.array(i_object)
+            data[col]["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
+            correction = (np.sqrt(data[col]["simhit_x"]**2 + \
+                                data[col]["simhit_y"]**2 + \
+                                data[col]["simhit_z"]**2) / SPEED_OF_LIGHT) if col == sim_col else 0.0
+            data[col]["simhit_t_corrected"] = data[col]["simhit_t"] - correction
+            if signal:
+                data[col]["simhit_distance"] = np.array([-1]*n_rows)
+            else:
+                data[col]["i_mcp"] = np.array([NO_MCP]*n_rows)
 
         # convert to DataFrame
         hits[col] = pd.DataFrame(data[col])
+
+        # nothing left to do for relations
+        if col == rel_col:
+            continue
 
         # adjust the "no MCParticle" value for i_mcp
         if "i_mcp" in hits[col].columns:
@@ -433,41 +420,27 @@ def convert_one_root_file_to_hits_per_system(
         mask = hit_layer.isin(layers[hit_system])
         hits[col] = hits[col][mask]
 
-
-    # engineer a tricky column:
-    # navigate from digi hits to sim hits to mcp index
+    # engineer a tricky column: navigate digi hit <-> relation <-> sim hit
     if signal and not use_sim:
-        rel_df = hits[digi_col][ ["file", "i_event", "i_to", "i_from"] ]
-        sim_df = hits[sim_col][ ["file", "i_event", "i_object", "i_mcp",
-                                 "simhit_px", "simhit_py", "simhit_pz",
-                                 "simhit_pathlength"] ]
 
-        rel_df = rel_df.rename(columns={"i_to": "i_sim", "i_from": "i_digi"})
-        sim_df = sim_df.rename(columns={"i_object": "i_sim"})
+        event_keys = ["file", "i_event"]
+        sim_payload = ["i_mcp", "simhit_px", "simhit_py", "simhit_pz", "simhit_pathlength"]
 
-        rel_df = rel_df.merge(sim_df, on=["file", "i_event", "i_sim"], how="left")
-        rel_df["i_mcp"] = rel_df["i_mcp"].fillna(NO_MCP).astype(int)
+        # 1: relation -> sim hit: attach each sim hit's mcp + kinematics to its relation
+        sim_info = (
+            hits[sim_col][event_keys + ["i_object"] + sim_payload]
+            .rename(columns={"i_object": "i_to"})
+        )
+        rels = hits[rel_col].merge(sim_info, on=event_keys + ["i_to"], how="left", validate="m:1")
 
-        # sort by file, event, i_sim
-        rel_df = rel_df.sort_values(by=["file", "i_event", "i_sim"]).reset_index(drop=True)
-
-        # warn if mulitple sim hits match to the same digi hit
-        duplicates = rel_df.duplicated(subset=["file", "i_event", "i_digi"], keep=False)
-        if duplicates.any():
-            dup_df = rel_df[duplicates]
-            dup_counts = dup_df.groupby(["file", "i_event", "i_digi"]).size()
-            logger.warning(f"Found {dup_counts.max()} sim hits matching the same digi hit. Sample of dups:\n{dup_df.head()}")
-
-        # merge
-        hits[digi_col]["i_mcp"] = rel_df["i_mcp"].values
-        hits[digi_col]["simhit_px"] = rel_df["simhit_px"].values
-        hits[digi_col]["simhit_py"] = rel_df["simhit_py"].values
-        hits[digi_col]["simhit_pz"] = rel_df["simhit_pz"].values
-        hits[digi_col]["simhit_pathlength"] = rel_df["simhit_pathlength"].values
-
-        # and drop
-        rm_cols = ["i_to", "i_from", "i_object"]
-        hits[digi_col] = hits[digi_col].drop(columns=rm_cols)
+        # 2: digi hit -> relation: attach onto each digi hit by its local index (i_from)
+        rels = rels.rename(columns={"i_from": "i_object"})
+        hits[digi_col] = hits[digi_col].merge(
+            rels[event_keys + ["i_object"] + sim_payload],
+            on=event_keys + ["i_object"], how="left", validate="1:1",
+        )
+        hits[digi_col]["i_mcp"] = hits[digi_col]["i_mcp"].fillna(NO_MCP).astype(int)
+        hits[digi_col] = hits[digi_col].drop(columns=["i_object"])
 
     # fin
     return hits[sim_col] if use_sim else hits[digi_col]
