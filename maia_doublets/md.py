@@ -41,7 +41,7 @@ class MDMaker:
                 "simhit_system", # the system (IT, OT)
                 "simhit_layer_div_2", # the double layer
                 "simhit_module", # the phi-module
-                # "simhit_sensor", # the z-sensor
+                "simhit_sensor", # the z-sensor
             ]
 
         # group loop
