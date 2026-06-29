@@ -29,7 +29,7 @@ def main():
                 try:
                     assert_series_equal(df1[col], df2[col], check_dtype=False, check_names=False)
                 except AssertionError as e:
-                    print(f"Column '{col}' is different:")
+                    print(f"Column '{col}' is different")
                     # print(e)
             else:
                 print(f"Column '{col}' is missing in the second DataFrame.")
