@@ -65,6 +65,7 @@ def main():
     logger.info(f"Cut MDs: {cut_mds}")
     logger.info(f"Cut T2s: {cut_t2s}")
     logger.info(f"Cut T4s: {cut_t4s}")
+    logger.info(f"Fast MDs: {ops.fast_mds}")
     logger.info(f"Geometry version: {ops.geo}")
     logger.info(f"Using sim hits: {ops.sim}")
     logger.info(f"Using digi hits: {ops.digi}")
@@ -114,6 +115,7 @@ def main():
                 sim=ops.sim,
                 smear=ops.smear,
                 cut_doublets=cut_mds,
+                fast_merge=ops.fast_mds,
                 simhits=simhits,
             ).df
 
@@ -121,6 +123,8 @@ def main():
     if ops.write_mds:
         logger.info("Saving mini-doublets as pickle file ...")
         doublets.to_pickle(ops.write_mds)
+
+    return
 
     # reading / making T2s (line segments)
     with Timer() as t2_time:
@@ -194,7 +198,7 @@ def main():
 
 def options():
     preset = [
-        # "ITB0", "ITB1", "ITB2", "ITB3",
+        "ITB0", "ITB1", "ITB2", "ITB3",
         "ITB4", "ITB5", "ITB6", "ITB7",
         "OTB0", "OTB1", "OTB2", "OTB3",
         "OTB4", "OTB5", "OTB6", "OTB7",
@@ -215,6 +219,7 @@ def options():
     parser.add_argument("--write-simhits", type=str, help="Write simhits to pickle file")
     parser.add_argument("--read-mds", type=str, help="Read mini-doublets from pickle file")
     parser.add_argument("--write-mds", type=str, help="Write mini-doublets to pickle file")
+    parser.add_argument("--fast-mds", action="store_true", help="Use fast binned merge for mini-doublets")
     parser.add_argument("--read-t2s", type=str, help="Read T2s (line segments) from pickle file")
     parser.add_argument("--write-t2s", type=str, help="Write T2s (line segments) to pickle file")
     parser.add_argument("--geo", type=str, help="Version of geometry to use for cuts (e.g. v01, v04)", required=True)

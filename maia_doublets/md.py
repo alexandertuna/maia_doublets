@@ -11,8 +11,16 @@ from maia_doublets.constants import N_T2_PHI_SLICES, N_T2_ETA_SLICES, DETECTOR_M
 
 class MDMaker:
 
-
-    def __init__(self, geometry_version: str, sim: bool, smear: str, signal: bool, cut_doublets: bool, simhits: pd.DataFrame):
+    def __init__(
+        self,
+        geometry_version: str,
+        sim: bool,
+        smear: str,
+        signal: bool,
+        cut_doublets: bool,
+        fast_merge: bool,
+        simhits: pd.DataFrame,
+    ):
         self.signal = signal
         self.cut_doublets = cut_doublets
         key = (geometry_version, "sim") if sim else (geometry_version, "digi", smear)
@@ -26,6 +34,7 @@ class MDMaker:
             "simhit_module", # the phi-module
             "simhit_sensor", # the z-sensor
         ]
+        self.fast_merge = fast_merge
         self.df = self.make_doublets(simhits)
 
 
@@ -85,15 +94,21 @@ class MDMaker:
 
         lower_mask = group["simhit_layer_mod_2"] == 0
         upper_mask = group["simhit_layer_mod_2"] == 1
+        lower = group[lower_mask]
+        upper = group[upper_mask]
 
         # inner join to find doublets
-        doublets = pd.merge(
-            group[lower_mask],
-            group[upper_mask],
-            on=self.doublet_cols,
-            how="inner",
-            suffixes=("_lower", "_upper"),
-        )
+        if self.cut_doublets and self.fast_merge:
+            doublets, n_full = self.merge_binned(lower, upper)
+        else:
+            doublets = pd.merge(
+                lower,
+                upper,
+                on=self.doublet_cols,
+                how="inner",
+                suffixes=("_lower", "_upper"),
+            )
+            n_full = len(doublets)
 
         # doublet feature: xy, dr at point of closest approach to origin
         slope_xy = np.divide(doublets["simhit_y_upper"] - doublets["simhit_y_lower"],
@@ -208,3 +223,100 @@ class MDMaker:
 
         return doublets, cutflow
 
+
+    def merge_binned(self, lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+        """
+        Experimental binned merge to speed up the doublet making, courtesy of Claude
+
+        Binned-merge equivalent of pd.merge(lower, upper, on=doublet_cols,
+        how="inner", suffixes=("_lower","_upper")), restricted to upper hits whose
+        z bin is within +/-1 of the lower hit's predicted z bin. Returns
+        (merge_equivalent_frame, n_full_crossproduct).
+
+        Assumes a single cell (system / doublelayer / module / sensor constant).
+
+        Bin width: within this cell the dz cut |doublet_dz| < DZ is exactly
+        |z_lo*r_up - z_up*r_lo| < DZ*(r_up-r_lo), which confines z_up to an interval
+        around the radial projection of the lower hit. The bin width is the widest
+        such half-interval the cut allows in the cell, so the predicted bin plus its
+        two neighbours are guaranteed to contain every dz survivor.
+        """
+        n_lo = len(lower)
+        n_up = len(upper)
+        n_full = n_lo * n_up
+
+        system = int(lower["simhit_system"].iloc[0])
+        doublelayer = int(lower["simhit_layer_div_2"].iloc[0])
+        dz_cut = float(self.MD_DZ_CUT[system, doublelayer])
+
+        z_lo = lower["simhit_z"].to_numpy(np.float64)
+        r_lo = lower["simhit_r"].to_numpy(np.float64)
+        z_up = upper["simhit_z"].to_numpy(np.float64)
+        r_up = upper["simhit_r"].to_numpy(np.float64)
+
+        r_up_min = r_up.min()
+        r_up_max = r_up.max()
+
+        # guard: closed form assumes the upper layer sits strictly outside the
+        # lower one. If radii overlap, fall back to the exact full merge.
+        if r_up_min <= r_lo.max():
+            self.logger.warning(f"MD binned merge: weird data, falling back to full merge")
+            doublets = pd.merge(lower, upper, on=self.doublet_cols, how="inner",
+                                suffixes=("_lower", "_upper"))
+            return doublets, n_full
+
+        # allowed z_up interval per lower hit (union over r_up in [min, max])
+        fmin_a = ((z_lo - dz_cut) * r_up_min + dz_cut * r_lo) / r_lo
+        fmin_b = ((z_lo - dz_cut) * r_up_max + dz_cut * r_lo) / r_lo
+        fmax_a = ((z_lo + dz_cut) * r_up_min - dz_cut * r_lo) / r_lo
+        fmax_b = ((z_lo + dz_cut) * r_up_max - dz_cut * r_lo) / r_lo
+        win_lo = np.minimum(fmin_a, fmin_b)
+        win_hi = np.maximum(fmax_a, fmax_b)
+
+        center = 0.5 * (win_lo + win_hi)            # = radial projection of the lower hit
+        half = 0.5 * (win_hi - win_lo)              # half-window the dz cut permits
+        bin_width = float(half.max())               # widest half-window in this cell
+
+        # degenerate (e.g. dz_cut == 0): nothing can pass, fall back is safe
+        if not (bin_width > 0.0):
+            self.logger.warning(f"MD binned merge: degenerate bin width, falling back to full merge")
+            doublets = pd.merge(lower, upper, on=self.doublet_cols, how="inner",
+                                suffixes=("_lower", "_upper"))
+            return doublets, n_full
+
+        # discretise z (shared grid origin) and predict each lower hit's bin
+        z0 = z_up.min()
+        upper_bin = np.floor((z_up - z0) / bin_width).astype(np.int64)
+        lower_bin = np.floor((center - z0) / bin_width).astype(np.int64)
+
+        # binned inner merge over {bin-1, bin, bin+1}: replicate the lower side
+        # across the three neighbour keys, merge on the bin key. Each upper hit
+        # lives in exactly one bin, so it matches at most one lower copy -> no dupes.
+        lower_keys = pd.DataFrame({
+            "_zbin": np.concatenate([lower_bin - 1, lower_bin, lower_bin + 1]),
+            "_lpos": np.tile(np.arange(n_lo), 3),
+        })
+        upper_keys = pd.DataFrame({
+            "_zbin": upper_bin,
+            "_upos": np.arange(n_up),
+        })
+        matched = lower_keys.merge(upper_keys, on="_zbin", how="inner")
+
+        if len(matched) == 0:
+            self.logger.warning(f"MD binned merge: no matches, falling back to full merge")
+            doublets = pd.merge(lower.iloc[:0], upper.iloc[:0], on=self.doublet_cols,
+                                how="inner", suffixes=("_lower", "_upper"))
+            return doublets, n_full
+
+        lower_pos = matched["_lpos"].to_numpy()
+        upper_pos = matched["_upos"].to_numpy()
+
+        # assemble the merge-equivalent frame (keys once, everything else suffixed)
+        L = lower.iloc[lower_pos].reset_index(drop=True)
+        U = upper.iloc[upper_pos].reset_index(drop=True)
+        keys = L[self.doublet_cols]
+        L_other = L.drop(columns=self.doublet_cols).add_suffix("_lower")
+        U_other = U.drop(columns=self.doublet_cols).add_suffix("_upper")
+        doublets = pd.concat([keys, L_other, U_other], axis=1)
+
+        return doublets, n_full
