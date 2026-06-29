@@ -81,7 +81,7 @@ signal_filepaths = {
 
 background100_filepaths = {
     ("v01", "sim"): [
-        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun_n5_p15/neutrinoGun_digi_3.slcio",
+        "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun/sim/neutrinoGun_digi_3.slcio",
     ],
     ("v01", "digi", "10um"): [
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun/10um/neutrinoGun_digi_3.slcio",
