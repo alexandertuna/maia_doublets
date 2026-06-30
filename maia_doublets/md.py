@@ -202,6 +202,7 @@ class MDMaker:
         if self.signal:
             doublets["doublet_first_exit"] = doublets["simhit_first_exit_lower"] & doublets["simhit_first_exit_upper"]
             doublets["doublet_from_fiducial_mcp"] = doublets["simhit_from_fiducial_mcp_lower"] & doublets["simhit_from_fiducial_mcp_upper"]
+            doublets["doublet_detectable"] = doublets["simhit_detectable_lower"] & doublets["simhit_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",
