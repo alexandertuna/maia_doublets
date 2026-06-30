@@ -64,15 +64,15 @@ class T2Calibrator:
             "ls_dtheta_rz",
             "ls_chi2_012",
         ]
-        self.global_doublelayer = "ls_gdoublelayer"
+        self.gdl = "ls_gdoublelayer"
         self.detectable = "ls_detectable"
         self.groupby = [
-            self.global_doublelayer,
+            self.gdl,
         ]
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating T2 {self.features}")
         logger.info(f"len(t2s) = {len(t2s)}")
-        logger.info(f"Global doublelayers: {self.df[self.global_doublelayer].unique()}")
+        logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
 
 
     def calibrate(self, update_calib: bool = True) -> None:
@@ -82,12 +82,12 @@ class T2Calibrator:
         )
         for feature in self.features:
             for (cols, group) in self.df[mask].groupby(self.groupby):
-                (global_doublelayer,) = [str(col) for col in cols]
-                if global_doublelayer not in self.calib[feature]:
-                    self.calib[feature][global_doublelayer] = {}
+                (gdl,) = [str(col) for col in cols]
+                if gdl not in self.calib[feature]:
+                    self.calib[feature][gdl] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
-                self.calib[feature][global_doublelayer] = interval
-                logger.info(f"Calibrated {feature} for {global_doublelayer}: {interval}")
+                self.calib[feature][gdl] = interval
+                logger.info(f"Calibrated {feature} for {gdl}: {interval}")
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -110,15 +110,15 @@ class T4Calibrator:
             "t4_dtheta_rz",
             "t4_chi2_xy_047",
         ]
-        self.global_doublelayer = "t4_gdoublelayer"
+        self.gdl = "t4_gdoublelayer"
         self.detectable = "t4_detectable"
         self.groupby = [
-            self.global_doublelayer,
+            self.gdl,
         ]
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating T4 {self.features}")
         logger.info(f"len(t4s) = {len(t4s)}")
-        logger.info(f"Global doublelayers: {self.df[self.global_doublelayer].unique()}")
+        logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
 
 
     def calibrate(self, update_calib: bool = True) -> None:
@@ -128,12 +128,12 @@ class T4Calibrator:
         )
         for feature in self.features:
             for (cols, group) in self.df[mask].groupby(self.groupby):
-                (global_doublelayer,) = [str(col) for col in cols]
-                if global_doublelayer not in self.calib[feature]:
-                    self.calib[feature][global_doublelayer] = {}
+                (gdl,) = [str(col) for col in cols]
+                if gdl not in self.calib[feature]:
+                    self.calib[feature][gdl] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
-                self.calib[feature][global_doublelayer] = interval
-                logger.info(f"Calibrated {feature} for {global_doublelayer}: {interval}")
+                self.calib[feature][gdl] = interval
+                logger.info(f"Calibrated {feature} for {gdl}: {interval}")
         if update_calib:
             self.update_calibration_on_disk()
 
