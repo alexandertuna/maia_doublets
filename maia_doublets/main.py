@@ -48,7 +48,7 @@ def main():
         raise ValueError("At least one layer must be specified")
     layers = parse_layers(ops.layers)
     geometry = ops.geometry
-    signal = any(SIGNAL in os.path.basename(fname) for fname in fnames) or ops.signal
+    signal = ops.signal or any(SIGNAL in os.path.basename(fname) for fname in fnames)
     cut_mds = ops.cut_mds or not signal
     cut_t2s = ops.cut_t2s or not signal
     cut_t4s = ops.cut_t4s or not signal
@@ -56,12 +56,15 @@ def main():
         raise ValueError("At least one of --sim or --digi must be specified")
     if ops.sim and ops.digi:
         raise ValueError("Only one of --sim or --digi can be specified, not both")
+    if ops.calibrate and (cut_mds or cut_t2s or cut_t4s):
+        raise ValueError("Cannot use --calibrate with any of --cut-mds, --cut-t2s, or --cut-t4s")
 
     # log some info
     logger.info(f"Detected {'signal' if signal else 'background'} files")
     logger.info(f"Found {len(fnames)} files")
     logger.info(f"Layers provided: {ops.layers}")
     logger.info(f"Layers decoded: {layers}")
+    logger.info(f"Do calibration: {ops.calibrate}")
     logger.info(f"Cut MDs: {cut_mds}")
     logger.info(f"Cut T2s: {cut_t2s}")
     logger.info(f"Cut T4s: {cut_t4s}")
@@ -72,91 +75,21 @@ def main():
     if ops.digi:
         logger.info(f"Smear value for digi hits: {ops.smear}")
 
-    # reading simhits and mcparticles
-    with Timer() as hit_time:
-        if ops.read_mcps and ops.read_simhits:
-            logger.info(f"Reading simhits {ops.read_simhits} and mcps {ops.read_mcps} ...")
-            mcps = pd.read_pickle(ops.read_mcps)
-            simhits = pd.read_pickle(ops.read_simhits)
-        elif any([
-            ops.read_mcps and not ops.read_simhits,
-            ops.read_simhits and not ops.read_mcps,
-        ]):
-            raise ValueError("Both --read-mcps and --read-simhits must be specified together")
-        else:
-            # convert slcio to hits dataframe
-            converter = HitMaker(slcio_file_paths=fnames,
-                                load_geometry=geometry,
-                                signal=signal,
-                                sim=ops.sim,
-                                layers=layers,
-                                )
-            mcps, simhits = converter.convert()
+    # simhits and mcparticles
+    simhits, mcps, hit_time = get_simhits_and_mcps(ops, fnames, geometry, signal, layers)
+    write_simhits_and_mcps(ops, simhits, mcps)
 
-    # writing simhits and mcparticles to pickle files
-    if ops.write_mcps:
-        logger.info(f"Saving mcps to {ops.write_mcps} ...")
-        mcps.to_pickle(ops.write_mcps)
-    if ops.write_simhits:
-        logger.info(f"Saving simhits to {ops.write_simhits} ...")
-        simhits.to_pickle(ops.write_simhits)
+    # mini-doublets (mds)
+    doublets, md_time = get_mds(ops, simhits, signal, cut_mds)
+    write_mds(ops, doublets)
 
-    # reading / making mini-doublets
-    with Timer() as md_time:
-        if ops.read_mds:
-            logger.info(f"Reading mini-doublets from {ops.read_mds} ...")
-            doublets = pd.read_pickle(ops.read_mds)
-        else:
-            # make mini-doublets from hits
-            doublets = None
-            doublets = MDMaker(
-                geometry_version=ops.geo,
-                signal=signal,
-                sim=ops.sim,
-                smear=ops.smear,
-                cut_doublets=cut_mds,
-                fast_merge=ops.fast_mds,
-                simhits=simhits,
-            ).df
+    # t2s
+    t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s)
+    write_t2s(ops, t2s)
 
-    # writing mini-doublets to pickle file
-    if ops.write_mds:
-        logger.info(f"Saving mini-doublets to {ops.write_mds} ...")
-        doublets.to_pickle(ops.write_mds)
-
-    # reading / making T2s (line segments)
-    with Timer() as t2_time:
-        if ops.read_t2s:
-            logger.info(f"Reading T2s (line segments) from {ops.read_t2s} ...")
-            t2s = pd.read_pickle(ops.read_t2s)
-        else:
-            # make T2s (line segments) from mini-doublets
-            t2s = None
-            t2s = T2Maker(
-                geometry_version=ops.geo,
-                sim=ops.sim,
-                smear=ops.smear,
-                signal=signal,
-                cut_line_segments=cut_t2s,
-                doublets=doublets,
-            ).df
-
-    # writing T2s (line segments) to pickle file
-    if ops.write_t2s:
-        logger.info(f"Saving T2s (line segments) to {ops.write_t2s} ...")
-        t2s.to_pickle(ops.write_t2s)
-
-    # make t4s
-    with Timer() as t4_time:
-        t4s = None
-        t4s = T4Maker(
-            geometry_version=ops.geo,
-            sim=ops.sim,
-            smear=ops.smear,
-            signal=signal,
-            t2s=t2s,
-            cut_t4s=cut_t4s,
-        ).df
+    # t4s
+    t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s)
+    write_t4s(ops, t4s)
 
     # plot stuff
     with Timer() as plot_time:
@@ -178,10 +111,10 @@ def main():
 
     # log timing info
     logger.info(f"Timing info (in seconds):")
-    logger.info(f"  Hit making: {hit_time.duration:.2f}")
-    logger.info(f"  MD making: {md_time.duration:.2f}")
-    logger.info(f"  T2 making: {t2_time.duration:.2f}")
-    logger.info(f"  T4 making: {t4_time.duration:.2f}")
+    logger.info(f"  Hit making: {hit_time:.2f}")
+    logger.info(f"  MD making: {md_time:.2f}")
+    logger.info(f"  T2 making: {t2_time:.2f}")
+    logger.info(f"  T4 making: {t4_time:.2f}")
     logger.info(f"  Plotting: {plot_time.duration:.2f}")
 
     # debug statements
@@ -194,6 +127,125 @@ def main():
         )
 
 
+def get_simhits_and_mcps(
+    ops: argparse.Namespace,
+    fnames: list[str],
+    geometry: bool,
+    signal: bool,
+    layers: dict[int, set[int]]
+) -> tuple[pd.DataFrame, pd.DataFrame, float]:
+
+    with Timer() as hit_time:
+        if ops.read_mcps and ops.read_simhits:
+            logger.info(f"Reading simhits {ops.read_simhits} and mcps {ops.read_mcps} ...")
+            mcps = pd.read_pickle(ops.read_mcps)
+            simhits = pd.read_pickle(ops.read_simhits)
+        elif any([
+            ops.read_mcps and not ops.read_simhits,
+            ops.read_simhits and not ops.read_mcps,
+        ]):
+            raise ValueError("Both --read-mcps and --read-simhits must be specified together")
+        else:
+            # convert slcio to hits dataframe
+            converter = HitMaker(slcio_file_paths=fnames,
+                                load_geometry=geometry,
+                                signal=signal,
+                                sim=ops.sim,
+                                layers=layers,
+                                )
+            mcps, simhits = converter.convert()
+
+    return simhits, mcps, hit_time.duration
+
+
+def write_simhits_and_mcps(ops: argparse.Namespace, simhits: pd.DataFrame, mcps: pd.DataFrame) -> None:
+    if ops.write_mcps:
+        logger.info(f"Saving mcps to {ops.write_mcps} ...")
+        mcps.to_pickle(ops.write_mcps)
+    if ops.write_simhits:
+        logger.info(f"Saving simhits to {ops.write_simhits} ...")
+        simhits.to_pickle(ops.write_simhits)
+
+
+def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_mds: bool) -> tuple[pd.DataFrame, float]:
+    with Timer() as md_time:
+        if ops.read_mds:
+            logger.info(f"Reading mini-doublets from {ops.read_mds} ...")
+            doublets = pd.read_pickle(ops.read_mds)
+        else:
+            # make mini-doublets from hits
+            doublets = None
+            doublets = MDMaker(
+                geometry_version=ops.geo,
+                signal=signal,
+                sim=ops.sim,
+                smear=ops.smear,
+                cut_doublets=cut_mds,
+                fast_merge=ops.fast_mds,
+                simhits=simhits,
+            ).df
+
+    return doublets, md_time.duration
+
+
+def write_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
+    if ops.write_mds:
+        logger.info(f"Saving mini-doublets to {ops.write_mds} ...")
+        doublets.to_pickle(ops.write_mds)
+
+
+def get_t2s(ops: argparse.Namespace, doublets: pd.DataFrame, signal: bool, cut_t2s: bool) -> tuple[pd.DataFrame, float]:
+    with Timer() as t2_time:
+        if ops.read_t2s:
+            logger.info(f"Reading T2s (line segments) from {ops.read_t2s} ...")
+            t2s = pd.read_pickle(ops.read_t2s)
+        else:
+            # make T2s (line segments) from mini-doublets
+            t2s = None
+            t2s = T2Maker(
+                geometry_version=ops.geo,
+                sim=ops.sim,
+                smear=ops.smear,
+                signal=signal,
+                cut_line_segments=cut_t2s,
+                doublets=doublets,
+            ).df
+
+    return t2s, t2_time.duration
+
+
+def write_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
+    if ops.write_t2s:
+        logger.info(f"Saving T2s (line segments) to {ops.write_t2s} ...")
+        t2s.to_pickle(ops.write_t2s)
+
+
+def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: bool) -> tuple[pd.DataFrame, float]:
+    with Timer() as t4_time:
+        if ops.read_t4s:
+            logger.info(f"Reading T4s from {ops.read_t4s} ...")
+            t4s = pd.read_pickle(ops.read_t4s)
+        else:
+            # make T4s from T2s (line segments)
+            t4s = None
+            t4s = T4Maker(
+                geometry_version=ops.geo,
+                sim=ops.sim,
+                smear=ops.smear,
+                signal=signal,
+                t2s=t2s,
+                cut_t4s=cut_t4s,
+            ).df
+
+    return t4s, t4_time.duration
+
+
+def write_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
+    if ops.write_t4s:
+        logger.info(f"Saving T4s to {ops.write_t4s} ...")
+        t4s.to_pickle(ops.write_t4s)
+
+
 def options():
     preset = [
         "ITB0", "ITB1", "ITB2", "ITB3",
@@ -203,6 +255,7 @@ def options():
     ]
     parser = argparse.ArgumentParser(usage=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-i", default=[], help="Input slcio file or glob pattern")
+    parser.add_argument("--calibrate", action="store_true", help="Measure and write calibration constants (signal intervals) to file")
     parser.add_argument("--geometry", action="store_true", help="Load compact geometry from xml")
     parser.add_argument("--layers", nargs="+", type=str, default=preset, help="List of layers to consider")
     parser.add_argument("--sim", action="store_true", help="Use sim hits in the analysis")
@@ -220,6 +273,8 @@ def options():
     parser.add_argument("--fast-mds", action="store_true", help="Use fast binned merge for mini-doublets")
     parser.add_argument("--read-t2s", type=str, help="Read T2s (line segments) from pickle file")
     parser.add_argument("--write-t2s", type=str, help="Write T2s (line segments) to pickle file")
+    parser.add_argument("--read-t4s", type=str, help="Read T4s from pickle file")
+    parser.add_argument("--write-t4s", type=str, help="Write T4s to pickle file")
     parser.add_argument("--geo", type=str, help="Version of geometry to use for cuts (e.g. v01, v04)", required=True)
     parser.add_argument("--smear", type=str, default="00um", help="Smear value to use for digi hits (e.g. 10um)")
     parser.add_argument("--signal", action="store_true", help="Use signal files in the analysis")
