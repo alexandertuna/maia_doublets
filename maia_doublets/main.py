@@ -16,6 +16,7 @@ from maia_doublets.md import MDMaker
 from maia_doublets.t2 import T2Maker
 from maia_doublets.t4 import T4Maker
 from maia_doublets.plot import Plotter
+from maia_doublets.calib import MDCalibrator
 
 
 def main():
@@ -82,6 +83,9 @@ def main():
     # mini-doublets (mds)
     doublets, md_time = get_mds(ops, simhits, signal, cut_mds)
     write_mds(ops, doublets)
+    calib_mds(ops, doublets)
+
+    # return
 
     # t2s
     t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s)
@@ -192,6 +196,16 @@ def write_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
     if ops.write_mds:
         logger.info(f"Saving mini-doublets to {ops.write_mds} ...")
         doublets.to_pickle(ops.write_mds)
+
+
+def calib_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
+    if not ops.calibrate:
+        return
+    logger.info("Calibrating MDs ...")
+    key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
+    key = "_".join(key)
+    calib = MDCalibrator(doublets, calib_json=f"{key}.json")
+    calib.calibrate()
 
 
 def get_t2s(ops: argparse.Namespace, doublets: pd.DataFrame, signal: bool, cut_t2s: bool) -> tuple[pd.DataFrame, float]:
