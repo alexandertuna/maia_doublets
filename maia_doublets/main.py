@@ -16,6 +16,7 @@ from maia_doublets.md import MDMaker
 from maia_doublets.t2 import T2Maker
 from maia_doublets.t4 import T4Maker
 from maia_doublets.plot import Plotter
+from maia_doublets.calib import CalibConstants
 from maia_doublets.calib import MDCalibrator
 from maia_doublets.calib import T2Calibrator
 from maia_doublets.calib import T4Calibrator
@@ -68,6 +69,7 @@ def main():
     logger.info(f"Layers provided: {ops.layers}")
     logger.info(f"Layers decoded: {layers}")
     logger.info(f"Do calibration: {ops.calibrate}")
+    logger.info(f"Calib json: {calib_json(ops)}")
     logger.info(f"Cut MDs: {cut_mds}")
     logger.info(f"Cut T2s: {cut_t2s}")
     logger.info(f"Cut T4s: {cut_t4s}")
@@ -78,6 +80,9 @@ def main():
     if ops.digi:
         logger.info(f"Smear value for digi hits: {ops.smear}")
 
+    # calib constants
+    calibs = CalibConstants(calib_json(ops))
+
     # simhits and mcparticles
     simhits, mcps, hit_time = get_simhits_and_mcps(ops, fnames, geometry, signal, layers)
     write_simhits_and_mcps(ops, simhits, mcps)
@@ -86,6 +91,8 @@ def main():
     doublets, md_time = get_mds(ops, simhits, signal, cut_mds)
     write_mds(ops, doublets)
     calib_mds(ops, doublets)
+
+    return
 
     # t2s
     t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s)
@@ -96,8 +103,6 @@ def main():
     t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s)
     write_t4s(ops, t4s)
     calib_t4s(ops, t4s)
-
-    return
 
     # plot stuff
     with Timer() as plot_time:
@@ -281,7 +286,12 @@ def calib_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
 def calib_json(ops: argparse.Namespace) -> str:
     key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
     key = "_".join(key)
-    return f"{key}.json"
+    return os.path.join(ops.calib_dir, f"{key}.json")
+
+
+def guess_calib_dir() -> str:
+    calib_guess = glob("../*/calibs/") or [""]
+    return calib_guess[0]
 
 
 def options():
@@ -294,6 +304,7 @@ def options():
     parser = argparse.ArgumentParser(usage=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-i", default=[], help="Input slcio file or glob pattern")
     parser.add_argument("--calibrate", action="store_true", help="Measure and write calibration constants (signal intervals) to file")
+    parser.add_argument("--calib-dir", type=str, default=guess_calib_dir(), help="Directory of calibration constants")
     parser.add_argument("--geometry", action="store_true", help="Load compact geometry from xml")
     parser.add_argument("--layers", nargs="+", type=str, default=preset, help="List of layers to consider")
     parser.add_argument("--sim", action="store_true", help="Use sim hits in the analysis")
