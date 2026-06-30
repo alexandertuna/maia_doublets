@@ -828,6 +828,7 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
             (df["simhit_costheta"] > MIN_COSTHETA) &
             (df["simhit_p"] / df["mcp_p"] > MIN_SIMHIT_PT_FRACTION)
         )
+        df["simhit_detectable"] = df["simhit_first_exit"] & df["simhit_from_fiducial_mcp"]
 
     # remove unused columns
     drop_cols = [
