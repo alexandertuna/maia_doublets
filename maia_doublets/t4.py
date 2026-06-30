@@ -81,9 +81,8 @@ class T4Maker:
 
         # make T4s from neighboring doublelayers
         gdoublelayer_pairs = [
-            (2, 4),
-            (4, 6),
-            (2, 6),
+            (0, 2), # IT
+            (4, 6), # OT
         ]
         all_t4s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:

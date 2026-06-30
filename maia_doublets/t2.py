@@ -81,9 +81,10 @@ class T2Maker:
 
         # make T2s from neighboring doublelayers
         gdoublelayer_pairs = [
-            (2, 3),
-            (4, 5),
-            (6, 7),
+            (0, 1), # IT
+            (2, 3), # IT
+            (4, 5), # OT
+            (6, 7), # OT
         ]
         all_t2s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
