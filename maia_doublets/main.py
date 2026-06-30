@@ -17,6 +17,7 @@ from maia_doublets.t2 import T2Maker
 from maia_doublets.t4 import T4Maker
 from maia_doublets.plot import Plotter
 from maia_doublets.calib import MDCalibrator
+from maia_doublets.calib import T2Calibrator
 
 
 def main():
@@ -85,11 +86,12 @@ def main():
     write_mds(ops, doublets)
     calib_mds(ops, doublets)
 
-    # return
-
     # t2s
     t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s)
     write_t2s(ops, t2s)
+    calib_t2s(ops, t2s)
+
+    return
 
     # t4s
     t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s)
@@ -232,6 +234,16 @@ def write_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
     if ops.write_t2s:
         logger.info(f"Saving T2s (line segments) to {ops.write_t2s} ...")
         t2s.to_pickle(ops.write_t2s)
+
+
+def calib_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
+    if not ops.calibrate:
+        return
+    logger.info("Calibrating T2s ...")
+    key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
+    key = "_".join(key)
+    calib = T2Calibrator(t2s, calib_json=f"{key}.json")
+    calib.calibrate()
 
 
 def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: bool) -> tuple[pd.DataFrame, float]:
