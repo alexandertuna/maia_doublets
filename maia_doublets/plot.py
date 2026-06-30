@@ -96,9 +96,9 @@ class Plotter:
             # self.plot_radius_vs_layer(pdf)
             # self.plot_doublet_occupancy(pdf)
             # self.plot_hit_features(pdf)
-            # self.plot_md_features(pdf)
+            self.plot_md_features(pdf)
             # self.plot_t2_features(pdf)
-            self.plot_t4_features(pdf)
+            # self.plot_t4_features(pdf)
             # self.plot_t4_sz_coordinates(pdf, ndisplay=20)
             if self.signal:
                 self.write_denominator_info(pdf)
