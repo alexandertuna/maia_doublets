@@ -6,6 +6,40 @@ logger = logging.getLogger(__name__)
 
 from maia_doublets.constants import NO_MCP
 
+class CalibConstants:
+
+    def __init__(self, file_path) -> None:
+        """
+        Read calibration json file and convert to numpy arrays
+        """
+        self.file_path = file_path
+        self.calib_dict = read_calibration(file_path)
+        self.calibs = {}
+        self.convert_dict_to_arrays()
+
+
+    def convert_dict_to_arrays(self) -> None:
+        self.convert_dict_to_arrays_mds()
+        self.convert_dict_to_arrays_t2s()
+
+
+    def convert_dict_to_arrays_mds(self) -> None:
+        for feature, calib in self.calib_dict.items():
+            if not feature.startswith("doublet_"):
+                continue
+            n_systems = max(int(system) for system in calib.keys()) + 1
+            n_doublelayers = max(int(dl) for dl_dict in calib.values() for dl in dl_dict.keys()) + 1
+            calib_array = np.zeros((n_systems, n_doublelayers))
+            for system, doublelayer_dict in calib.items():
+                for doublelayer, interval in doublelayer_dict.items():
+                    calib_array[int(system), int(doublelayer)] = interval
+            self.calibs[feature] = calib_array
+
+
+    def convert_dict_to_arrays_t2s(self) -> None:
+        pass
+
+
 class MDCalibrator:
 
     def __init__(self, doublets: pd.DataFrame, calib_json: str) -> None:
