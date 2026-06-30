@@ -75,7 +75,7 @@ def main():
     # reading simhits and mcparticles
     with Timer() as hit_time:
         if ops.read_mcps and ops.read_simhits:
-            logger.info(f"Reading simhits {ops.read_simhits} and mcps {ops.read_mcps} from pickle files ...")
+            logger.info(f"Reading simhits {ops.read_simhits} and mcps {ops.read_mcps} ...")
             mcps = pd.read_pickle(ops.read_mcps)
             simhits = pd.read_pickle(ops.read_simhits)
         elif any([
@@ -95,16 +95,16 @@ def main():
 
     # writing simhits and mcparticles to pickle files
     if ops.write_mcps:
-        logger.info("Saving mcps as pickle file ...")
+        logger.info(f"Saving mcps to {ops.write_mcps} ...")
         mcps.to_pickle(ops.write_mcps)
     if ops.write_simhits:
-        logger.info("Saving simhits as pickle file ...")
+        logger.info(f"Saving simhits to {ops.write_simhits} ...")
         simhits.to_pickle(ops.write_simhits)
 
     # reading / making mini-doublets
     with Timer() as md_time:
         if ops.read_mds:
-            logger.info("Reading mini-doublets from pickle file ...")
+            logger.info(f"Reading mini-doublets from {ops.read_mds} ...")
             doublets = pd.read_pickle(ops.read_mds)
         else:
             # make mini-doublets from hits
@@ -121,15 +121,13 @@ def main():
 
     # writing mini-doublets to pickle file
     if ops.write_mds:
-        logger.info("Saving mini-doublets as pickle file ...")
+        logger.info(f"Saving mini-doublets to {ops.write_mds} ...")
         doublets.to_pickle(ops.write_mds)
-
-    return
 
     # reading / making T2s (line segments)
     with Timer() as t2_time:
         if ops.read_t2s:
-            logger.info("Reading T2s (line segments) from pickle file ...")
+            logger.info(f"Reading T2s (line segments) from {ops.read_t2s} ...")
             t2s = pd.read_pickle(ops.read_t2s)
         else:
             # make T2s (line segments) from mini-doublets
@@ -145,7 +143,7 @@ def main():
 
     # writing T2s (line segments) to pickle file
     if ops.write_t2s:
-        logger.info("Saving T2s (line segments) as pickle file ...")
+        logger.info(f"Saving T2s (line segments) to {ops.write_t2s} ...")
         t2s.to_pickle(ops.write_t2s)
 
     # make t4s
