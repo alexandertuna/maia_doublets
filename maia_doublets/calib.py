@@ -9,7 +9,7 @@ from maia_doublets.constants import NO_MCP
 class MDCalibrator:
 
     def __init__(self, doublets: pd.DataFrame, calib_json: str) -> None:
-        self.doublets = doublets
+        self.df = doublets
         self.calib_json = calib_json
         self.percentile = 99.7
         self.features = [
@@ -26,27 +26,27 @@ class MDCalibrator:
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating MDs {self.features}")
         logger.info(f"len(doublets) = {len(doublets)}")
-        logger.info(f"Systems: {self.doublets[self.system].unique()}")
-        logger.info(f"Doublelayers: {self.doublets[self.doublelayer].unique()}")
+        logger.info(f"Systems: {self.df[self.system].unique()}")
+        logger.info(f"Doublelayers: {self.df[self.doublelayer].unique()}")
 
 
-    def calibrate(self, update_calibration: bool = True) -> None:
+    def calibrate(self, update_calib: bool = True) -> None:
         mask = (
-            self.doublets[self.detectable] &
-            (self.doublets["i_mcp"] != NO_MCP)
+            (self.df["i_mcp"] != NO_MCP) &
+            self.df[self.detectable]
         )
         for feature in self.features:
-            for (cols, group) in self.doublets[mask].groupby(self.groupby):
+            for (cols, group) in self.df[mask].groupby(self.groupby):
                 (system, doublelayer) = [str(col) for col in cols]
                 if system not in self.calib[feature]:
                     self.calib[feature][system] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
                 self.calib[feature][system][doublelayer] = interval
-        if update_calibration:
-            self.update_calibration()
+        if update_calib:
+            self.update_calibration_on_disk()
 
 
-    def update_calibration(self) -> None:
+    def update_calibration_on_disk(self) -> None:
         calib_dict = read_calibration(self.calib_json)
         calib_dict = update_calibration(calib_dict, self.calib)
         write_calibration(calib_dict, self.calib_json)
@@ -55,7 +55,7 @@ class MDCalibrator:
 class T2Calibrator:
 
     def __init__(self, t2s: pd.DataFrame, calib_json: str) -> None:
-        self.t2s = t2s
+        self.df = t2s
         self.calib_json = calib_json
         self.percentile = 99.7
         self.features = [
@@ -72,30 +72,78 @@ class T2Calibrator:
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating T2 {self.features}")
         logger.info(f"len(t2s) = {len(t2s)}")
-        logger.info(f"Global doublelayers: {self.t2s[self.global_doublelayer].unique()}")
+        logger.info(f"Global doublelayers: {self.df[self.global_doublelayer].unique()}")
 
 
-    def calibrate(self, update_calibration: bool = True) -> None:
+    def calibrate(self, update_calib: bool = True) -> None:
         mask = (
-            self.t2s[self.detectable] &
-            (self.t2s["i_mcp"] != NO_MCP)
+            (self.df["i_mcp"] != NO_MCP) &
+            self.df[self.detectable]
         )
         for feature in self.features:
-            for (cols, group) in self.t2s[mask].groupby(self.groupby):
+            for (cols, group) in self.df[mask].groupby(self.groupby):
                 (global_doublelayer,) = [str(col) for col in cols]
                 if global_doublelayer not in self.calib[feature]:
                     self.calib[feature][global_doublelayer] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
                 self.calib[feature][global_doublelayer] = interval
                 logger.info(f"Calibrated {feature} for {global_doublelayer}: {interval}")
-        if update_calibration:
-            self.update_calibration()
+        if update_calib:
+            self.update_calibration_on_disk()
 
 
-    def update_calibration(self) -> None:
+    def update_calibration_on_disk(self) -> None:
         calib_dict = read_calibration(self.calib_json)
         calib_dict = update_calibration(calib_dict, self.calib)
         write_calibration(calib_dict, self.calib_json)
+
+
+class T4Calibrator:
+
+    def __init__(self, t4s: pd.DataFrame, calib_json: str) -> None:
+        self.df = t4s
+        self.calib_json = calib_json
+        self.percentile = 99.7
+        self.features = [
+            "t4_dz",
+            "t4_dr",
+            "t4_dtheta_rz",
+            "t4_chi2_xy_047",
+        ]
+        self.global_doublelayer = "t4_gdoublelayer"
+        self.detectable = "t4_detectable"
+        self.groupby = [
+            self.global_doublelayer,
+        ]
+        self.calib = {feature: {} for feature in self.features}
+        logger.info(f"Calibrating T4 {self.features}")
+        logger.info(f"len(t4s) = {len(t4s)}")
+        logger.info(f"Global doublelayers: {self.df[self.global_doublelayer].unique()}")
+
+
+    def calibrate(self, update_calib: bool = True) -> None:
+        mask = (
+            (self.df["i_mcp"] != NO_MCP) &
+            self.df[self.detectable]
+        )
+        for feature in self.features:
+            for (cols, group) in self.df[mask].groupby(self.groupby):
+                (global_doublelayer,) = [str(col) for col in cols]
+                if global_doublelayer not in self.calib[feature]:
+                    self.calib[feature][global_doublelayer] = {}
+                interval = np.percentile(np.abs(group[feature]), self.percentile)
+                self.calib[feature][global_doublelayer] = interval
+                logger.info(f"Calibrated {feature} for {global_doublelayer}: {interval}")
+        if update_calib:
+            self.update_calibration_on_disk()
+
+
+    def update_calibration_on_disk(self) -> None:
+        calib_dict = read_calibration(self.calib_json)
+        calib_dict = update_calibration(calib_dict, self.calib)
+        write_calibration(calib_dict, self.calib_json)
+
+
 
 
 

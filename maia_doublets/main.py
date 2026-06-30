@@ -18,6 +18,7 @@ from maia_doublets.t4 import T4Maker
 from maia_doublets.plot import Plotter
 from maia_doublets.calib import MDCalibrator
 from maia_doublets.calib import T2Calibrator
+from maia_doublets.calib import T4Calibrator
 
 
 def main():
@@ -91,11 +92,12 @@ def main():
     write_t2s(ops, t2s)
     calib_t2s(ops, t2s)
 
-    return
-
     # t4s
     t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s)
     write_t4s(ops, t4s)
+    calib_t4s(ops, t4s)
+
+    return
 
     # plot stuff
     with Timer() as plot_time:
@@ -204,9 +206,7 @@ def calib_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
     if not ops.calibrate:
         return
     logger.info("Calibrating MDs ...")
-    key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
-    key = "_".join(key)
-    calib = MDCalibrator(doublets, calib_json=f"{key}.json")
+    calib = MDCalibrator(doublets, calib_json=calib_json(ops))
     calib.calibrate()
 
 
@@ -240,9 +240,7 @@ def calib_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
     if not ops.calibrate:
         return
     logger.info("Calibrating T2s ...")
-    key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
-    key = "_".join(key)
-    calib = T2Calibrator(t2s, calib_json=f"{key}.json")
+    calib = T2Calibrator(t2s, calib_json=calib_json(ops))
     calib.calibrate()
 
 
@@ -270,6 +268,20 @@ def write_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
     if ops.write_t4s:
         logger.info(f"Saving T4s to {ops.write_t4s} ...")
         t4s.to_pickle(ops.write_t4s)
+
+
+def calib_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
+    if not ops.calibrate:
+        return
+    logger.info("Calibrating T4s ...")
+    calib = T4Calibrator(t4s, calib_json=calib_json(ops))
+    calib.calibrate()
+
+
+def calib_json(ops: argparse.Namespace) -> str:
+    key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
+    key = "_".join(key)
+    return f"{key}.json"
 
 
 def options():
