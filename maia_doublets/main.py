@@ -117,15 +117,13 @@ def main():
         if ops.plot:
             logger.info("Creating plots ...")
             plotter = Plotter(
-                geometry_version=ops.geo,
-                sim=ops.sim,
-                smear=ops.smear,
                 signal=signal,
                 mcps=mcps,
                 simhits=simhits,
                 doublets=doublets,
                 linesegments=t2s,
                 t4s=t4s,
+                calibs=calibs,
                 pdf="doublets.pdf",
             )
             plotter.plot()

@@ -33,32 +33,27 @@ rcParams.update({
 
 from maia_doublets.constants import MUON
 from maia_doublets.constants import BARREL_TRACKER_MAX_ETA
-from maia_doublets.constants import BARREL_TRACKER_MAX_RADIUS
-from maia_doublets.constants import ONE_POINT_FIVE_GEV, ONE_MM, ZERO_POINT_ZERO_ONE_MM
+from maia_doublets.constants import ONE_POINT_FIVE_GEV, ZERO_POINT_ZERO_ONE_MM
 from maia_doublets.constants import NICKNAMES, INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
-from maia_doublets.constants import MD_DZ_CUT, MD_DR_CUT
+from maia_doublets.constants import CUT_MISSING
 from maia_doublets.constants import REQ_PASSTHROUGH, REQ_RZ, REQ_XY, REQ_RZ_XY
 from maia_doublets.constants import DOUBLET_REQS, NO_MCP
 from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_RZ_ANG, T2_REQ_ALL
-from maia_doublets.constants import T2_DZ_CUT, T2_DR_CUT, T2_DTHETA_RZ_CUT, T2_CHI2_XY_CUT
 from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import N_T2_PHI_SLICES
-from maia_doublets.constants import T4_DR_CUT, T4_DZ_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT
 
 
 class Plotter:
 
     def __init__(
         self,
-        geometry_version: str,
-        sim: bool,
-        smear: str,
         signal: bool,
         mcps: pd.DataFrame,
         simhits: pd.DataFrame,
         doublets: pd.DataFrame,
         linesegments: pd.DataFrame,
         t4s: pd.DataFrame,
+        calibs: dict,
         pdf: str,
     ):
         self.signal = signal
@@ -67,20 +62,20 @@ class Plotter:
         self.doublets = doublets
         self.linesegments = linesegments
         self.t4s = t4s
+        self.calibs = calibs
         self.pdf = pdf
 
         # shorthands for cuts
-        key = (geometry_version, "sim") if sim else (geometry_version, "digi", smear)
-        self.MD_DZ_CUT = MD_DZ_CUT[key]
-        self.MD_DR_CUT = MD_DR_CUT[key]
-        self.T2_DZ_CUT = T2_DZ_CUT[key]
-        self.T2_DR_CUT = T2_DR_CUT[key]
-        self.T2_DTHETA_RZ_CUT = T2_DTHETA_RZ_CUT[key]
-        self.T2_CHI2_XY_CUT = T2_CHI2_XY_CUT[key]
-        self.T4_DR_CUT = T4_DR_CUT[key]
-        self.T4_DZ_CUT = T4_DZ_CUT[key]
-        self.T4_DTHETA_RZ_CUT = T4_DTHETA_RZ_CUT[key]
-        self.T4_CHI2_XY_CUT = T4_CHI2_XY_CUT[key]
+        self.MD_DZ_CUT = calibs.get("doublet_dz", CUT_MISSING)
+        self.MD_DR_CUT = calibs.get("doublet_dr", CUT_MISSING)
+        self.T2_DZ_CUT = calibs.get("ls_dz", CUT_MISSING)
+        self.T2_DR_CUT = calibs.get("ls_dr", CUT_MISSING)
+        self.T2_DTHETA_RZ_CUT = calibs.get("ls_dtheta_rz", CUT_MISSING)
+        self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_012", CUT_MISSING)
+        self.T4_DR_CUT = calibs.get("t4_dr", CUT_MISSING)
+        self.T4_DZ_CUT = calibs.get("t4_dz", CUT_MISSING)
+        self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", CUT_MISSING)
+        self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy_047", CUT_MISSING)
 
 
     def plot(self):
