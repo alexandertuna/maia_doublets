@@ -86,10 +86,7 @@ class MDCalibrator:
 
 
     def calibrate(self, update_calib: bool = True) -> None:
-        mask = (
-            (self.df["i_mcp"] != NO_MCP) &
-            self.df[self.detectable]
-        )
+        mask = self.df[self.detectable]
         for feature in self.features:
             for (cols, group) in self.df[mask].groupby(self.groupby):
                 (system, doublelayer) = [str(col) for col in cols]
@@ -134,10 +131,7 @@ class T2Calibrator:
 
 
     def calibrate(self, update_calib: bool = True) -> None:
-        mask = (
-            (self.df["i_mcp"] != NO_MCP) &
-            self.df[self.detectable]
-        )
+        mask = self.df[self.detectable]
         for feature in self.features:
             for (cols, group) in self.df[mask].groupby(self.groupby):
                 (system, doublelayer) = [str(col) for col in cols]
@@ -180,10 +174,7 @@ class T4Calibrator:
 
 
     def calibrate(self, update_calib: bool = True) -> None:
-        mask = (
-            (self.df["i_mcp"] != NO_MCP) &
-            self.df[self.detectable]
-        )
+        mask = self.df[self.detectable]
         for feature in self.features:
             for (cols, group) in self.df[mask].groupby(self.groupby):
                 (gdl,) = [str(col) for col in cols]
