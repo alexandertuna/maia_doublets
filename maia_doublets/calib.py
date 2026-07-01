@@ -22,6 +22,7 @@ class CalibConstants:
         self.convert_dict_to_arrays_mds()
         self.convert_dict_to_arrays_t2s()
         self.convert_dict_to_arrays_t4s()
+        self.convert_dict_to_arrays_t8s()
 
 
     def convert_dict_to_arrays_mds(self) -> None:
@@ -58,6 +59,17 @@ class CalibConstants:
             calib_array = np.zeros((n_gdls+2, n_gdls+2))
             for gdl, interval in calib.items():
                 calib_array[int(gdl), int(gdl)+2] = interval
+            self.calibs[feature] = calib_array
+
+
+    def convert_dict_to_arrays_t8s(self) -> None:
+        for feature, calib in self.calib_dict.items():
+            if not feature.startswith("t8_"):
+                continue
+            n_gdls = max(int(gdl) for gdl in calib.keys()) + 1
+            calib_array = np.zeros((n_gdls+4, n_gdls+4))
+            for gdl, interval in calib.items():
+                calib_array[int(gdl), int(gdl)+4] = interval
             self.calibs[feature] = calib_array
 
 
