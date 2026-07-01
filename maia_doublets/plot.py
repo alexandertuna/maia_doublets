@@ -78,6 +78,8 @@ class Plotter:
         self.T4_DZ_CUT = calibs.get("t4_dz", CUT_MISSING)
         self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", CUT_MISSING)
         self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy_047", CUT_MISSING)
+        self.T8_DZ_CUT = calibs.get("t8_dz", CUT_MISSING)
+        self.T8_DR_CUT = calibs.get("t8_dr", CUT_MISSING)
 
 
     def plot(self):
