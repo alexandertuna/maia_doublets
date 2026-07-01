@@ -4,28 +4,24 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import MD_DZ_CUT, MD_DR_CUT
 from maia_doublets.constants import MAGNETIC_FIELD, SPEED_OF_LIGHT
-from maia_doublets.constants import BYTE_TO_MB, MEV_TO_GEV, NO_MCP
+from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_T2_PHI_SLICES, N_T2_ETA_SLICES, DETECTOR_MAX_ETA, DETECTOR_MAX_PHI
 
 class MDMaker:
 
     def __init__(
         self,
-        geometry_version: str,
-        sim: bool,
-        smear: str,
         signal: bool,
-        cut_doublets: bool,
+        cut_mds: bool,
         fast_merge: bool,
+        calibs: dict,
         simhits: pd.DataFrame,
     ):
         self.signal = signal
-        self.cut_doublets = cut_doublets
-        key = (geometry_version, "sim") if sim else (geometry_version, "digi", smear)
-        self.MD_DZ_CUT = MD_DZ_CUT[key]
-        self.MD_DR_CUT = MD_DR_CUT[key]
+        self.cut_mds = cut_mds
+        self.MD_DZ_CUT = calibs.get("doublet_dz", np.zeros((10, 10)))
+        self.MD_DR_CUT = calibs.get("doublet_dr", np.zeros((10, 10)))
         self.doublet_cols = [
             "file",
             "i_event", # the event
@@ -98,7 +94,7 @@ class MDMaker:
         upper = group[upper_mask]
 
         # inner join to find doublets
-        if self.cut_doublets and self.fast_merge:
+        if self.cut_mds and self.fast_merge:
             doublets, n_full = self.merge_binned(lower, upper)
         else:
             doublets = pd.merge(
@@ -135,7 +131,7 @@ class MDMaker:
         doublets["doublet_ok"] = mask["and"].astype(bool)
 
         # remove as desired
-        if self.cut_doublets:
+        if self.cut_mds:
             for cut in mask.keys():
                 cutflow[cut] = np.sum(mask[cut])
             doublets = doublets[mask["and"]]
