@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_T4_PHI_SLICES
 from maia_doublets.constants import N_LAYERS_IN_T4
+from maia_doublets.constants import N_T8_PHI_SLICES, N_T8_ETA_SLICES, DETECTOR_MAX_ETA
 
 class T4Maker:
 
@@ -195,7 +196,12 @@ class T4Maker:
         t4s["t4_eta"] = 0.5 * (t4s["ls_eta_upper"] + t4s["ls_eta_lower"])
         t4s["t4_x"] = 0.5 * (t4s["ls_x_upper"] + t4s["ls_x_lower"])
         t4s["t4_y"] = 0.5 * (t4s["ls_y_upper"] + t4s["ls_y_lower"])
+        t4s["t4_z"] = 0.5 * (t4s["ls_z_upper"] + t4s["ls_z_lower"])
+        t4s["t4_r"] = 0.5 * (t4s["ls_r_upper"] + t4s["ls_r_lower"])
         t4s["t4_phi"] = np.arctan2(t4s["t4_y"], t4s["t4_x"])
+        t4s["t4_phi_slice"] = np.floor((t4s["t4_phi"] + np.pi) / (2 * np.pi) * N_T8_PHI_SLICES).astype(np.int16)
+        t4s["t4_eta_slice"] = np.floor((t4s["t4_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T8_ETA_SLICES).astype(np.int16)
+
 
         # angle differences (handle wraparound)
         t4s["t4_dtheta_rz"] = t4s["ls_theta_rz_upper"] - t4s["ls_theta_rz_lower"]
