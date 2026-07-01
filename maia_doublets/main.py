@@ -103,12 +103,14 @@ def main():
         calibs = CalibConstants(calib_json(ops)).calibs
         t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s, calibs)
 
-    return
 
     # t4s
-    t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s)
+    t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
     write_t4s(ops, t4s)
-    calib_t4s(ops, t4s)
+    if ops.calibrate:
+        calib_t4s(ops, t4s)
+        calibs = CalibConstants(calib_json(ops)).calibs
+        t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
 
     # plot stuff
     with Timer() as plot_time:
@@ -251,7 +253,7 @@ def calib_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
     calib.calibrate()
 
 
-def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: bool) -> tuple[pd.DataFrame, float]:
+def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
     with Timer() as t4_time:
         if ops.read_t4s:
             logger.info(f"Reading T4s from {ops.read_t4s} ...")
@@ -260,12 +262,10 @@ def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: b
             # make T4s from T2s (line segments)
             t4s = None
             t4s = T4Maker(
-                geometry_version=ops.geo,
-                sim=ops.sim,
-                smear=ops.smear,
                 signal=signal,
-                t2s=t2s,
                 cut_t4s=cut_t4s,
+                calibs=calibs,
+                t2s=t2s,
             ).df
 
     return t4s, t4_time.duration

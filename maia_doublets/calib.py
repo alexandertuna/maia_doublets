@@ -21,6 +21,7 @@ class CalibConstants:
     def convert_dict_to_arrays(self) -> None:
         self.convert_dict_to_arrays_mds()
         self.convert_dict_to_arrays_t2s()
+        self.convert_dict_to_arrays_t4s()
 
 
     def convert_dict_to_arrays_mds(self) -> None:
@@ -46,6 +47,17 @@ class CalibConstants:
             for system, doublelayer_dict in calib.items():
                 for doublelayer, interval in doublelayer_dict.items():
                     calib_array[int(system), int(doublelayer)] = interval
+            self.calibs[feature] = calib_array
+
+
+    def convert_dict_to_arrays_t4s(self) -> None:
+        for feature, calib in self.calib_dict.items():
+            if not feature.startswith("t4_"):
+                continue
+            n_gdls = max(int(gdl) for gdl in calib.keys()) + 1
+            calib_array = np.zeros((n_gdls+2, n_gdls+2))
+            for gdl, interval in calib.items():
+                calib_array[int(gdl), int(gdl)+2] = interval
             self.calibs[feature] = calib_array
 
 
@@ -154,6 +166,7 @@ class T4Calibrator:
             "t4_dr",
             "t4_dtheta_rz",
             "t4_chi2_xy_047",
+            "t4_chi2_sz",
         ]
         self.gdl = "t4_gdoublelayer"
         self.detectable = "t4_detectable"

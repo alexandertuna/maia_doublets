@@ -12,13 +12,18 @@ import logging
 logger = logging.getLogger(__name__)
 
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
-from maia_doublets.constants import T4_DZ_CUT, T4_DR_CUT, T4_DTHETA_RZ_CUT, T4_CHI2_XY_CUT, T4_CHI2_SZ_CUT
 from maia_doublets.constants import N_T4_PHI_SLICES
 from maia_doublets.constants import N_LAYERS_IN_T4
 
 class T4Maker:
 
-    def __init__(self, geometry_version: str, sim: bool, smear: str, t2s: pd.DataFrame, signal: bool, cut_t4s: bool):
+    def __init__(
+        self,
+        signal: bool,
+        cut_t4s: bool,
+        calibs: dict,
+        t2s: pd.DataFrame,
+    ):
         self.df = None
         self.signal = signal
         self.cut_t4s = cut_t4s
@@ -26,12 +31,11 @@ class T4Maker:
         memory = self.t2s.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"Making T4s. T2 dataframe size: {memory:.2f} MB")
 
-        key = (geometry_version, "sim") if sim else (geometry_version, "digi", smear)
-        self.T4_DZ_CUT = T4_DZ_CUT[key]
-        self.T4_DR_CUT = T4_DR_CUT[key]
-        self.T4_DTHETA_RZ_CUT = T4_DTHETA_RZ_CUT[key]
-        self.T4_CHI2_XY_CUT = T4_CHI2_XY_CUT[key]
-        self.T4_CHI2_SZ_CUT = T4_CHI2_SZ_CUT[key]
+        self.T4_DZ_CUT = calibs.get("t4_dz", np.zeros((10, 10)))
+        self.T4_DR_CUT = calibs.get("t4_dr", np.zeros((10, 10)))
+        self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", np.zeros((10, 10)))
+        self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy_047", np.zeros((10, 10)))
+        self.T4_CHI2_SZ_CUT = calibs.get("t4_chi2_sz", np.zeros((10, 10)))
 
         # how to merge lower and upper T2s into T4s
         self.merge_keys = [
