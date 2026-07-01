@@ -3,8 +3,6 @@ import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import T2_DZ_CUT, T2_DR_CUT
-from maia_doublets.constants import T2_DTHETA_RZ_CUT, T2_CHI2_XY_CUT
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_T2_PHI_SLICES
 from maia_doublets.constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
@@ -18,20 +16,25 @@ class T2Maker:
     #  Layers 12, 34, ... grouped by doublet_doublelayer_plus_1_mod_2
     #
 
-    def __init__(self, geometry_version: str, sim: bool, smear: str, doublets: pd.DataFrame, signal: bool, cut_line_segments: bool):
+    def __init__(
+            self,
+            signal: bool,
+            cut_t2s: bool,
+            calibs: dict,
+            doublets: pd.DataFrame,
+        ):
         self.df = None
         self.signal = signal
-        self.cut_line_segments = cut_line_segments
+        self.cut_t2s = cut_t2s
         self.lower_suffix = "lower"
         self.upper_suffix = "upper"
         memory = doublets.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"Making linesegments with doublets memory {memory:.1f} MB ...")
 
-        key = (geometry_version, "sim") if sim else (geometry_version, "digi", smear)
-        self.T2_DZ_CUT = T2_DZ_CUT[key]
-        self.T2_DR_CUT = T2_DR_CUT[key]
-        self.T2_DTHETA_RZ_CUT = T2_DTHETA_RZ_CUT[key]
-        self.T2_CHI2_XY_CUT = T2_CHI2_XY_CUT[key]
+        self.T2_DZ_CUT = calibs.get("ls_dz", np.zeros((10, 10)))
+        self.T2_DR_CUT = calibs.get("ls_dr", np.zeros((10, 10)))
+        self.T2_DTHETA_RZ_CUT = calibs.get("ls_dtheta_rz", np.zeros((10, 10)))
+        self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_012", np.zeros((10, 10)))
 
         self.merge_keys = [
             "file",
@@ -44,7 +47,6 @@ class T2Maker:
         self.filter_doublets()
         self.sort_doublets()
         self.make_t2s()
-        # self.make_linesegments()
 
 
     def filter_doublets(self):
@@ -137,7 +139,7 @@ class T2Maker:
                 t2s = self.rename_t2_columns_after_merge(t2s)
 
                 # cut some t2s early to save computations
-                if self.cut_line_segments:
+                if self.cut_t2s:
                     t2s = self.add_basic_t2_features(t2s)
                     sy = t2s["ls_system"]
                     dl = t2s["ls_doublelayer"]
@@ -319,7 +321,7 @@ class T2Maker:
         # remove as desired
         for cut in [col for col in segments.columns if col.startswith("ls_ok")]:
             cutflow[cut] = np.sum(segments[cut])
-        if self.cut_line_segments:
+        if self.cut_t2s:
             segments = segments[segments["ls_ok"]]
 
         # fin
