@@ -81,23 +81,29 @@ def main():
         logger.info(f"Smear value for digi hits: {ops.smear}")
 
     # calib constants
-    calibs = CalibConstants(calib_json(ops))
+    calibs = CalibConstants(calib_json(ops)).calibs
 
     # simhits and mcparticles
     simhits, mcps, hit_time = get_simhits_and_mcps(ops, fnames, geometry, signal, layers)
     write_simhits_and_mcps(ops, simhits, mcps)
 
     # mini-doublets (mds)
-    doublets, md_time = get_mds(ops, simhits, signal, cut_mds)
+    doublets, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
     write_mds(ops, doublets)
-    calib_mds(ops, doublets)
-
-    return
+    if ops.calibrate:
+        calib_mds(ops, doublets)
+        calibs = CalibConstants(calib_json(ops)).calibs
+        doublets, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
 
     # t2s
-    t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s)
+    t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s, calibs)
     write_t2s(ops, t2s)
-    calib_t2s(ops, t2s)
+    if ops.calibrate:
+        calib_t2s(ops, t2s)
+        calibs = CalibConstants(calib_json(ops)).calibs
+        t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s, calibs)
+
+    return
 
     # t4s
     t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s)
@@ -180,7 +186,7 @@ def write_simhits_and_mcps(ops: argparse.Namespace, simhits: pd.DataFrame, mcps:
         simhits.to_pickle(ops.write_simhits)
 
 
-def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_mds: bool) -> tuple[pd.DataFrame, float]:
+def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_mds: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
     with Timer() as md_time:
         if ops.read_mds:
             logger.info(f"Reading mini-doublets from {ops.read_mds} ...")
@@ -189,12 +195,10 @@ def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_md
             # make mini-doublets from hits
             doublets = None
             doublets = MDMaker(
-                geometry_version=ops.geo,
                 signal=signal,
-                sim=ops.sim,
-                smear=ops.smear,
-                cut_doublets=cut_mds,
+                cut_mds=cut_mds,
                 fast_merge=ops.fast_mds,
+                calibs=calibs,
                 simhits=simhits,
             ).df
 
@@ -215,7 +219,7 @@ def calib_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
     calib.calibrate()
 
 
-def get_t2s(ops: argparse.Namespace, doublets: pd.DataFrame, signal: bool, cut_t2s: bool) -> tuple[pd.DataFrame, float]:
+def get_t2s(ops: argparse.Namespace, doublets: pd.DataFrame, signal: bool, cut_t2s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
     with Timer() as t2_time:
         if ops.read_t2s:
             logger.info(f"Reading T2s (line segments) from {ops.read_t2s} ...")
@@ -224,11 +228,9 @@ def get_t2s(ops: argparse.Namespace, doublets: pd.DataFrame, signal: bool, cut_t
             # make T2s (line segments) from mini-doublets
             t2s = None
             t2s = T2Maker(
-                geometry_version=ops.geo,
-                sim=ops.sim,
-                smear=ops.smear,
                 signal=signal,
-                cut_line_segments=cut_t2s,
+                cut_t2s=cut_t2s,
+                calibs=calibs,
                 doublets=doublets,
             ).df
 
