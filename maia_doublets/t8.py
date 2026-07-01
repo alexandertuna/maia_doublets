@@ -65,8 +65,6 @@ class T8Maker:
             "t4_system_upper",
             "t4_doublelayer",
         ]
-        print("len(self.t4s) = ", len(self.t4s))
-        print("self.t4s.cols = ", self.t4s.columns)
         self.t4s = self.t4s.sort_values(by=cols).reset_index(drop=True)
 
 
@@ -175,25 +173,6 @@ class T8Maker:
             ]:
                 t8s[attr] = t8s[f"{attr}_lower"].where(mcp_ok, 0)
 
-        # pass-through the simhit positions
-        for coord in ["x", "y", "r", "z"]:
-            t8s[f"t8_{coord}_0"] = t8s[f"t4_{coord}_0_lower"]
-            t8s[f"t8_{coord}_1"] = t8s[f"t4_{coord}_1_lower"]
-            t8s[f"t8_{coord}_2"] = t8s[f"t4_{coord}_2_lower"]
-            t8s[f"t8_{coord}_3"] = t8s[f"t4_{coord}_3_lower"]
-            t8s[f"t8_{coord}_4"] = t8s[f"t4_{coord}_4_lower"]
-            t8s[f"t8_{coord}_5"] = t8s[f"t4_{coord}_5_lower"]
-            t8s[f"t8_{coord}_6"] = t8s[f"t4_{coord}_6_lower"]
-            t8s[f"t8_{coord}_7"] = t8s[f"t4_{coord}_7_lower"]
-            t8s[f"t8_{coord}_8"] = t8s[f"t4_{coord}_0_upper"]
-            t8s[f"t8_{coord}_9"] = t8s[f"t4_{coord}_1_upper"]
-            t8s[f"t8_{coord}_10"] = t8s[f"t4_{coord}_2_upper"]
-            t8s[f"t8_{coord}_11"] = t8s[f"t4_{coord}_3_upper"]
-            t8s[f"t8_{coord}_12"] = t8s[f"t4_{coord}_4_upper"]
-            t8s[f"t8_{coord}_13"] = t8s[f"t4_{coord}_5_upper"]
-            t8s[f"t8_{coord}_14"] = t8s[f"t4_{coord}_6_upper"]
-            t8s[f"t8_{coord}_15"] = t8s[f"t4_{coord}_7_upper"]
-
         # more features
         t8s["t8_deta"] = t8s["t4_eta_upper"] - t8s["t4_eta_lower"]
         t8s["t8_dphi"] = t8s["t4_phi_upper"] - t8s["t4_phi_lower"]
@@ -208,24 +187,43 @@ class T8Maker:
         # t8s["t8_dtheta_rz"] = (t8s["t8_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
 
         # collect new columns
-        newcols = {}
+        new = {}
+
+        # pass-through the simhit positions
+        for coord in ["x", "y", "r", "z"]:
+            new[f"t8_{coord}_0"] = t8s[f"t4_{coord}_0_lower"]
+            new[f"t8_{coord}_1"] = t8s[f"t4_{coord}_1_lower"]
+            new[f"t8_{coord}_2"] = t8s[f"t4_{coord}_2_lower"]
+            new[f"t8_{coord}_3"] = t8s[f"t4_{coord}_3_lower"]
+            new[f"t8_{coord}_4"] = t8s[f"t4_{coord}_4_lower"]
+            new[f"t8_{coord}_5"] = t8s[f"t4_{coord}_5_lower"]
+            new[f"t8_{coord}_6"] = t8s[f"t4_{coord}_6_lower"]
+            new[f"t8_{coord}_7"] = t8s[f"t4_{coord}_7_lower"]
+            new[f"t8_{coord}_8"] = t8s[f"t4_{coord}_0_upper"]
+            new[f"t8_{coord}_9"] = t8s[f"t4_{coord}_1_upper"]
+            new[f"t8_{coord}_10"] = t8s[f"t4_{coord}_2_upper"]
+            new[f"t8_{coord}_11"] = t8s[f"t4_{coord}_3_upper"]
+            new[f"t8_{coord}_12"] = t8s[f"t4_{coord}_4_upper"]
+            new[f"t8_{coord}_13"] = t8s[f"t4_{coord}_5_upper"]
+            new[f"t8_{coord}_14"] = t8s[f"t4_{coord}_6_upper"]
+            new[f"t8_{coord}_15"] = t8s[f"t4_{coord}_7_upper"]
 
         # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
         i0, i1, i2 = 0, 4, 7
         ixs = [1, 2, 3, 5, 6]
-        circle_d = 2 * (t8s[f"t8_x_{i0}"] * (t8s[f"t8_y_{i1}"] - t8s[f"t8_y_{i2}"]) +
-                        t8s[f"t8_x_{i1}"] * (t8s[f"t8_y_{i2}"] - t8s[f"t8_y_{i0}"]) +
-                        t8s[f"t8_x_{i2}"] * (t8s[f"t8_y_{i0}"] - t8s[f"t8_y_{i1}"]))
-        circle_x = np.divide(t8s[f"t8_r_{i0}"]**2 * (t8s[f"t8_y_{i1}"] - t8s[f"t8_y_{i2}"]) +
-                                t8s[f"t8_r_{i1}"]**2 * (t8s[f"t8_y_{i2}"] - t8s[f"t8_y_{i0}"]) +
-                                t8s[f"t8_r_{i2}"]**2 * (t8s[f"t8_y_{i0}"] - t8s[f"t8_y_{i1}"]),
-                                circle_d)
-        circle_y = np.divide(t8s[f"t8_r_{i0}"]**2 * (t8s[f"t8_x_{i2}"] - t8s[f"t8_x_{i1}"]) +
-                                t8s[f"t8_r_{i1}"]**2 * (t8s[f"t8_x_{i0}"] - t8s[f"t8_x_{i2}"]) +
-                                t8s[f"t8_r_{i2}"]**2 * (t8s[f"t8_x_{i1}"] - t8s[f"t8_x_{i0}"]),
-                                circle_d)
-        circle_r = np.sqrt((t8s[f"t8_x_{i0}"] - circle_x)**2 + (t8s[f"t8_y_{i0}"] - circle_y)**2)
+        circle_d = 2 * (new[f"t8_x_{i0}"] * (new[f"t8_y_{i1}"] - new[f"t8_y_{i2}"]) +
+                        new[f"t8_x_{i1}"] * (new[f"t8_y_{i2}"] - new[f"t8_y_{i0}"]) +
+                        new[f"t8_x_{i2}"] * (new[f"t8_y_{i0}"] - new[f"t8_y_{i1}"]))
+        circle_x = np.divide(new[f"t8_r_{i0}"]**2 * (new[f"t8_y_{i1}"] - new[f"t8_y_{i2}"]) +
+                             new[f"t8_r_{i1}"]**2 * (new[f"t8_y_{i2}"] - new[f"t8_y_{i0}"]) +
+                             new[f"t8_r_{i2}"]**2 * (new[f"t8_y_{i0}"] - new[f"t8_y_{i1}"]),
+                             circle_d)
+        circle_y = np.divide(new[f"t8_r_{i0}"]**2 * (new[f"t8_x_{i2}"] - new[f"t8_x_{i1}"]) +
+                             new[f"t8_r_{i1}"]**2 * (new[f"t8_x_{i0}"] - new[f"t8_x_{i2}"]) +
+                             new[f"t8_r_{i2}"]**2 * (new[f"t8_x_{i1}"] - new[f"t8_x_{i0}"]),
+                             circle_d)
+        circle_r = np.sqrt((new[f"t8_x_{i0}"] - circle_x)**2 + (new[f"t8_y_{i0}"] - circle_y)**2)
         circle_ok = circle_d != 0
         if np.any(~circle_ok):
             logger.warning(f"Found {np.sum(~circle_ok)} invalid circles with circle_d = 0")
@@ -233,21 +231,21 @@ class T8Maker:
         # calculate the average diff
         diff2s = []
         for ix in ixs:
-            circle_diff = np.sqrt((t8s[f"t8_x_{ix}"] - circle_x)**2 + (t8s[f"t8_y_{ix}"] - circle_y)**2) - circle_r
+            circle_diff = np.sqrt((new[f"t8_x_{ix}"] - circle_x)**2 + (new[f"t8_y_{ix}"] - circle_y)**2) - circle_r
             diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
-        newcols[f"t8_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
+        new[f"t8_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
 
         # calculate chi2 for sz fit, where s is the arc length along the circle
-        phis = [ np.arctan2(t8s[f"t8_y_{it}"] - circle_y, t8s[f"t8_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T8) ]
+        phis = [ np.arctan2(new[f"t8_y_{it}"] - circle_y, new[f"t8_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T8) ]
         dphis = [ (phi - phis[0] + np.pi) % (2 * np.pi) - np.pi for phi in phis ]
         pathlengths = [ circle_r * dphi for dphi in dphis ]
         for it in range(N_LAYERS_IN_T8):
-            newcols[f"t8_s_{it}"] = pathlengths[it]
+            new[f"t8_s_{it}"] = pathlengths[it]
 
         # -------------------------- <Claude derivation> --------------------------
         # stack per-hit columns
         s_all = np.stack(pathlengths, axis=1)
-        z_all = np.stack([ t8s[f"t8_z_{it}"] for it in range(N_LAYERS_IN_T8) ], axis=1)
+        z_all = np.stack([ new[f"t8_z_{it}"] for it in range(N_LAYERS_IN_T8) ], axis=1)
 
         # row-wise least-squares line: z = z0_ref + tanlambda * s
         s_mean = s_all.mean(axis=1, keepdims=True)
@@ -261,7 +259,7 @@ class T8Maker:
         # residuals + quality metric, one per track
         resid = z_all - (z0_ref[:, None] + tanlambda[:, None] * s_all)
         resid2 = (resid ** 2).sum(axis=1)
-        newcols[f"t8_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
+        new[f"t8_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
 
         # rename some things
@@ -324,7 +322,7 @@ class T8Maker:
             )
 
         # merge new columns into the df
-        t8s = pd.concat([t8s, pd.DataFrame(newcols, index=t8s.index)], axis=1)
+        t8s = pd.concat([t8s, pd.DataFrame(new, index=t8s.index)], axis=1)
 
         # remove as desired
         for cut in [col for col in t8s.columns if col.startswith("t8_ok")]:
