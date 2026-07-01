@@ -257,7 +257,7 @@ class MDMaker:
         # guard: closed form assumes the upper layer sits strictly outside the
         # lower one. If radii overlap, fall back to the exact full merge.
         if r_up_min <= r_lo.max():
-            self.logger.warning(f"MD binned merge: weird data, falling back to full merge")
+            logger.warning(f"MD binned merge: weird data, falling back to full merge")
             doublets = pd.merge(lower, upper, on=self.doublet_cols, how="inner",
                                 suffixes=("_lower", "_upper"))
             return doublets, n_full
@@ -276,7 +276,7 @@ class MDMaker:
 
         # degenerate (e.g. dz_cut == 0): nothing can pass, fall back is safe
         if not (bin_width > 0.0):
-            self.logger.warning(f"MD binned merge: degenerate bin width, falling back to full merge")
+            logger.warning(f"MD binned merge: degenerate bin width, falling back to full merge")
             doublets = pd.merge(lower, upper, on=self.doublet_cols, how="inner",
                                 suffixes=("_lower", "_upper"))
             return doublets, n_full
@@ -300,7 +300,7 @@ class MDMaker:
         matched = lower_keys.merge(upper_keys, on="_zbin", how="inner")
 
         if len(matched) == 0:
-            self.logger.warning(f"MD binned merge: no matches, falling back to full merge")
+            logger.warning(f"MD binned merge: no matches, falling back to full merge")
             doublets = pd.merge(lower.iloc[:0], upper.iloc[:0], on=self.doublet_cols,
                                 how="inner", suffixes=("_lower", "_upper"))
             return doublets, n_full
