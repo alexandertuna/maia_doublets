@@ -15,6 +15,7 @@ from maia_doublets.slcio import HitMaker
 from maia_doublets.md import MDMaker
 from maia_doublets.t2 import T2Maker
 from maia_doublets.t4 import T4Maker
+from maia_doublets.t8 import T8Maker
 from maia_doublets.plot import Plotter
 from maia_doublets.calib import CalibConstants
 from maia_doublets.calib import MDCalibrator
@@ -56,12 +57,13 @@ def main():
     cut_mds = ops.cut_mds or not signal
     cut_t2s = ops.cut_t2s or not signal
     cut_t4s = ops.cut_t4s or not signal
+    cut_t8s = ops.cut_t8s or not signal
     if not ops.sim and not ops.digi:
         raise ValueError("At least one of --sim or --digi must be specified")
     if ops.sim and ops.digi:
         raise ValueError("Only one of --sim or --digi can be specified, not both")
-    if ops.calibrate and (cut_mds or cut_t2s or cut_t4s):
-        raise ValueError("Cannot use --calibrate with any of --cut-mds, --cut-t2s, or --cut-t4s")
+    if ops.calibrate and (cut_mds or cut_t2s or cut_t4s or cut_t8s):
+        raise ValueError("Cannot use --calibrate with any of --cut-mds, --cut-t2s, --cut-t4s, or --cut-t8s")
 
     # log some info
     logger.info(f"Detected {'signal' if signal else 'background'} files")
@@ -73,6 +75,7 @@ def main():
     logger.info(f"Cut MDs: {cut_mds}")
     logger.info(f"Cut T2s: {cut_t2s}")
     logger.info(f"Cut T4s: {cut_t4s}")
+    logger.info(f"Cut T8s: {cut_t8s}")
     logger.info(f"Fast MDs: {ops.fast_mds}")
     logger.info(f"Geometry version: {ops.geo}")
     logger.info(f"Using sim hits: {ops.sim}")
@@ -112,6 +115,12 @@ def main():
         calibs = CalibConstants(calib_json(ops)).calibs
         t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
 
+    # t8s
+    t8s, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
+    write_t8s(ops, t8s)
+    if ops.calibrate:
+        raise NotImplementedError("Calibration for T8s is not implemented yet")
+
     # plot stuff
     with Timer() as plot_time:
         if ops.plot:
@@ -123,6 +132,7 @@ def main():
                 doublets=doublets,
                 linesegments=t2s,
                 t4s=t4s,
+                t8s=t8s,
                 calibs=calibs,
                 pdf="doublets.pdf",
             )
@@ -283,6 +293,30 @@ def calib_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
     calib.calibrate()
 
 
+def get_t8s(ops: argparse.Namespace, t4s: pd.DataFrame, signal: bool, cut_t8s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
+    with Timer() as t8_time:
+        if ops.read_t8s:
+            logger.info(f"Reading T8s from {ops.read_t8s} ...")
+            t8s = pd.read_pickle(ops.read_t8s)
+        else:
+            # make T8s from T4s
+            t8s = None
+            t8s = T8Maker(
+                signal=signal,
+                cut_t8s=cut_t8s,
+                calibs=calibs,
+                t4s=t4s,
+            ).df
+
+    return t8s, t8_time.duration
+
+
+def write_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
+    if ops.write_t8s:
+        logger.info(f"Saving T8s to {ops.write_t8s} ...")
+        t8s.to_pickle(ops.write_t8s)
+
+
 def calib_json(ops: argparse.Namespace) -> str:
     key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
     key = "_".join(key)
@@ -313,6 +347,7 @@ def options():
     parser.add_argument("--cut-mds", action="store_true", help="Cut MDs based on MD_DZ_CUT and MD_DR_CUT")
     parser.add_argument("--cut-t2s", action="store_true", help="Cut T2s (line segments) based on [[ something ]]")
     parser.add_argument("--cut-t4s", action="store_true", help="Cut T4s based on [[ something ]]")
+    parser.add_argument("--cut-t8s", action="store_true", help="Cut T8s based on [[ something ]]")
     parser.add_argument("--read-mcps", type=str, help="Read mcps from pickle file")
     parser.add_argument("--write-mcps", type=str, help="Write mcps to pickle file")
     parser.add_argument("--read-simhits", type=str, help="Read simhits from pickle file")
@@ -324,6 +359,8 @@ def options():
     parser.add_argument("--write-t2s", type=str, help="Write T2s (line segments) to pickle file")
     parser.add_argument("--read-t4s", type=str, help="Read T4s from pickle file")
     parser.add_argument("--write-t4s", type=str, help="Write T4s to pickle file")
+    parser.add_argument("--read-t8s", type=str, help="Read T8s from pickle file")
+    parser.add_argument("--write-t8s", type=str, help="Write T8s to pickle file")
     parser.add_argument("--geo", type=str, help="Version of geometry to use for cuts (e.g. v01, v04)", required=True)
     parser.add_argument("--smear", type=str, default="00um", help="Smear value to use for digi hits (e.g. 10um)")
     parser.add_argument("--signal", action="store_true", help="Use signal files in the analysis")

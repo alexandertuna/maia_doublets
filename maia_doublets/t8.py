@@ -114,14 +114,14 @@ class T8Maker:
 
     def make_t8s_from_lower_upper(self, lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
         """
-        Given an lower df and upper df, make T4s from their combinations
-            For example, lower df could be T2s which span OT layers 0-3 (global doublelayer 4),
-            and upper df could be T2s which span OT layers 4-7 (global doublelayer 6).
+        Given an lower df and upper df, make T8s from their combinations
+            For example, lower df could be T4s which span OT layers 0-3 (global doublelayer 4),
+            and upper df could be T4s which span OT layers 4-7 (global doublelayer 6).
         """
         # get combinations of lower and upper
         # within neighboring phi/eta slices
-        logger.info(f"Total number of lower T2s: {len(lower)}")
-        logger.info(f"Total number of upper T2s: {len(upper)}")
+        logger.info(f"Total number of lower T4s: {len(lower)}")
+        logger.info(f"Total number of upper T4s: {len(upper)}")
         cands = []
         for phi_shift in (-1, 0, 1):
             for eta_shift in (-1, 0, 1):
@@ -162,7 +162,7 @@ class T8Maker:
         if self.signal:
             t8s["t8_first_exit"] = t8s["t4_first_exit_lower"] & t8s["t4_first_exit_upper"]
             t8s["t8_from_fiducial_mcp"] = t8s["t4_from_fiducial_mcp_lower"] & t8s["t4_from_fiducial_mcp_upper"]
-            t8s["t8_detectable"] = t8s["t4_detectable_lower"] & t8s["t4_detectable_upper"]
+            t8s["t8_detectable"] = mcp_ok & t8s["t4_detectable_lower"] & t8s["t4_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",

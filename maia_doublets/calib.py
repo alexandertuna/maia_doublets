@@ -201,6 +201,46 @@ class T4Calibrator:
         write_calibration(calib_dict, self.calib_json)
 
 
+class T8Calibrator:
+
+    def __init__(self, t8s: pd.DataFrame, calib_json: str) -> None:
+        self.df = t8s
+        self.calib_json = calib_json
+        self.percentile = 99.7
+        self.features = [
+            "t8_dz",
+            "t8_dr",
+        ]
+        self.gdl = "t8_gdoublelayer"
+        self.detectable = "t8_detectable"
+        self.groupby = [
+            self.gdl,
+        ]
+        self.calib = {feature: {} for feature in self.features}
+        logger.info(f"Calibrating T8 {self.features}")
+        logger.info(f"len(t8s) = {len(t8s)}")
+        logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
+
+
+    def calibrate(self, update_calib: bool = True) -> None:
+        mask = self.df[self.detectable]
+        for feature in self.features:
+            for (cols, group) in self.df[mask].groupby(self.groupby):
+                (gdl,) = [str(col) for col in cols]
+                if gdl not in self.calib[feature]:
+                    self.calib[feature][gdl] = {}
+                interval = np.percentile(np.abs(group[feature]), self.percentile)
+                self.calib[feature][gdl] = interval
+        if update_calib:
+            self.update_calibration_on_disk()
+
+
+    def update_calibration_on_disk(self) -> None:
+        calib_dict = read_calibration(self.calib_json)
+        calib_dict = update_calibration(calib_dict, self.calib)
+        write_calibration(calib_dict, self.calib_json)
+
+
 def read_calibration(calib_json: str) -> dict:
     try:
         with open(calib_json, "r") as fi:

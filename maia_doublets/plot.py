@@ -53,6 +53,7 @@ class Plotter:
         doublets: pd.DataFrame,
         linesegments: pd.DataFrame,
         t4s: pd.DataFrame,
+        t8s: pd.DataFrame,
         calibs: dict,
         pdf: str,
     ):
@@ -62,6 +63,7 @@ class Plotter:
         self.doublets = doublets
         self.linesegments = linesegments
         self.t4s = t4s
+        self.t8s = t8s
         self.calibs = calibs
         self.pdf = pdf
 
@@ -94,6 +96,7 @@ class Plotter:
             self.plot_md_features(pdf)
             # self.plot_t2_features(pdf)
             # self.plot_t4_features(pdf)
+            self.plot_t8_features(pdf)
             # self.plot_t4_sz_coordinates(pdf, ndisplay=20)
             if self.signal:
                 self.write_denominator_info(pdf)
@@ -1662,3 +1665,72 @@ class Plotter:
                     pdf.savefig()
                     plt.close()
 
+
+    def plot_t8_features(self, pdf: PdfPages):
+        logger.info("Plotting t8 features ...")
+        if self.t8s is None or len(self.t8s) == 0:
+            logger.info("No T8s to plot")
+            return
+        baseline = self.t8s["t8_detectable"] if self.signal else np.ones(len(self.t8s), dtype=bool)
+
+        bins = {
+            "t8_deta": np.linspace(-3.2, 3.2, 641) if not self.signal else np.linspace(-0.032, 0.032, 321),
+            "t8_dphi": np.linspace(-3.2, 3.2, 321) if not self.signal else np.linspace(-0.32, 0.32, 321),
+            "t8_dr": np.linspace(0, 1500, 501) if not self.signal else np.linspace(0, 1000, 401),
+            "t8_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
+        }
+        xlabel = {
+            "t8_deta": "upper T4 eta - lower T4 eta",
+            "t8_dphi": "upper T4 phi - lower T4 phi [rad]",
+            "t8_dr": "T8 dr [mm]",
+            "t8_dz": "T8 dz [mm]",
+        }
+        formatting = {
+            "t8_deta": ".5f",
+            "t8_dphi": ".5f",
+            "t8_dr": ".1f",
+            "t8_dz": ".1f",
+        }
+        color = "cornflowerblue" if self.signal else "crimson"
+
+        # 1d histograms
+        for feature in [
+            "t8_deta",
+            "t8_dphi",
+            "t8_dr",
+            "t8_dz",
+        ]:
+
+            for semilogy in [
+                False,
+                # True,
+            ]:
+
+                gdls = ["t8_gdoublelayer_lower", "t8_gdoublelayer_upper"]
+                for ([gdl_l, gdl_u], group) in self.t8s[baseline].groupby(gdls):
+
+                        fig, ax = plt.subplots()
+                        ax.hist(
+                            group[feature],
+                            bins=bins[feature],
+                            histtype="stepfilled",
+                            color=color,
+                            edgecolor="black",
+                            linewidth=1.0,
+                            alpha=0.9,
+                        )
+                        if semilogy:
+                            ax.semilogy()
+                        num = len(group)
+                        mean = np.mean(group[feature])
+                        rms = np.sqrt(np.mean((group[feature] - mean) ** 2))
+                        p997 = np.percentile(np.abs(group[feature]), 99.7)
+                        fmt = formatting[feature]
+                        ax.set_ylim(0.8 if ax.get_yscale() == "log" else 0, None)
+                        ax.set_xlabel(xlabel[feature])
+                        ax.set_ylabel("T8s")
+                        ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+                        ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
+                        logger.info(f"GDL {gdl_l}-{gdl_u} {feature}: 99.7% in {p997:{fmt}}")
+                        pdf.savefig()
+                        plt.close()
