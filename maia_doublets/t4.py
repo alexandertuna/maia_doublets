@@ -165,7 +165,7 @@ class T4Maker:
         if self.signal:
             t4s["t4_first_exit"] = t4s["ls_first_exit_lower"] & t4s["ls_first_exit_upper"]
             t4s["t4_from_fiducial_mcp"] = t4s["ls_from_fiducial_mcp_lower"] & t4s["ls_from_fiducial_mcp_upper"]
-            t4s["t4_detectable"] = t4s["ls_detectable_lower"] & t4s["ls_detectable_upper"]
+            t4s["t4_detectable"] = mcp_ok & t4s["ls_detectable_lower"] & t4s["ls_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",

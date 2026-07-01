@@ -215,7 +215,7 @@ class T2Maker:
         if self.signal:
             segments["ls_first_exit"] = segments["doublet_first_exit_lower"] & segments["doublet_first_exit_upper"]
             segments["ls_from_fiducial_mcp"] = segments["doublet_from_fiducial_mcp_lower"] & segments["doublet_from_fiducial_mcp_upper"]
-            segments["ls_detectable"] = segments["doublet_detectable_lower"] & segments["doublet_detectable_upper"]
+            segments["ls_detectable"] = mcp_ok & segments["doublet_detectable_lower"] & segments["doublet_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",
