@@ -144,6 +144,7 @@ def main():
     logger.info(f"  MD making: {md_time:.2f}")
     logger.info(f"  T2 making: {t2_time:.2f}")
     logger.info(f"  T4 making: {t4_time:.2f}")
+    logger.info(f"  T8 making: {t8_time:.2f}")
     logger.info(f"  Plotting: {plot_time.duration:.2f}")
 
     # debug statements
