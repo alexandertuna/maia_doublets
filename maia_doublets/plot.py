@@ -109,7 +109,7 @@ class Plotter:
                 # self.plot_doublet_quality_efficiency(pdf)
                 # self.plot_segment_efficiency_vs_kinematics(pdf)
                 # self.plot_segment_quality_efficiency(pdf)
-                # self.plot_t4_efficiency_vs_kinematics_overall(pdf)
+                self.plot_t4_efficiency_vs_kinematics_overall(pdf)
                 # self.plot_t4_efficiency_vs_kinematics(pdf)
                 # self.plot_t4_quality_efficiency(pdf)
 
