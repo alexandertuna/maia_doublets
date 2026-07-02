@@ -21,15 +21,15 @@ class T2Maker:
             signal: bool,
             cut_t2s: bool,
             calibs: dict,
-            doublets: pd.DataFrame,
+            mds: pd.DataFrame,
         ):
         self.df = None
         self.signal = signal
         self.cut_t2s = cut_t2s
         self.lower_suffix = "lower"
         self.upper_suffix = "upper"
-        memory = doublets.memory_usage(deep=True).sum() * BYTE_TO_MB
-        logger.info(f"Making linesegments with doublets memory {memory:.1f} MB ...")
+        memory = mds.memory_usage(deep=True).sum() * BYTE_TO_MB
+        logger.info(f"Making t2s with mds memory {memory:.1f} MB ...")
 
         self.T2_DZ_CUT = calibs.get("ls_dz", np.zeros((10, 10)))
         self.T2_DR_CUT = calibs.get("ls_dr", np.zeros((10, 10)))
@@ -43,23 +43,23 @@ class T2Maker:
             "doublet_eta_slice",
         ]
 
-        self.doublets = doublets.copy()
-        self.filter_doublets()
-        self.sort_doublets()
+        self.mds = mds.copy()
+        self.filter_mds()
+        self.sort_mds()
         self.make_t2s()
 
 
-    def filter_doublets(self):
-        # only consider "good" doublets
-        logger.info("Filtering doublets for line segments ...")
-        self.doublets = self.doublets[ self.doublets["doublet_ok"] ]
-        memory = self.doublets.memory_usage(deep=True).sum() * BYTE_TO_MB
-        logger.info(f"Memory usage after filtering doublets: {memory:.1f} MB")
+    def filter_mds(self):
+        # only consider "good" mds
+        logger.info("Filtering MDs for T2s ...")
+        self.mds = self.mds[ self.mds["doublet_ok"] ]
+        memory = self.mds.memory_usage(deep=True).sum() * BYTE_TO_MB
+        logger.info(f"Memory usage after filtering MDs: {memory:.1f} MB")
 
 
-    def sort_doublets(self):
-        # sort doublets by file, event, system, doublelayer, sensor, module
-        logger.info("Sorting doublets for line segments ...")
+    def sort_mds(self):
+        # sort mds by file, event, system, doublelayer, sensor, module
+        logger.info("Sorting MDs for T2s ...")
         cols = [
             "file",
             "i_event",
@@ -68,7 +68,7 @@ class T2Maker:
             "doublet_sensor",
             "doublet_module",
         ]
-        self.doublets = self.doublets.sort_values(by=cols).reset_index(drop=True)
+        self.mds = self.mds.sort_values(by=cols).reset_index(drop=True)
 
 
     def make_t2s(self):
@@ -78,7 +78,7 @@ class T2Maker:
         mds = {
             gdl: group.reset_index(drop=True)
             for gdl, group
-            in self.doublets.groupby("doublet_gdoublelayer", sort=True)
+            in self.mds.groupby("doublet_gdoublelayer", sort=True)
         }
 
         # make T2s from neighboring doublelayers

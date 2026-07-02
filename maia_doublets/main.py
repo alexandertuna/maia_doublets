@@ -92,20 +92,20 @@ def main():
     write_simhits_and_mcps(ops, simhits, mcps)
 
     # mini-doublets (mds)
-    doublets, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
-    write_mds(ops, doublets)
+    mds, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
+    write_mds(ops, mds)
     if ops.calibrate:
-        calib_mds(ops, doublets)
+        calib_mds(ops, mds)
         calibs = CalibConstants(calib_json(ops)).calibs
-        doublets, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
+        mds, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
 
     # t2s
-    t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s, calibs)
+    t2s, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
     write_t2s(ops, t2s)
     if ops.calibrate:
         calib_t2s(ops, t2s)
         calibs = CalibConstants(calib_json(ops)).calibs
-        t2s, t2_time = get_t2s(ops, doublets, signal, cut_t2s, calibs)
+        t2s, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
 
 
     # t4s
@@ -132,8 +132,8 @@ def main():
                 signal=signal,
                 mcps=mcps,
                 simhits=simhits,
-                doublets=doublets,
-                linesegments=t2s,
+                mds=mds,
+                t2s=t2s,
                 t4s=t4s,
                 t8s=t8s,
                 calibs=calibs,
@@ -225,7 +225,7 @@ def calib_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
     calib.calibrate()
 
 
-def get_t2s(ops: argparse.Namespace, doublets: pd.DataFrame, signal: bool, cut_t2s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
+def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
     with Timer() as t2_time:
         if ops.read_t2s:
             logger.info(f"Reading T2s (line segments) from {ops.read_t2s} ...")
@@ -237,7 +237,7 @@ def get_t2s(ops: argparse.Namespace, doublets: pd.DataFrame, signal: bool, cut_t
                 signal=signal,
                 cut_t2s=cut_t2s,
                 calibs=calibs,
-                doublets=doublets,
+                mds=mds,
             ).df
 
     return t2s, t2_time.duration

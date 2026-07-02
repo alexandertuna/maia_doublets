@@ -50,8 +50,8 @@ class Plotter:
         signal: bool,
         mcps: pd.DataFrame,
         simhits: pd.DataFrame,
-        doublets: pd.DataFrame,
-        linesegments: pd.DataFrame,
+        mds: pd.DataFrame,
+        t2s: pd.DataFrame,
         t4s: pd.DataFrame,
         t8s: pd.DataFrame,
         calibs: dict,
@@ -60,8 +60,8 @@ class Plotter:
         self.signal = signal
         self.mcps = mcps
         self.simhits = simhits
-        self.doublets = doublets
-        self.linesegments = linesegments
+        self.doublets = mds
+        self.linesegments = t2s
         self.t4s = t4s
         self.t8s = t8s
         self.calibs = calibs
