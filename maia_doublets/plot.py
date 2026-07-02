@@ -339,20 +339,18 @@ class Plotter:
             mask_t2s = self.linesegments["ls_system"] == system
             mask_t4s = (self.t4s["t4_system_lower"] == system) & (self.t4s["t4_system_upper"] == system)
 
-            YANXI_T8S = 4
-
             mult = [
                 len(simhits),
                 mask_mds.sum(),
                 mask_t2s.sum(),
                 mask_t4s.sum(),
-                YANXI_T8S,
+                len(self.t8s),
             ]
             bins = np.arange(-0.5, len(mult))
 
             fig, ax = plt.subplots()
             ax.hist(
-                ["Hits", "Doublets", "T2s", "T4s", "T8s (w/IT)"],
+                ["Hits", "Doublets", "T2s", "T4s", "T8s (IT, OT)"],
                 bins=bins,
                 weights=mult,
                 histtype="stepfilled",
