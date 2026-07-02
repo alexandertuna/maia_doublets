@@ -21,6 +21,7 @@ from maia_doublets.calib import CalibConstants
 from maia_doublets.calib import MDCalibrator
 from maia_doublets.calib import T2Calibrator
 from maia_doublets.calib import T4Calibrator
+from maia_doublets.calib import T8Calibrator
 
 
 def main():
@@ -119,7 +120,9 @@ def main():
     t8s, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
     write_t8s(ops, t8s)
     if ops.calibrate:
-        raise NotImplementedError("Calibration for T8s is not implemented yet")
+        calib_t8s(ops, t8s)
+        calibs = CalibConstants(calib_json(ops)).calibs
+        t8s, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
 
     # plot stuff
     with Timer() as plot_time:
@@ -147,14 +150,6 @@ def main():
     logger.info(f"  T8 making: {t8_time:.2f}")
     logger.info(f"  Plotting: {plot_time.duration:.2f}")
 
-    # debug statements
-    if ops.debug:
-        debug_statements(
-            hits=simhits,
-            mds=doublets,
-            t2s=t2s,
-            t4s=t4s,
-        )
 
 
 def get_simhits_and_mcps(
@@ -318,6 +313,14 @@ def write_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
         t8s.to_pickle(ops.write_t8s)
 
 
+def calib_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
+    if not ops.calibrate:
+        return
+    logger.info("Calibrating T8s ...")
+    calib = T8Calibrator(t8s, calib_json=calib_json(ops))
+    calib.calibrate()
+
+
 def calib_json(ops: argparse.Namespace) -> str:
     key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
     key = "_".join(key)
@@ -393,77 +396,6 @@ def parse_system(system_str: str) -> int:
     if len(system_str) != len("OTB"):
         raise ValueError(f"Invalid system specified: {system_str}")
     return NICKNAME_TO_SYSTEM[system_str]
-
-
-def debug_statements(
-    hits: pd.DataFrame | None,
-    mds: pd.DataFrame | None,
-    t2s: pd.DataFrame | None,
-    t4s: pd.DataFrame | None,
-):
-    if hits is not None:
-        cols = [
-            "file",
-            "i_event",
-            "i_mcp",
-            "simhit_layer",
-            "simhit_x",
-            "simhit_y",
-        ]
-        mask = (hits["i_event"] == 5) & (hits["simhit_layer"].isin([0, 1]))
-        # logger.info(hits[mask][cols].to_string(index=False))
-
-    if mds is not None:
-        cols = [
-            "file",
-            "i_event",
-            "i_mcp",
-            "doublet_module",
-            "doublet_sensor",
-            "doublet_doublelayer",
-            "doublet_first_exit",
-            "doublet_x_0",
-            "doublet_x_1",
-            "doublet_y_0",
-            "doublet_y_1",
-            "doublet_dz",
-            "doublet_dr",
-        ]
-        mask = (mds["i_event"] == 5) & (mds["doublet_doublelayer"].isin([0, 1]))
-        # logger.info("\n%s", mds[mask][cols].to_string(index=False))
-
-    if t2s is not None:
-        cols = [
-            "file",
-            "i_event",
-            "i_mcp",
-            "ls_module_lower",
-            "ls_module_upper",
-            "ls_sensor_lower",
-            "ls_sensor_upper",
-            "ls_doublelayer",
-            "ls_x_0",
-            "ls_x_1",
-            "ls_x_2",
-            "ls_x_3",
-            "ls_y_0",
-            "ls_y_1",
-            "ls_y_2",
-            "ls_y_3",
-            "ls_dz",
-            "ls_dr",
-            "ls_dtheta_rz",
-            "ls_chi2_012",
-        ]
-        # mask = (t2s["i_event"] == 5) & (t2s["ls_doublelayer"] == 0)
-        # logger.info(t2s[mask][cols].to_string(index=False))
-        mask = (t2s["ls_doublelayer"] == 0)
-        logger.info("\n%s", t2s[mask][cols].to_string(index=False))
-
-    if t4s is not None:
-        cols = ["file", "i_event", "i_mcp", "t4_system", "t4_dr", "t4_dz", "t4_dtheta_rz", "t4_chi2_047"]
-        mask = (t4s["i_event"] == 5)
-        # logger.info(t4s[mask][cols].to_string(index=False))
 
 
 class Timer:
