@@ -19,6 +19,8 @@ NO_MCP = np.uint32(0xffffffff)
 # https://github.com/AIDASoft/podio/blob/master/include/podio/ObjectID.h
 PODIO_NO_MCP = -2
 
+INTERVAL_PRECISION = 4
+
 ONE_MM = 1.0
 ZERO_POINT_ZERO_ONE_MM = 0.01
 ONE_GEV = 1.0

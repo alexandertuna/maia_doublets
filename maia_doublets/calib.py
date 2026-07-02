@@ -4,7 +4,7 @@ import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import NO_MCP
+from maia_doublets.constants import INTERVAL_PRECISION
 
 class CalibConstants:
 
@@ -105,7 +105,7 @@ class MDCalibrator:
                 if system not in self.calib[feature]:
                     self.calib[feature][system] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
-                self.calib[feature][system][doublelayer] = interval
+                self.calib[feature][system][doublelayer] = format_interval(interval)
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -150,7 +150,7 @@ class T2Calibrator:
                 if system not in self.calib[feature]:
                     self.calib[feature][system] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
-                self.calib[feature][system][doublelayer] = interval
+                self.calib[feature][system][doublelayer] = format_interval(interval)
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -193,7 +193,7 @@ class T4Calibrator:
                 if gdl not in self.calib[feature]:
                     self.calib[feature][gdl] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
-                self.calib[feature][gdl] = interval
+                self.calib[feature][gdl] = format_interval(interval)
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -233,7 +233,7 @@ class T8Calibrator:
                 if gdl not in self.calib[feature]:
                     self.calib[feature][gdl] = {}
                 interval = np.percentile(np.abs(group[feature]), self.percentile)
-                self.calib[feature][gdl] = interval
+                self.calib[feature][gdl] = format_interval(interval)
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -242,6 +242,11 @@ class T8Calibrator:
         calib_dict = read_calibration(self.calib_json)
         calib_dict = update_calibration(calib_dict, self.calib)
         write_calibration(calib_dict, self.calib_json)
+
+
+def format_interval(interval: float) -> float:
+    # return interval
+    return float(np.format_float_positional(interval, precision=INTERVAL_PRECISION, fractional=False))
 
 
 def read_calibration(calib_json: str) -> dict:
