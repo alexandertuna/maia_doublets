@@ -75,7 +75,7 @@ class CalibConstants:
 
 class MDCalibrator:
 
-    def __init__(self, doublets: pd.DataFrame, calib_json: str) -> None:
+    def __init__(self, doublets: pd.DataFrame, calib_json: str, sequential: bool = True) -> None:
         self.df = doublets
         self.calib_json = calib_json
         self.percentile = 99.7
@@ -83,6 +83,7 @@ class MDCalibrator:
             "doublet_dz",
             "doublet_dr",
         ]
+        self.sequential = sequential
         self.system = "doublet_system"
         self.doublelayer = "doublet_doublelayer"
         self.detectable = "doublet_detectable"
@@ -98,14 +99,16 @@ class MDCalibrator:
 
 
     def calibrate(self, update_calib: bool = True) -> None:
-        mask = self.df[self.detectable]
-        for feature in self.features:
-            for (cols, group) in self.df[mask].groupby(self.groupby):
+        for (cols, group) in self.df.groupby(self.groupby):
+            mask = group[self.detectable]
+            for feature in self.features:
                 (system, doublelayer) = [str(col) for col in cols]
                 if system not in self.calib[feature]:
                     self.calib[feature][system] = {}
-                interval = np.percentile(np.abs(group[feature]), self.percentile)
+                interval = np.percentile(np.abs(group[mask][feature]), self.percentile)
                 self.calib[feature][system][doublelayer] = format_interval(interval)
+                if self.sequential:
+                    mask &= (np.abs(group[feature]) < interval)
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -118,7 +121,7 @@ class MDCalibrator:
 
 class T2Calibrator:
 
-    def __init__(self, t2s: pd.DataFrame, calib_json: str) -> None:
+    def __init__(self, t2s: pd.DataFrame, calib_json: str, sequential: bool = True) -> None:
         self.df = t2s
         self.calib_json = calib_json
         self.percentile = 99.7
@@ -128,6 +131,7 @@ class T2Calibrator:
             "ls_dtheta_rz",
             "ls_chi2_012",
         ]
+        self.sequential = sequential
         self.system = "ls_system"
         self.doublelayer = "ls_doublelayer"
         self.detectable = "ls_detectable"
@@ -143,14 +147,16 @@ class T2Calibrator:
 
 
     def calibrate(self, update_calib: bool = True) -> None:
-        mask = self.df[self.detectable]
-        for feature in self.features:
-            for (cols, group) in self.df[mask].groupby(self.groupby):
+        for (cols, group) in self.df.groupby(self.groupby):
+            mask = group[self.detectable]
+            for feature in self.features:
                 (system, doublelayer) = [str(col) for col in cols]
                 if system not in self.calib[feature]:
                     self.calib[feature][system] = {}
-                interval = np.percentile(np.abs(group[feature]), self.percentile)
+                interval = np.percentile(np.abs(group[mask][feature]), self.percentile)
                 self.calib[feature][system][doublelayer] = format_interval(interval)
+                if self.sequential:
+                    mask &= (np.abs(group[feature]) < interval)
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -163,7 +169,7 @@ class T2Calibrator:
 
 class T4Calibrator:
 
-    def __init__(self, t4s: pd.DataFrame, calib_json: str) -> None:
+    def __init__(self, t4s: pd.DataFrame, calib_json: str, sequential: bool = True) -> None:
         self.df = t4s
         self.calib_json = calib_json
         self.percentile = 99.7
@@ -172,8 +178,9 @@ class T4Calibrator:
             "t4_dr",
             "t4_dtheta_rz",
             "t4_chi2_xy_047",
-            "t4_chi2_sz",
+            # "t4_chi2_sz",
         ]
+        self.sequential = sequential
         self.gdl = "t4_gdoublelayer"
         self.detectable = "t4_detectable"
         self.groupby = [
@@ -186,14 +193,14 @@ class T4Calibrator:
 
 
     def calibrate(self, update_calib: bool = True) -> None:
-        mask = self.df[self.detectable]
-        for feature in self.features:
-            for (cols, group) in self.df[mask].groupby(self.groupby):
+        for (cols, group) in self.df.groupby(self.groupby):
+            mask = group[self.detectable]
+            for feature in self.features:
                 (gdl,) = [str(col) for col in cols]
-                if gdl not in self.calib[feature]:
-                    self.calib[feature][gdl] = {}
-                interval = np.percentile(np.abs(group[feature]), self.percentile)
+                interval = np.percentile(np.abs(group[mask][feature]), self.percentile)
                 self.calib[feature][gdl] = format_interval(interval)
+                if self.sequential:
+                    mask &= (np.abs(group[feature]) < interval)
         if update_calib:
             self.update_calibration_on_disk()
 
@@ -206,7 +213,7 @@ class T4Calibrator:
 
 class T8Calibrator:
 
-    def __init__(self, t8s: pd.DataFrame, calib_json: str) -> None:
+    def __init__(self, t8s: pd.DataFrame, calib_json: str, sequential: bool = True) -> None:
         self.df = t8s
         self.calib_json = calib_json
         self.percentile = 99.7
@@ -214,6 +221,7 @@ class T8Calibrator:
             "t8_dz",
             "t8_dr",
         ]
+        self.sequential = sequential
         self.gdl = "t8_gdoublelayer"
         self.detectable = "t8_detectable"
         self.groupby = [
@@ -226,14 +234,14 @@ class T8Calibrator:
 
 
     def calibrate(self, update_calib: bool = True) -> None:
-        mask = self.df[self.detectable]
-        for feature in self.features:
-            for (cols, group) in self.df[mask].groupby(self.groupby):
+        for (cols, group) in self.df.groupby(self.groupby):
+            mask = group[self.detectable]
+            for feature in self.features:
                 (gdl,) = [str(col) for col in cols]
-                if gdl not in self.calib[feature]:
-                    self.calib[feature][gdl] = {}
-                interval = np.percentile(np.abs(group[feature]), self.percentile)
+                interval = np.percentile(np.abs(group[mask][feature]), self.percentile)
                 self.calib[feature][gdl] = format_interval(interval)
+                if self.sequential:
+                    mask &= (np.abs(group[feature]) < interval)
         if update_calib:
             self.update_calibration_on_disk()
 
