@@ -96,8 +96,8 @@ class Plotter:
             # self.plot_doublet_occupancy(pdf)
             # self.plot_hit_features(pdf)
             self.plot_md_features(pdf)
-            # self.plot_t2_features(pdf)
-            # self.plot_t4_features(pdf)
+            self.plot_t2_features(pdf)
+            self.plot_t4_features(pdf)
             self.plot_t8_features(pdf)
             # self.plot_t4_sz_coordinates(pdf, ndisplay=20)
             if self.signal:
@@ -818,7 +818,7 @@ class Plotter:
 
     def plot_md_features(self, pdf: PdfPages):
         logger.info("Plotting doublet features ...")
-        baseline = self.baseline_doublet_mask() if self.signal else np.ones(len(self.doublets), dtype=bool)
+        baseline = self.doublets["doublet_detectable"] if self.signal else np.ones(len(self.doublets), dtype=bool)
 
         bins = {
             "doublet_dz": np.linspace(-150, 150, 301) if self.signal else np.linspace(-49e3, 49e3, 101),
@@ -940,20 +940,6 @@ class Plotter:
                 plt.close()
 
 
-    def baseline_doublet_mask(self) -> pd.Series:
-        return (
-            (self.doublets["i_mcp"] != NO_MCP) &
-            (self.doublets["doublet_first_exit"]) &
-            (np.abs(self.doublets["mcp_pdg"]) == MUON) &
-            (self.doublets["mcp_q"] != 0) &
-            (self.doublets["mcp_pt"] > ONE_POINT_FIVE_GEV) &
-            (np.abs(self.doublets["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &
-            (self.doublets["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
-            (np.abs(self.doublets["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM) &
-            np.ones(len(self.doublets), dtype=bool)
-        )
-
-
     def plot_doublet_quality_efficiency(self, pdf: PdfPages):
 
         bins = {
@@ -968,7 +954,7 @@ class Plotter:
         }
 
         # only consider truth-match doublets
-        baseline = self.baseline_doublet_mask()
+        baseline = self.doublets["doublet_detectable"]
         logger.info(f"Doublet efficiency: total doublets: {len(self.doublets)}")
         logger.info(f"Doublet efficiency: total doublets in baseline: {baseline.sum()}")
 
@@ -1029,25 +1015,9 @@ class Plotter:
         plt.close()
 
 
-    def baseline_linesegment_mask(self) -> pd.Series:
-        return (
-            (self.linesegments["i_mcp"] != NO_MCP) &
-            (self.linesegments["ls_first_exit"]) &
-            (np.abs(self.linesegments["mcp_pdg"]) == MUON) &
-            (self.linesegments["mcp_q"] != 0) &
-            (self.linesegments["mcp_pt"] > ONE_POINT_FIVE_GEV) &
-            (np.abs(self.linesegments["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &
-            (self.linesegments["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
-            (np.abs(self.linesegments["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM) &
-            (self.linesegments["ls_md_ok_lower"]) &
-            (self.linesegments["ls_md_ok_upper"]) &
-            np.ones(len(self.linesegments), dtype=bool)
-        )
-
-
     def plot_t2_features(self, pdf: PdfPages):
         logger.info("Plotting linesegment features ...")
-        baseline = self.baseline_linesegment_mask() if self.signal else np.ones(len(self.linesegments), dtype=bool)
+        baseline = self.linesegments["ls_detectable"] if self.signal else np.ones(len(self.linesegments), dtype=bool)
 
         bins = {
             "ls_deta": np.linspace(-3.2, 3.2, 641) if not self.signal else np.linspace(-0.012, 0.012, 241),
@@ -1248,7 +1218,7 @@ class Plotter:
         }
 
         # only consider truth-match doublets
-        baseline = self.baseline_linesegment_mask()
+        baseline = self.linesegments["ls_detectable"]
         logger.info(f"Segment efficiency: total segments: {len(self.linesegments)}")
         logger.info(f"Segment efficiency: total segments in baseline: {baseline.sum()}")
 
@@ -1330,22 +1300,6 @@ class Plotter:
         return text, mask
 
 
-    def baseline_t4_mask(self) -> pd.Series:
-        return (
-            (self.t4s["i_mcp"] != NO_MCP) &
-            (self.t4s["t4_first_exit"]) &
-            (np.abs(self.t4s["mcp_pdg"]) == MUON) &
-            (self.t4s["mcp_q"] != 0) &
-            (self.t4s["mcp_pt"] > ONE_POINT_FIVE_GEV) &
-            (np.abs(self.t4s["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &
-            (self.t4s["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
-            (np.abs(self.t4s["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM) &
-            (self.t4s["t4_ls_ok_lower"]) &
-            (self.t4s["t4_ls_ok_upper"]) &
-            np.ones(len(self.t4s), dtype=bool)
-        )
-
-
     def plot_t4_sz_coordinates(self, pdf: PdfPages, ndisplay):
         logger.info(f"Plotting T4 sz coordinates for first {ndisplay} T4s ...")
         nhits_in_t4 = 8
@@ -1384,7 +1338,7 @@ class Plotter:
         if self.t4s is None or len(self.t4s) == 0:
             logger.info("No T4s to plot")
             return
-        baseline = self.baseline_t4_mask() if self.signal else np.ones(len(self.t4s), dtype=bool)
+        baseline = self.t4s["t4_detectable"] if self.signal else np.ones(len(self.t4s), dtype=bool)
 
         bins = {
             "t4_deta": np.linspace(-3.2, 3.2, 641) if not self.signal else np.linspace(-0.032, 0.032, 321),
@@ -1619,7 +1573,7 @@ class Plotter:
         reqs = [col for col in self.t4s.columns if col.startswith("t4_ok")]
 
         # only consider truth-matched
-        baseline = self.baseline_t4_mask()
+        baseline = self.t4s["t4_detectable"]
         logger.info(f"T4 efficiency: total T4: {len(self.t4s)}")
         logger.info(f"T4 efficiency: total T4 in baseline: {baseline.sum()}")
 
