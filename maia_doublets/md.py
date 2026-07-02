@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 from maia_doublets.constants import MAGNETIC_FIELD, SPEED_OF_LIGHT
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_T2_PHI_SLICES, N_T2_ETA_SLICES, DETECTOR_MAX_ETA, DETECTOR_MAX_PHI
+from maia_doublets.constants import BAD_CHI2
 
 class MDMaker:
 
@@ -108,15 +109,22 @@ class MDMaker:
 
         # doublet feature: xy, dr at point of closest approach to origin
         slope_xy = np.divide(doublets["simhit_y_upper"] - doublets["simhit_y_lower"],
-                                doublets["simhit_x_upper"] - doublets["simhit_x_lower"])
+                             doublets["simhit_x_upper"] - doublets["simhit_x_lower"])
         intercept_xy = doublets["simhit_y_lower"] - slope_xy * doublets["simhit_x_lower"]
         doublets["doublet_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
 
         # doublet feature: rz
         slope_rz = np.divide(doublets["simhit_z_upper"] - doublets["simhit_z_lower"],
-                                doublets["simhit_r_upper"] - doublets["simhit_r_lower"])
+                             doublets["simhit_r_upper"] - doublets["simhit_r_lower"])
         doublets["doublet_dz"] = doublets["simhit_z_lower"] - doublets["simhit_r_lower"] * slope_rz
         doublets["doublet_theta_rz"] = np.arctan(slope_rz)
+
+        # announce any nans
+        for feature in ["doublet_dr", "doublet_dz"]:
+            if doublets[feature].isnull().any():
+                n_nan = doublets[feature].isnull().sum()
+                logger.warning(f"Found {n_nan} NaN in {feature}, replacing with {BAD_CHI2}")
+                doublets[feature] = doublets[feature].fillna(BAD_CHI2)
 
         # record some numbers
         cutflow = {"all": len(doublets)}
