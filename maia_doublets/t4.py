@@ -178,54 +178,53 @@ class T4Maker:
             ]:
                 t4s[attr] = t4s[f"{attr}_lower"].where(mcp_ok, 0)
 
+        # collect new columns
+        new = {}
+
         # pass-through the simhit positions
         for coord in ["x", "y", "r", "z"]:
-            t4s[f"t4_{coord}_0"] = t4s[f"ls_{coord}_0_lower"]
-            t4s[f"t4_{coord}_1"] = t4s[f"ls_{coord}_1_lower"]
-            t4s[f"t4_{coord}_2"] = t4s[f"ls_{coord}_2_lower"]
-            t4s[f"t4_{coord}_3"] = t4s[f"ls_{coord}_3_lower"]
-            t4s[f"t4_{coord}_4"] = t4s[f"ls_{coord}_0_upper"]
-            t4s[f"t4_{coord}_5"] = t4s[f"ls_{coord}_1_upper"]
-            t4s[f"t4_{coord}_6"] = t4s[f"ls_{coord}_2_upper"]
-            t4s[f"t4_{coord}_7"] = t4s[f"ls_{coord}_3_upper"]
+            new[f"t4_{coord}_0"] = t4s[f"ls_{coord}_0_lower"]
+            new[f"t4_{coord}_1"] = t4s[f"ls_{coord}_1_lower"]
+            new[f"t4_{coord}_2"] = t4s[f"ls_{coord}_2_lower"]
+            new[f"t4_{coord}_3"] = t4s[f"ls_{coord}_3_lower"]
+            new[f"t4_{coord}_4"] = t4s[f"ls_{coord}_0_upper"]
+            new[f"t4_{coord}_5"] = t4s[f"ls_{coord}_1_upper"]
+            new[f"t4_{coord}_6"] = t4s[f"ls_{coord}_2_upper"]
+            new[f"t4_{coord}_7"] = t4s[f"ls_{coord}_3_upper"]
 
         # more features
-        t4s["t4_deta"] = t4s["ls_eta_upper"] - t4s["ls_eta_lower"]
-        t4s["t4_dphi"] = t4s["ls_phi_upper"] - t4s["ls_phi_lower"]
-        t4s["t4_dphi"] = (t4s["t4_dphi"] + np.pi) % (2 * np.pi) - np.pi
-        t4s["t4_eta"] = 0.5 * (t4s["ls_eta_upper"] + t4s["ls_eta_lower"])
-        t4s["t4_x"] = 0.5 * (t4s["ls_x_upper"] + t4s["ls_x_lower"])
-        t4s["t4_y"] = 0.5 * (t4s["ls_y_upper"] + t4s["ls_y_lower"])
-        t4s["t4_z"] = 0.5 * (t4s["ls_z_upper"] + t4s["ls_z_lower"])
-        t4s["t4_r"] = 0.5 * (t4s["ls_r_upper"] + t4s["ls_r_lower"])
-        t4s["t4_phi"] = np.arctan2(t4s["t4_y"], t4s["t4_x"])
-        t4s["t4_phi_slice"] = np.floor((t4s["t4_phi"] + np.pi) / (2 * np.pi) * N_T8_PHI_SLICES).astype(np.int16)
-        t4s["t4_eta_slice"] = np.floor((t4s["t4_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T8_ETA_SLICES).astype(np.int16)
-
+        new["t4_deta"] = t4s["ls_eta_upper"] - t4s["ls_eta_lower"]
+        new["t4_dphi"] = t4s["ls_phi_upper"] - t4s["ls_phi_lower"]
+        new["t4_dphi"] = (new["t4_dphi"] + np.pi) % (2 * np.pi) - np.pi
+        new["t4_eta"] = 0.5 * (t4s["ls_eta_upper"] + t4s["ls_eta_lower"])
+        new["t4_x"] = 0.5 * (t4s["ls_x_upper"] + t4s["ls_x_lower"])
+        new["t4_y"] = 0.5 * (t4s["ls_y_upper"] + t4s["ls_y_lower"])
+        new["t4_z"] = 0.5 * (t4s["ls_z_upper"] + t4s["ls_z_lower"])
+        new["t4_r"] = 0.5 * (t4s["ls_r_upper"] + t4s["ls_r_lower"])
+        new["t4_phi"] = np.arctan2(new["t4_y"], new["t4_x"])
+        new["t4_phi_slice"] = np.floor((new["t4_phi"] + np.pi) / (2 * np.pi) * N_T8_PHI_SLICES).astype(np.int16)
+        new["t4_eta_slice"] = np.floor((new["t4_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T8_ETA_SLICES).astype(np.int16)
 
         # angle differences (handle wraparound)
-        t4s["t4_dtheta_rz"] = t4s["ls_theta_rz_upper"] - t4s["ls_theta_rz_lower"]
-        t4s["t4_dtheta_rz"] = (t4s["t4_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
-
-        # collect new columns
-        newcols = {}
+        new["t4_dtheta_rz"] = t4s["ls_theta_rz_upper"] - t4s["ls_theta_rz_lower"]
+        new["t4_dtheta_rz"] = (new["t4_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
 
         # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
         i0, i1, i2 = 0, 4, 7
         ixs = [1, 2, 3, 5, 6]
-        circle_d = 2 * (t4s[f"t4_x_{i0}"] * (t4s[f"t4_y_{i1}"] - t4s[f"t4_y_{i2}"]) +
-                        t4s[f"t4_x_{i1}"] * (t4s[f"t4_y_{i2}"] - t4s[f"t4_y_{i0}"]) +
-                        t4s[f"t4_x_{i2}"] * (t4s[f"t4_y_{i0}"] - t4s[f"t4_y_{i1}"]))
-        circle_x = np.divide(t4s[f"t4_r_{i0}"]**2 * (t4s[f"t4_y_{i1}"] - t4s[f"t4_y_{i2}"]) +
-                                t4s[f"t4_r_{i1}"]**2 * (t4s[f"t4_y_{i2}"] - t4s[f"t4_y_{i0}"]) +
-                                t4s[f"t4_r_{i2}"]**2 * (t4s[f"t4_y_{i0}"] - t4s[f"t4_y_{i1}"]),
-                                circle_d)
-        circle_y = np.divide(t4s[f"t4_r_{i0}"]**2 * (t4s[f"t4_x_{i2}"] - t4s[f"t4_x_{i1}"]) +
-                                t4s[f"t4_r_{i1}"]**2 * (t4s[f"t4_x_{i0}"] - t4s[f"t4_x_{i2}"]) +
-                                t4s[f"t4_r_{i2}"]**2 * (t4s[f"t4_x_{i1}"] - t4s[f"t4_x_{i0}"]),
-                                circle_d)
-        circle_r = np.sqrt((t4s[f"t4_x_{i0}"] - circle_x)**2 + (t4s[f"t4_y_{i0}"] - circle_y)**2)
+        circle_d = 2 * (new[f"t4_x_{i0}"] * (new[f"t4_y_{i1}"] - new[f"t4_y_{i2}"]) +
+                        new[f"t4_x_{i1}"] * (new[f"t4_y_{i2}"] - new[f"t4_y_{i0}"]) +
+                        new[f"t4_x_{i2}"] * (new[f"t4_y_{i0}"] - new[f"t4_y_{i1}"]))
+        circle_x = np.divide(new[f"t4_r_{i0}"]**2 * (new[f"t4_y_{i1}"] - new[f"t4_y_{i2}"]) +
+                             new[f"t4_r_{i1}"]**2 * (new[f"t4_y_{i2}"] - new[f"t4_y_{i0}"]) +
+                             new[f"t4_r_{i2}"]**2 * (new[f"t4_y_{i0}"] - new[f"t4_y_{i1}"]),
+                             circle_d)
+        circle_y = np.divide(new[f"t4_r_{i0}"]**2 * (new[f"t4_x_{i2}"] - new[f"t4_x_{i1}"]) +
+                             new[f"t4_r_{i1}"]**2 * (new[f"t4_x_{i0}"] - new[f"t4_x_{i2}"]) +
+                             new[f"t4_r_{i2}"]**2 * (new[f"t4_x_{i1}"] - new[f"t4_x_{i0}"]),
+                             circle_d)
+        circle_r = np.sqrt((new[f"t4_x_{i0}"] - circle_x)**2 + (new[f"t4_y_{i0}"] - circle_y)**2)
         circle_ok = circle_d != 0
         if np.any(~circle_ok):
             logger.warning(f"Found {np.sum(~circle_ok)} invalid circles with circle_d = 0")
@@ -233,21 +232,21 @@ class T4Maker:
         # calculate the average diff
         diff2s = []
         for ix in ixs:
-            circle_diff = np.sqrt((t4s[f"t4_x_{ix}"] - circle_x)**2 + (t4s[f"t4_y_{ix}"] - circle_y)**2) - circle_r
+            circle_diff = np.sqrt((new[f"t4_x_{ix}"] - circle_x)**2 + (new[f"t4_y_{ix}"] - circle_y)**2) - circle_r
             diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
-        newcols[f"t4_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
+        new[f"t4_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
 
         # calculate chi2 for sz fit, where s is the arc length along the circle
-        phis = [ np.arctan2(t4s[f"t4_y_{it}"] - circle_y, t4s[f"t4_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T4) ]
+        phis = [ np.arctan2(new[f"t4_y_{it}"] - circle_y, new[f"t4_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T4) ]
         dphis = [ (phi - phis[0] + np.pi) % (2 * np.pi) - np.pi for phi in phis ]
         pathlengths = [ circle_r * dphi for dphi in dphis ]
         for it in range(N_LAYERS_IN_T4):
-            newcols[f"t4_s_{it}"] = pathlengths[it]
+            new[f"t4_s_{it}"] = pathlengths[it]
 
         # -------------------------- <Claude derivation> --------------------------
         # stack per-hit columns
         s_all = np.stack(pathlengths, axis=1)
-        z_all = np.stack([ t4s[f"t4_z_{it}"] for it in range(N_LAYERS_IN_T4) ], axis=1)
+        z_all = np.stack([ new[f"t4_z_{it}"] for it in range(N_LAYERS_IN_T4) ], axis=1)
 
         # row-wise least-squares line: z = z0_ref + tanlambda * s
         s_mean = s_all.mean(axis=1, keepdims=True)
@@ -261,7 +260,7 @@ class T4Maker:
         # residuals + quality metric, one per track
         resid = z_all - (z0_ref[:, None] + tanlambda[:, None] * s_all)
         resid2 = (resid ** 2).sum(axis=1)
-        newcols[f"t4_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
+        new[f"t4_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
 
         # rename some things
@@ -302,12 +301,12 @@ class T4Maker:
         # record some cut results
         gdl_l = t4s["t4_gdoublelayer_lower"]
         gdl_u = t4s["t4_gdoublelayer_upper"]
-        t4s["t4_ok_dphi"] = np.abs(t4s["t4_dphi"]) < np.pi / 2.0
         t4s["t4_ok_dz"] = np.abs(t4s["t4_dz"]) < self.T4_DZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl_l, gdl_u]
-        t4s["t4_ok_dthetarz"] = np.abs(t4s["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
-        t4s["t4_ok_chi2_xy"] = np.abs(newcols[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
-        t4s["t4_ok_chi2_sz"] = np.abs(newcols[f"t4_chi2_sz"]) < self.T4_CHI2_SZ_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_dphi"] = np.abs(new["t4_dphi"]) < np.pi / 2.0
+        t4s["t4_ok_dthetarz"] = np.abs(new["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2_xy"] = np.abs(new[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2_sz"] = np.abs(new[f"t4_chi2_sz"]) < self.T4_CHI2_SZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok"] = (
             t4s["t4_ok_dphi"] &
             t4s["t4_ok_dz"] &
@@ -334,7 +333,7 @@ class T4Maker:
             )
 
         # merge new columns into the df
-        t4s = pd.concat([t4s, pd.DataFrame(newcols, index=t4s.index)], axis=1)
+        t4s = pd.concat([t4s, pd.DataFrame(new, index=t4s.index)], axis=1)
 
         # remove as desired
         for cut in [col for col in t4s.columns if col.startswith("t4_ok")]:
