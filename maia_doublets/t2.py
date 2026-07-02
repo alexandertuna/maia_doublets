@@ -7,6 +7,7 @@ from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_T2_PHI_SLICES
 from maia_doublets.constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
 from maia_doublets.constants import N_T4_PHI_SLICES, N_T4_ETA_SLICES
+from maia_doublets.constants import BAD_CHI2
 
 class T2Maker:
 
@@ -261,7 +262,6 @@ class T2Maker:
         segments["ls_dtheta_xy"] = (segments["ls_dtheta_xy"] + np.pi) % (2 * np.pi) - np.pi
 
         # find the circle (radius, x_center, y_center) formed from the first three hits
-        BAD_CHI2 = 1e6
         circle_d = 2 * (segments["ls_x_0"] * (segments["ls_y_1"] - segments["ls_y_2"]) +
                         segments["ls_x_1"] * (segments["ls_y_2"] - segments["ls_y_0"]) +
                         segments["ls_x_2"] * (segments["ls_y_0"] - segments["ls_y_1"]))

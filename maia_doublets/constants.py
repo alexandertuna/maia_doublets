@@ -34,7 +34,7 @@ MEV_TO_GEV = 1e-3
 CODE = "/ceph/users/atuna/work/maia"
 XML = f"{CODE}/k4geo/MuColl/MAIA/compact/MAIA_v0/MAIA_v0.xml"
 
-
+BAD_CHI2 = 1e6
 EPSILON = 1e-6
 MCPARTICLE = "MCParticle"
 MAGNETIC_FIELD = 5.0 # Tesla
