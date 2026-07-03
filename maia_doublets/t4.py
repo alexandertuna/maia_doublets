@@ -311,9 +311,9 @@ class T4Maker:
             t4s["t4_ok_dphi"] &
             t4s["t4_ok_dz"] &
             t4s["t4_ok_dr"] &
-            t4s["t4_ok_dthetarz"] &
+            # t4s["t4_ok_dthetarz"] &
             t4s["t4_ok_chi2_xy"] &
-            # t4s["t4_ok_chi2_sz"] &
+            t4s["t4_ok_chi2_sz"] &
             np.ones(len(t4s), dtype=bool)
         )
         if self.signal:
