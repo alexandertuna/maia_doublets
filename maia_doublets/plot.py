@@ -354,7 +354,7 @@ class Plotter:
                 bins=bins,
                 weights=mult,
                 histtype="stepfilled",
-                color="yellow",
+                color="lightgray",
                 edgecolor="black",
                 linewidth=1.0,
             )
@@ -377,7 +377,7 @@ class Plotter:
                 simhits["simhit_t_corrected"],
                 bins=bins,
                 histtype="stepfilled",
-                color="yellow",
+                color="lightgray",
                 edgecolor="black",
                 linewidth=1.0,
                 alpha=0.9,
@@ -402,7 +402,7 @@ class Plotter:
                 simhits["simhit_layer"],
                 bins=bins,
                 histtype="stepfilled",
-                color="yellow",
+                color="lightgray",
                 edgecolor="black",
                 linewidth=1.0,
                 alpha=0.9,
@@ -799,7 +799,7 @@ class Plotter:
             (mds["simhit_z_upper"] - mds["simhit_z_lower"])[ok],
             bins=bins,
             histtype="stepfilled",
-            color="pink",
+            color="yellow",
             edgecolor="black",
             linewidth=1.0,
             alpha=0.9,
@@ -876,11 +876,12 @@ class Plotter:
                             continue
 
                         fig, ax = plt.subplots()
+                        color = "pink" if self.signal else "crimson"
                         ax.hist(
                             group[feature],
                             bins=bins[feature],
                             histtype="stepfilled",
-                            color="crimson",
+                            color=color,
                             edgecolor="black",
                             linewidth=1.0,
                             alpha=0.9,
@@ -1059,7 +1060,7 @@ class Plotter:
             "ls_chi2_012": ".5f",
             "ls_chi2_sz": ".5f",
         }
-        color = "cornflowerblue" if self.signal else "crimson"
+        color = "yellow" if self.signal else "tan"
 
         # 1d histograms
         for feature in [
@@ -1373,7 +1374,7 @@ class Plotter:
             "t4_chi2_xy": ".5f",
             "t4_chi2_sz": ".5f",
         }
-        color = "cornflowerblue" if self.signal else "crimson"
+        color = "lightblue" if self.signal else "blue"
 
         # 1d histograms
         for feature in [
@@ -1656,7 +1657,7 @@ class Plotter:
             "t8_chi2_xy": ".4f",
             "t8_chi2_sz": ".4f",
         }
-        color = "cornflowerblue" if self.signal else "crimson"
+        color = "palegreen" if self.signal else "green"
 
         # 1d histograms
         for feature in [
