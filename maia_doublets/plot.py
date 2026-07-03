@@ -77,7 +77,7 @@ class Plotter:
         self.T4_DR_CUT = calibs.get("t4_dr", CUT_MISSING)
         self.T4_DZ_CUT = calibs.get("t4_dz", CUT_MISSING)
         self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", CUT_MISSING)
-        self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy_047", CUT_MISSING)
+        self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy", CUT_MISSING)
         self.T8_DZ_CUT = calibs.get("t8_dz", CUT_MISSING)
         self.T8_DR_CUT = calibs.get("t8_dr", CUT_MISSING)
 
@@ -1352,8 +1352,7 @@ class Plotter:
             "t4_dr": np.linspace(0, 1500, 501) if not self.signal else np.linspace(0, 1000, 401),
             "t4_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
             "t4_dtheta_rz": np.linspace(-0.08, 0.08, 241),
-            "t4_chi2_xy_047": np.linspace(0, 0.5, 201),
-            # "t4_chi2_sz": np.linspace(0, 0.5, 201),
+            "t4_chi2_xy": np.logspace(-5, 2, 201),
             "t4_chi2_sz": np.logspace(-5, 2, 201),
         }
         xlabel = {
@@ -1362,7 +1361,7 @@ class Plotter:
             "t4_dr": "T4 dr [mm]",
             "t4_dz": "T4 dz [mm]",
             "t4_dtheta_rz": "upper T2 theta_rz - lower T2 theta_rz",
-            "t4_chi2_xy_047": "Diff^2 between circle(xy, 047) and 12356 [mm^2]",
+            "t4_chi2_xy": "Diff^2 between circle(xy, 047) and 12356 [mm^2]",
             "t4_chi2_sz": "Diff^2 for sz fit [mm^2]",
         }
         formatting = {
@@ -1371,7 +1370,7 @@ class Plotter:
             "t4_dr": ".1f",
             "t4_dz": ".1f",
             "t4_dtheta_rz": ".5f",
-            "t4_chi2_xy_047": ".5f",
+            "t4_chi2_xy": ".5f",
             "t4_chi2_sz": ".5f",
         }
         color = "cornflowerblue" if self.signal else "crimson"
@@ -1383,7 +1382,7 @@ class Plotter:
             "t4_dr",
             "t4_dz",
             "t4_dtheta_rz",
-            "t4_chi2_xy_047",
+            "t4_chi2_xy",
             "t4_chi2_sz",
         ]:
 
@@ -1408,11 +1407,11 @@ class Plotter:
                             linewidth=1.0,
                             alpha=0.9,
                         )
-                        if semilogy or feature in ["t4_chi2_xy_047",
+                        if semilogy or feature in ["t4_chi2_xy",
                                                    "t4_chi2_sz",
                                                    ]:
                             ax.semilogy()
-                        if feature in ["t4_chi2_sz"]:
+                        if feature in ["t4_chi2_xy", "t4_chi2_sz"]:
                             ax.semilogx()
                         num = len(group)
                         mean = np.mean(group[feature])
@@ -1638,18 +1637,24 @@ class Plotter:
             "t8_dphi": np.linspace(-3.2, 3.2, 321) if not self.signal else np.linspace(-0.32, 0.32, 321),
             "t8_dr": np.linspace(0, 1500, 501) if not self.signal else np.linspace(0, 1000, 401),
             "t8_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
+            "t8_chi2_xy": np.logspace(-4, 4, 201),
+            "t8_chi2_sz": np.logspace(-4, 4, 201),
         }
         xlabel = {
             "t8_deta": "upper T4 eta - lower T4 eta",
             "t8_dphi": "upper T4 phi - lower T4 phi [rad]",
             "t8_dr": "T8 dr [mm]",
             "t8_dz": "T8 dz [mm]",
+            "t8_chi2_xy": "T8 chi2 xy",
+            "t8_chi2_sz": "T8 chi2 sz",
         }
         formatting = {
             "t8_deta": ".5f",
             "t8_dphi": ".5f",
             "t8_dr": ".1f",
             "t8_dz": ".1f",
+            "t8_chi2_xy": ".4f",
+            "t8_chi2_sz": ".4f",
         }
         color = "cornflowerblue" if self.signal else "crimson"
 
@@ -1659,6 +1664,8 @@ class Plotter:
             "t8_dphi",
             "t8_dr",
             "t8_dz",
+            "t8_chi2_xy",
+            "t8_chi2_sz",
         ]:
 
             for semilogy in [
@@ -1666,7 +1673,10 @@ class Plotter:
                 # True,
             ]:
 
-                gdls = ["t8_gdoublelayer_lower", "t8_gdoublelayer_upper"]
+                gdls = [
+                    "t8_gdoublelayer_lower",
+                    "t8_gdoublelayer_upper",
+                ]
                 for ([gdl_l, gdl_u], group) in self.t8s[baseline].groupby(gdls):
 
                         fig, ax = plt.subplots()
@@ -1679,8 +1689,10 @@ class Plotter:
                             linewidth=1.0,
                             alpha=0.9,
                         )
-                        if semilogy:
+                        if semilogy or feature in ["t8_chi2_xy", "t8_chi2_sz"]:
                             ax.semilogy()
+                        if feature in ["t8_chi2_xy", "t8_chi2_sz"]:
+                            ax.semilogx()
                         num = len(group)
                         mean = np.mean(group[feature])
                         rms = np.sqrt(np.mean((group[feature] - mean) ** 2))

@@ -35,7 +35,7 @@ class T4Maker:
         self.T4_DZ_CUT = calibs.get("t4_dz", np.zeros((10, 10)))
         self.T4_DR_CUT = calibs.get("t4_dr", np.zeros((10, 10)))
         self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", np.zeros((10, 10)))
-        self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy_047", np.zeros((10, 10)))
+        self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy", np.zeros((10, 10)))
         self.T4_CHI2_SZ_CUT = calibs.get("t4_chi2_sz", np.zeros((10, 10)))
 
         # how to merge lower and upper T2s into T4s
@@ -234,7 +234,7 @@ class T4Maker:
         for ix in ixs:
             circle_diff = np.sqrt((new[f"t4_x_{ix}"] - circle_x)**2 + (new[f"t4_y_{ix}"] - circle_y)**2) - circle_r
             diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
-        new[f"t4_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
+        new[f"t4_chi2_xy"] = np.sum(diff2s, axis=0)
 
         # calculate chi2 for sz fit, where s is the arc length along the circle
         phis = [ np.arctan2(new[f"t4_y_{it}"] - circle_y, new[f"t4_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T4) ]
@@ -305,7 +305,7 @@ class T4Maker:
         t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dphi"] = np.abs(new["t4_dphi"]) < np.pi / 2.0
         t4s["t4_ok_dthetarz"] = np.abs(new["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
-        t4s["t4_ok_chi2_xy"] = np.abs(new[f"t4_chi2_xy_{i0}{i1}{i2}"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
+        t4s["t4_ok_chi2_xy"] = np.abs(new[f"t4_chi2_xy"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
         t4s["t4_ok_chi2_sz"] = np.abs(new[f"t4_chi2_sz"]) < self.T4_CHI2_SZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok"] = (
             t4s["t4_ok_dphi"] &

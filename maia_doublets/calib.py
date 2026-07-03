@@ -177,7 +177,7 @@ class T4Calibrator:
             "t4_dz",
             "t4_dr",
             "t4_dtheta_rz",
-            "t4_chi2_xy_047",
+            "t4_chi2_xy",
             # "t4_chi2_sz",
         ]
         self.sequential = sequential
