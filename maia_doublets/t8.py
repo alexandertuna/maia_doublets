@@ -210,8 +210,8 @@ class T8Maker:
 
         # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
-        i0, i1, i2 = 0, 4, 7
-        ixs = [1, 2, 3, 5, 6]
+        i0, i1, i2 = 0, 8, 15
+        ixs = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14]
         circle_d = 2 * (new[f"t8_x_{i0}"] * (new[f"t8_y_{i1}"] - new[f"t8_y_{i2}"]) +
                         new[f"t8_x_{i1}"] * (new[f"t8_y_{i2}"] - new[f"t8_y_{i0}"]) +
                         new[f"t8_x_{i2}"] * (new[f"t8_y_{i0}"] - new[f"t8_y_{i1}"]))
@@ -233,7 +233,7 @@ class T8Maker:
         for ix in ixs:
             circle_diff = np.sqrt((new[f"t8_x_{ix}"] - circle_x)**2 + (new[f"t8_y_{ix}"] - circle_y)**2) - circle_r
             diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
-        new[f"t8_chi2_xy_{i0}{i1}{i2}"] = np.sum(diff2s, axis=0)
+        new[f"t8_chi2_xy"] = np.sum(diff2s, axis=0)
 
         # calculate chi2 for sz fit, where s is the arc length along the circle
         phis = [ np.arctan2(new[f"t8_y_{it}"] - circle_y, new[f"t8_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T8) ]
