@@ -1031,6 +1031,7 @@ class Plotter:
             "ls_dtheta_xy": np.linspace(-0.12, 0.12, 241),
             # "ls_chi2_012": np.linspace(0, 2.0, 201),
             "ls_chi2_012": np.linspace(0, 0.01, 201),
+            "ls_chi2_sz": np.logspace(-7, 0, 201),
         }
         xlabel = {
             "ls_deta": r"upper doublet eta - lower doublet eta",
@@ -1043,6 +1044,7 @@ class Plotter:
             "ls_dtheta_rz": "upper doublet theta_rz - lower doublet theta_rz",
             "ls_dtheta_xy": "upper doublet theta_xy - lower doublet theta_xy",
             "ls_chi2_012": "Diff^2 between circle(xy, 012) and 3 [mm^2]",
+            "ls_chi2_sz": "Diff^2 between line(z, s) [mm^2]",
         }
         formatting = {
             "ls_deta": ".5f",
@@ -1055,6 +1057,7 @@ class Plotter:
             "ls_dtheta_rz": ".5f",
             "ls_dtheta_xy": ".4f",
             "ls_chi2_012": ".5f",
+            "ls_chi2_sz": ".5f",
         }
         color = "cornflowerblue" if self.signal else "crimson"
 
@@ -1070,6 +1073,7 @@ class Plotter:
             "ls_dtheta_rz",
             "ls_dtheta_xy",
             "ls_chi2_012",
+            "ls_chi2_sz",
         ]:
 
             for semilogy in [
@@ -1093,8 +1097,10 @@ class Plotter:
                             linewidth=1.0,
                             alpha=0.9,
                         )
-                        if semilogy or feature in ["ls_chi2_012"]:
+                        if semilogy or feature in ["ls_chi2_012", "ls_chi2_sz"]:
                             ax.semilogy()
+                        if feature in ["ls_chi2_sz"]:
+                            ax.semilogx()
                         num = len(group)
                         mean = np.mean(group[feature])
                         rms = np.sqrt(np.mean((group[feature] - mean) ** 2))

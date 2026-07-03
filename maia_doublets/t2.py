@@ -7,7 +7,7 @@ from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_T2_PHI_SLICES
 from maia_doublets.constants import DETECTOR_MAX_PHI, DETECTOR_MAX_ETA
 from maia_doublets.constants import N_T4_PHI_SLICES, N_T4_ETA_SLICES
-from maia_doublets.constants import BAD_CHI2
+from maia_doublets.constants import BAD_CHI2, N_LAYERS_IN_T2
 
 class T2Maker:
 
@@ -229,58 +229,88 @@ class T2Maker:
             ]:
                 t2s[attr] = t2s[f"{attr}_lower"].where(mcp_ok, 0)
 
+        # collect new columns
+        new = {}
+
         # features: position
-        t2s["ls_r"] = (t2s["doublet_r_lower"] + t2s["doublet_r_upper"]) / 2
-        t2s["ls_z"] = (t2s["doublet_z_lower"] + t2s["doublet_z_upper"]) / 2
-        t2s["ls_x"] = (t2s["doublet_x_lower"] + t2s["doublet_x_upper"]) / 2
-        t2s["ls_y"] = (t2s["doublet_y_lower"] + t2s["doublet_y_upper"]) / 2
-        t2s["ls_phi"] = np.arctan2(t2s["ls_y"], t2s["ls_x"])
-        t2s["ls_theta"] = np.arctan2(t2s["ls_r"], t2s["ls_z"])
-        t2s["ls_eta"] = -np.log(np.tan(t2s["ls_theta"] / 2))
-        t2s["ls_phi_slice"] = np.floor((t2s["ls_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * N_T4_PHI_SLICES).astype(np.int16)
-        t2s["ls_eta_slice"] = np.floor((t2s["ls_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T4_ETA_SLICES).astype(np.int16)
+        new["ls_r"] = (t2s["doublet_r_lower"] + t2s["doublet_r_upper"]) / 2
+        new["ls_z"] = (t2s["doublet_z_lower"] + t2s["doublet_z_upper"]) / 2
+        new["ls_x"] = (t2s["doublet_x_lower"] + t2s["doublet_x_upper"]) / 2
+        new["ls_y"] = (t2s["doublet_y_lower"] + t2s["doublet_y_upper"]) / 2
+        new["ls_phi"] = np.arctan2(new["ls_y"], new["ls_x"])
+        new["ls_theta"] = np.arctan2(new["ls_r"], new["ls_z"])
+        new["ls_eta"] = -np.log(np.tan(new["ls_theta"] / 2))
+        new["ls_phi_slice"] = np.floor((new["ls_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * N_T4_PHI_SLICES).astype(np.int16)
+        new["ls_eta_slice"] = np.floor((new["ls_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T4_ETA_SLICES).astype(np.int16)
 
         # assign more features
-        t2s["ls_ddr"] = t2s["ls_dr_upper"] - t2s["ls_dr_lower"]
-        t2s["ls_ddz"] = t2s["ls_dz_upper"] - t2s["ls_dz_lower"]
-        t2s["ls_deta"] = t2s["doublet_eta_upper"] - t2s["doublet_eta_lower"]
-        t2s["ls_dphi"] = t2s["doublet_phi_upper"] - t2s["doublet_phi_lower"]
-        t2s["ls_dphi"] = (t2s["ls_dphi"] + np.pi) % (2 * np.pi) - np.pi
-        t2s["ls_dqoverpt"] = t2s["doublet_qoverpt_upper"] - t2s["doublet_qoverpt_lower"]
+        new["ls_ddr"] = t2s["ls_dr_upper"] - t2s["ls_dr_lower"]
+        new["ls_ddz"] = t2s["ls_dz_upper"] - t2s["ls_dz_lower"]
+        new["ls_deta"] = t2s["doublet_eta_upper"] - t2s["doublet_eta_lower"]
+        new["ls_dphi"] = t2s["doublet_phi_upper"] - t2s["doublet_phi_lower"]
+        new["ls_dphi"] = (new["ls_dphi"] + np.pi) % (2 * np.pi) - np.pi
+        new["ls_dqoverpt"] = t2s["doublet_qoverpt_upper"] - t2s["doublet_qoverpt_lower"]
 
         # pass-through the simhit positions
         for coord in ["x", "y", "r", "z"]:
-            t2s[f"ls_{coord}_0"] = t2s[f"doublet_{coord}_0_lower"]
-            t2s[f"ls_{coord}_1"] = t2s[f"doublet_{coord}_1_lower"]
-            t2s[f"ls_{coord}_2"] = t2s[f"doublet_{coord}_0_upper"]
-            t2s[f"ls_{coord}_3"] = t2s[f"doublet_{coord}_1_upper"]
+            new[f"ls_{coord}_0"] = t2s[f"doublet_{coord}_0_lower"]
+            new[f"ls_{coord}_1"] = t2s[f"doublet_{coord}_1_lower"]
+            new[f"ls_{coord}_2"] = t2s[f"doublet_{coord}_0_upper"]
+            new[f"ls_{coord}_3"] = t2s[f"doublet_{coord}_1_upper"]
 
         # angle differences (handle wraparound)
-        t2s["ls_dtheta_rz"] = t2s["doublet_theta_rz_upper"] - t2s["doublet_theta_rz_lower"]
-        t2s["ls_dtheta_xy"] = t2s["doublet_theta_xy_upper"] - t2s["doublet_theta_xy_lower"]
-        t2s["ls_dtheta_rz"] = (t2s["ls_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
-        t2s["ls_dtheta_xy"] = (t2s["ls_dtheta_xy"] + np.pi) % (2 * np.pi) - np.pi
+        new["ls_dtheta_rz"] = t2s["doublet_theta_rz_upper"] - t2s["doublet_theta_rz_lower"]
+        new["ls_dtheta_xy"] = t2s["doublet_theta_xy_upper"] - t2s["doublet_theta_xy_lower"]
+        new["ls_dtheta_rz"] = (new["ls_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
+        new["ls_dtheta_xy"] = (new["ls_dtheta_xy"] + np.pi) % (2 * np.pi) - np.pi
 
         # find the circle (radius, x_center, y_center) formed from the first three hits
-        circle_d = 2 * (t2s["ls_x_0"] * (t2s["ls_y_1"] - t2s["ls_y_2"]) +
-                        t2s["ls_x_1"] * (t2s["ls_y_2"] - t2s["ls_y_0"]) +
-                        t2s["ls_x_2"] * (t2s["ls_y_0"] - t2s["ls_y_1"]))
-        circle_x = np.divide(t2s["ls_r_0"]**2 * (t2s["ls_y_1"] - t2s["ls_y_2"]) +
-                                t2s["ls_r_1"]**2 * (t2s["ls_y_2"] - t2s["ls_y_0"]) +
-                                t2s["ls_r_2"]**2 * (t2s["ls_y_0"] - t2s["ls_y_1"]),
-                                circle_d)
-        circle_y = np.divide(t2s["ls_r_0"]**2 * (t2s["ls_x_2"] - t2s["ls_x_1"]) +
-                                t2s["ls_r_1"]**2 * (t2s["ls_x_0"] - t2s["ls_x_2"]) +
-                                t2s["ls_r_2"]**2 * (t2s["ls_x_1"] - t2s["ls_x_0"]),
-                                circle_d)
-        circle_r = np.sqrt((t2s["ls_x_0"] - circle_x)**2 + (t2s["ls_y_0"] - circle_y)**2)
+        circle_d = 2 * (new["ls_x_0"] * (new["ls_y_1"] - new["ls_y_2"]) +
+                        new["ls_x_1"] * (new["ls_y_2"] - new["ls_y_0"]) +
+                        new["ls_x_2"] * (new["ls_y_0"] - new["ls_y_1"]))
+        circle_x = np.divide(new["ls_r_0"]**2 * (new["ls_y_1"] - new["ls_y_2"]) +
+                             new["ls_r_1"]**2 * (new["ls_y_2"] - new["ls_y_0"]) +
+                             new["ls_r_2"]**2 * (new["ls_y_0"] - new["ls_y_1"]),
+                             circle_d)
+        circle_y = np.divide(new["ls_r_0"]**2 * (new["ls_x_2"] - new["ls_x_1"]) +
+                             new["ls_r_1"]**2 * (new["ls_x_0"] - new["ls_x_2"]) +
+                             new["ls_r_2"]**2 * (new["ls_x_1"] - new["ls_x_0"]),
+                             circle_d)
+        circle_r = np.sqrt((new["ls_x_0"] - circle_x)**2 + (new["ls_y_0"] - circle_y)**2)
         circle_ok = circle_d != 0
         if np.any(~circle_ok):
             logger.warning(f"Found {np.sum(~circle_ok)} invalid circles with circle_d = 0")
-        circle_diff = np.sqrt((t2s["ls_x_3"] - circle_x)**2 + (t2s["ls_y_3"] - circle_y)**2) - circle_r
+        circle_diff = np.sqrt((new["ls_x_3"] - circle_x)**2 + (new["ls_y_3"] - circle_y)**2) - circle_r
 
         # calculate the distance from (x_3, y_3) to the circle
-        t2s["ls_chi2_012"] = np.where(circle_ok, circle_diff**2, BAD_CHI2)
+        new["ls_chi2_012"] = np.where(circle_ok, circle_diff**2, BAD_CHI2)
+
+        # calculate chi2 for sz fit, where s is the arc length along the circle
+        phis = [ np.arctan2(new[f"ls_y_{it}"] - circle_y, new[f"ls_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T2) ]
+        dphis = [ (phi - phis[0] + np.pi) % (2 * np.pi) - np.pi for phi in phis ]
+        pathlengths = [ circle_r * dphi for dphi in dphis ]
+        for it in range(N_LAYERS_IN_T2):
+            new[f"ls_s_{it}"] = pathlengths[it]
+
+        # -------------------------- <Claude derivation> --------------------------
+        # stack per-hit columns
+        s_all = np.stack(pathlengths, axis=1)
+        z_all = np.stack([ new[f"ls_z_{it}"] for it in range(N_LAYERS_IN_T2) ], axis=1)
+
+        # row-wise least-squares line: z = z0_ref + tanlambda * s
+        s_mean = s_all.mean(axis=1, keepdims=True)
+        z_mean = z_all.mean(axis=1, keepdims=True)
+        ds, dz = s_all - s_mean, z_all - z_mean
+        s_ss = (ds * ds).sum(axis=1)                                 # (N,)
+        s_sz = (ds * dz).sum(axis=1)                                 # (N,)
+        tanlambda = s_sz / s_ss                                      # (N,)
+        z0_ref    = z_mean.ravel() - tanlambda * s_mean.ravel()      # (N,)
+
+        # residuals + quality metric, one per track
+        resid = z_all - (z0_ref[:, None] + tanlambda[:, None] * s_all)
+        resid2 = (resid ** 2).sum(axis=1)
+        new[f"ls_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
+        # -------------------------- </Claude derivation> --------------------------
 
         # assign features from lower doublet (arbitrary choice)
         t2s["ls_module"] = t2s["ls_module_lower"]
@@ -302,21 +332,24 @@ class T2Maker:
         # record some cut results
         sy = t2s["ls_system"]
         dl = t2s["ls_doublelayer"]
-        t2s["ls_ok_dtheta_rz"] = np.abs(t2s["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
-        t2s["ls_ok_dz"] = np.abs(t2s["ls_dz"]) < self.T2_DZ_CUT[sy, dl]
-        t2s["ls_ok_dr"] = np.abs(t2s["ls_dr"]) < self.T2_DR_CUT[sy, dl]
-        t2s["ls_ok_dphi"] = np.abs(t2s["ls_dphi"]) < np.pi / 2.0
-        t2s["ls_ok_chi2_xy"] = np.abs(t2s["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl]
-        t2s["ls_ok_drdz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & t2s["ls_ok_dphi"]
-        t2s["ls_ok_drdzdthetarz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & t2s["ls_ok_dphi"] & t2s["ls_ok_dtheta_rz"]
-        t2s["ls_ok"] = (
+        t2s["ls_ok_dz"] = np.abs(t2s["ls_dz"]) < self.T2_DZ_CUT[sy, dl] # NB: these two cuts are special
+        t2s["ls_ok_dr"] = np.abs(t2s["ls_dr"]) < self.T2_DR_CUT[sy, dl] # because theyre already defined above
+        new["ls_ok_dtheta_rz"] = np.abs(new["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
+        new["ls_ok_dphi"] = np.abs(new["ls_dphi"]) < np.pi / 2.0
+        new["ls_ok_chi2_xy"] = np.abs(new["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl]
+        new["ls_ok_drdz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & new["ls_ok_dphi"]
+        new["ls_ok_drdzdthetarz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & new["ls_ok_dphi"] & new["ls_ok_dtheta_rz"]
+        new["ls_ok"] = (
             t2s["ls_ok_dz"] &
             t2s["ls_ok_dr"] &
-            t2s["ls_ok_dphi"] &
-            t2s["ls_ok_dtheta_rz"] &
-            t2s["ls_ok_chi2_xy"] &
+            new["ls_ok_dphi"] &
+            new["ls_ok_dtheta_rz"] &
+            new["ls_ok_chi2_xy"] &
             np.ones(len(t2s), dtype=bool)
         )
+
+        # merge new columns into the df
+        t2s = pd.concat([t2s, pd.DataFrame(new, index=t2s.index)], axis=1)
 
         # remove as desired
         for cut in [col for col in t2s.columns if col.startswith("ls_ok")]:
