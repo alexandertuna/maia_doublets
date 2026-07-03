@@ -89,6 +89,9 @@ class T8Maker:
         ]
         all_t8s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
+            if (lower not in t4s) or (upper not in t4s):
+                logger.warning(f"No T4s in gdl={lower} and/or gdl={upper}, skipping ...")
+                continue
             logger.info(f"Making T8s from gdl={lower} and gdl={upper} ...")
             lower_df = t4s[lower]
             upper_df = t4s[upper]
@@ -97,6 +100,12 @@ class T8Maker:
                 logger.info(f"T8s cutflow, gdl={lower}-{upper}, {col}: {cutflow[col]}")
             all_t8s.append(t8s)
             all_cutflows.append(cutflow)
+
+        # did we make any T8s?
+        if len(all_t8s) == 0:
+            logger.warning("No T8s were made!")
+            self.df = pd.DataFrame()
+            return
 
         # merge dataframes
         logger.info(f"Merging {len(all_t8s)} groups of T8s ...")
