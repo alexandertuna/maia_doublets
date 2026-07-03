@@ -128,8 +128,9 @@ class T2Calibrator:
         self.features = [
             "ls_dz",
             "ls_dr",
-            "ls_dtheta_rz",
+            # "ls_dtheta_rz",
             "ls_chi2_012",
+            "ls_chi2_sz",
         ]
         self.sequential = sequential
         self.system = "ls_system"
@@ -176,9 +177,9 @@ class T4Calibrator:
         self.features = [
             "t4_dz",
             "t4_dr",
-            "t4_dtheta_rz",
+            # "t4_dtheta_rz",
             "t4_chi2_xy",
-            # "t4_chi2_sz",
+            "t4_chi2_sz",
         ]
         self.sequential = sequential
         self.gdl = "t4_gdoublelayer"
