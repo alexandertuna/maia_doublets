@@ -36,6 +36,7 @@ class T2Maker:
         self.T2_DR_CUT = calibs.get("ls_dr", np.zeros((10, 10)))
         self.T2_DTHETA_RZ_CUT = calibs.get("ls_dtheta_rz", np.zeros((10, 10)))
         self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_012", np.zeros((10, 10)))
+        self.T2_CHI2_SZ_CUT = calibs.get("ls_chi2_sz", np.zeros((10, 10)))
 
         self.merge_keys = [
             "file",
@@ -337,14 +338,16 @@ class T2Maker:
         new["ls_ok_dtheta_rz"] = np.abs(new["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
         new["ls_ok_dphi"] = np.abs(new["ls_dphi"]) < np.pi / 2.0
         new["ls_ok_chi2_xy"] = np.abs(new["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl]
+        new["ls_ok_chi2_sz"] = np.abs(new["ls_chi2_sz"]) < self.T2_CHI2_SZ_CUT[sy, dl]
         new["ls_ok_drdz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & new["ls_ok_dphi"]
         new["ls_ok_drdzdthetarz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & new["ls_ok_dphi"] & new["ls_ok_dtheta_rz"]
         new["ls_ok"] = (
             t2s["ls_ok_dz"] &
             t2s["ls_ok_dr"] &
             new["ls_ok_dphi"] &
-            new["ls_ok_dtheta_rz"] &
+            # new["ls_ok_dtheta_rz"] &
             new["ls_ok_chi2_xy"] &
+            new["ls_ok_chi2_sz"] &
             np.ones(len(t2s), dtype=bool)
         )
 
