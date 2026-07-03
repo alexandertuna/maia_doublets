@@ -73,7 +73,7 @@ class Plotter:
         self.T2_DZ_CUT = calibs.get("ls_dz", CUT_MISSING)
         self.T2_DR_CUT = calibs.get("ls_dr", CUT_MISSING)
         self.T2_DTHETA_RZ_CUT = calibs.get("ls_dtheta_rz", CUT_MISSING)
-        self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_012", CUT_MISSING)
+        self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_xy", CUT_MISSING)
         self.T2_CHI2_SZ_CUT = calibs.get("ls_chi2_sz", CUT_MISSING)
         self.T4_DR_CUT = calibs.get("t4_dr", CUT_MISSING)
         self.T4_DZ_CUT = calibs.get("t4_dz", CUT_MISSING)
@@ -269,7 +269,7 @@ class Plotter:
                 [np.abs(self.linesegments["ls_dz"]) < self.T2_DZ_CUT[sy, dl], f"LS with |dz| < {self.T2_DZ_CUT[sy, dl]}mm"],
                 [np.abs(self.linesegments["ls_dr"]) < self.T2_DR_CUT[sy, dl], f"LS with |dr| < {self.T2_DR_CUT[sy, dl]}mm"],
                 [np.abs(self.linesegments["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[sy, dl]}"],
-                [np.abs(self.linesegments["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
+                [np.abs(self.linesegments["ls_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
             ]:
                 mask &= req
                 logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -1031,8 +1031,7 @@ class Plotter:
             "ls_dqoverpt": np.linspace(-0.2, 0.2, 201),
             "ls_dtheta_rz": np.linspace(-0.024, 0.024, 241),
             "ls_dtheta_xy": np.linspace(-0.12, 0.12, 241),
-            # "ls_chi2_012": np.linspace(0, 2.0, 201),
-            "ls_chi2_012": np.linspace(0, 0.01, 201),
+            "ls_chi2_xy": np.logspace(-7, 0, 201),
             "ls_chi2_sz": np.logspace(-7, 0, 201),
         }
         xlabel = {
@@ -1045,7 +1044,7 @@ class Plotter:
             "ls_dqoverpt": "upper doublet q/pt - lower doublet q/pt",
             "ls_dtheta_rz": "upper doublet theta_rz - lower doublet theta_rz",
             "ls_dtheta_xy": "upper doublet theta_xy - lower doublet theta_xy",
-            "ls_chi2_012": "Diff^2 between circle(xy, 012) and 3 [mm^2]",
+            "ls_chi2_xy": "Diff^2 between circle(xy, 012) and 3 [mm^2]",
             "ls_chi2_sz": "Diff^2 between line(z, s) [mm^2]",
         }
         formatting = {
@@ -1058,7 +1057,7 @@ class Plotter:
             "ls_dqoverpt": ".3f",
             "ls_dtheta_rz": ".5f",
             "ls_dtheta_xy": ".4f",
-            "ls_chi2_012": ".5f",
+            "ls_chi2_xy": ".5f",
             "ls_chi2_sz": ".5f",
         }
         color = "yellow" if self.signal else "tan"
@@ -1074,7 +1073,7 @@ class Plotter:
             "ls_dz",
             "ls_dtheta_rz",
             "ls_dtheta_xy",
-            "ls_chi2_012",
+            "ls_chi2_xy",
             "ls_chi2_sz",
         ]:
 
@@ -1099,9 +1098,9 @@ class Plotter:
                             linewidth=1.0,
                             alpha=0.9,
                         )
-                        if semilogy or feature in ["ls_chi2_012", "ls_chi2_sz"]:
+                        if semilogy or feature in ["ls_chi2_xy", "ls_chi2_sz"]:
                             ax.semilogy()
-                        if feature in ["ls_chi2_sz"]:
+                        if feature in ["ls_chi2_xy", "ls_chi2_sz"]:
                             ax.semilogx()
                         num = len(group)
                         mean = np.mean(group[feature])
@@ -1299,7 +1298,7 @@ class Plotter:
             mask = np.abs(df["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
         elif req == T2_REQ_XY_CHI2:
             text = f"Chi2(xy,012) < {self.T2_CHI2_XY_CUT[sy, dl]}"
-            mask = np.abs(df["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl]
+            mask = np.abs(df["ls_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl]
         elif req == T2_REQ_ALL:
             text = f"All LS requirements"
             mask = df["ls_ok"]

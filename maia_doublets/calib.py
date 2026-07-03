@@ -129,7 +129,7 @@ class T2Calibrator:
             "ls_dz",
             "ls_dr",
             # "ls_dtheta_rz",
-            "ls_chi2_012",
+            "ls_chi2_xy",
             "ls_chi2_sz",
         ]
         self.sequential = sequential

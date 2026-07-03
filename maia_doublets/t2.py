@@ -35,7 +35,7 @@ class T2Maker:
         self.T2_DZ_CUT = calibs.get("ls_dz", np.zeros((10, 10)))
         self.T2_DR_CUT = calibs.get("ls_dr", np.zeros((10, 10)))
         self.T2_DTHETA_RZ_CUT = calibs.get("ls_dtheta_rz", np.zeros((10, 10)))
-        self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_012", np.zeros((10, 10)))
+        self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_xy", np.zeros((10, 10)))
         self.T2_CHI2_SZ_CUT = calibs.get("ls_chi2_sz", np.zeros((10, 10)))
 
         self.merge_keys = [
@@ -284,7 +284,7 @@ class T2Maker:
         circle_diff = np.sqrt((new["ls_x_3"] - circle_x)**2 + (new["ls_y_3"] - circle_y)**2) - circle_r
 
         # calculate the distance from (x_3, y_3) to the circle
-        new["ls_chi2_012"] = np.where(circle_ok, circle_diff**2, BAD_CHI2)
+        new["ls_chi2_xy"] = np.where(circle_ok, circle_diff**2, BAD_CHI2)
 
         # calculate chi2 for sz fit, where s is the arc length along the circle
         phis = [ np.arctan2(new[f"ls_y_{it}"] - circle_y, new[f"ls_x_{it}"] - circle_x) for it in range(N_LAYERS_IN_T2) ]
@@ -337,7 +337,7 @@ class T2Maker:
         t2s["ls_ok_dr"] = np.abs(t2s["ls_dr"]) < self.T2_DR_CUT[sy, dl] # because theyre already defined above
         new["ls_ok_dtheta_rz"] = np.abs(new["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
         new["ls_ok_dphi"] = np.abs(new["ls_dphi"]) < np.pi / 2.0
-        new["ls_ok_chi2_xy"] = np.abs(new["ls_chi2_012"]) < self.T2_CHI2_XY_CUT[sy, dl]
+        new["ls_ok_chi2_xy"] = np.abs(new["ls_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl]
         new["ls_ok_chi2_sz"] = np.abs(new["ls_chi2_sz"]) < self.T2_CHI2_SZ_CUT[sy, dl]
         new["ls_ok_drdz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & new["ls_ok_dphi"]
         new["ls_ok_drdzdthetarz"] = t2s["ls_ok_dz"] & t2s["ls_ok_dr"] & new["ls_ok_dphi"] & new["ls_ok_dtheta_rz"]
