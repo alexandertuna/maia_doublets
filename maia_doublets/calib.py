@@ -220,6 +220,8 @@ class T8Calibrator:
         self.features = [
             "t8_dz",
             "t8_dr",
+            "t8_chi2_xy",
+            "t8_chi2_sz",
         ]
         self.sequential = sequential
         self.gdl = "t8_gdoublelayer"
