@@ -107,7 +107,6 @@ def main():
         calibs = CalibConstants(calib_json(ops)).calibs
         t2s, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
 
-
     # t4s
     t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
     write_t4s(ops, t4s)
