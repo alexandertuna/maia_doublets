@@ -55,6 +55,7 @@ def main():
     layers = parse_layers(ops.layers)
     geometry = ops.geometry
     signal = ops.signal or any(SIGNAL in os.path.basename(fname) for fname in fnames)
+    pdf = ops.pdf or f"{calib_key(ops)}_{'signal' if signal else 'background'}.pdf"
     cut_mds = ops.cut_mds or not signal
     cut_t2s = ops.cut_t2s or not signal
     cut_t4s = ops.cut_t4s or not signal
@@ -81,6 +82,7 @@ def main():
     logger.info(f"Geometry version: {ops.geo}")
     logger.info(f"Using sim hits: {ops.sim}")
     logger.info(f"Using digi hits: {ops.digi}")
+    logger.info(f"Writing pdf: {pdf}")
     if ops.digi:
         logger.info(f"Smear value for digi hits: {ops.smear}")
 
@@ -136,7 +138,7 @@ def main():
                 t4s=t4s,
                 t8s=t8s,
                 calibs=calibs,
-                pdf="doublets.pdf",
+                pdf=pdf,
             )
             plotter.plot()
 
@@ -320,9 +322,14 @@ def calib_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
     calib.calibrate()
 
 
-def calib_json(ops: argparse.Namespace) -> str:
+def calib_key(ops: argparse.Namespace) -> str:
     key = (ops.geo, "sim") if ops.sim else (ops.geo, "digi", ops.smear)
     key = "_".join(key)
+    return key
+
+
+def calib_json(ops: argparse.Namespace) -> str:
+    key = calib_key(ops)
     return os.path.join(ops.calib_dir, f"{key}.json")
 
 
@@ -370,6 +377,7 @@ def options():
     parser.add_argument("--background10", action="store_true", help="Use background files (10 percent) in the analysis")
     parser.add_argument("--background100", action="store_true", help="Use background files (100 percent) in the analysis")
     parser.add_argument("--debug", action="store_true", help="Print some debug information")
+    parser.add_argument("--pdf", type=str, default="", help="Path to output PDF file")
     return parser.parse_args()
 
 
