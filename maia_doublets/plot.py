@@ -330,28 +330,38 @@ class Plotter:
 
     def plot_multiplicity(self, pdf: PdfPages):
         logger.info(f"Plotting multiplicity")
-        titles = {
-            INNER_TRACKER_BARREL: "Inner tracker, barrel",
-            OUTER_TRACKER_BARREL: "Outer tracker, barrel",
-        }
-        for (system, simhits) in self.simhits.groupby("simhit_system"):
 
-            mask_mds = self.doublets["doublet_system"] == system
-            mask_t2s = self.linesegments["ls_system"] == system
-            mask_t4s = (self.t4s["t4_system_lower"] == system) & (self.t4s["t4_system_upper"] == system)
+        detectors = [
+            (INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL),
+            (INNER_TRACKER_BARREL, ),
+            (OUTER_TRACKER_BARREL, ),
+        ]
+        titles = {
+            (INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL): "Inner and outer trackers, barrel",
+            (INNER_TRACKER_BARREL, ): "Inner tracker, barrel",
+            (OUTER_TRACKER_BARREL, ): "Outer tracker, barrel",
+        }
+
+        for dets in detectors:
+
+            mask_hits = self.simhits["simhit_system"].isin(dets) # == system
+            mask_mds = self.doublets["doublet_system"].isin(dets) # == system
+            mask_t2s = self.linesegments["ls_system"].isin(dets) # == system
+            mask_t4s = (self.t4s["t4_system_lower"].isin(dets)) & (self.t4s["t4_system_upper"].isin(dets))
+            mask_t8s = np.ones(len(self.t8s), dtype=bool)
 
             mult = [
-                len(simhits),
+                mask_hits.sum(),
                 mask_mds.sum(),
                 mask_t2s.sum(),
                 mask_t4s.sum(),
-                len(self.t8s),
+                mask_t8s.sum(),
             ]
             bins = np.arange(-0.5, len(mult))
 
             fig, ax = plt.subplots()
             ax.hist(
-                ["Hits", "Doublets", "T2s", "T4s", "T8s (IT, OT)"],
+                ["Hits", "Doublets", "T2s", "T4s", "T8s"],
                 bins=bins,
                 weights=mult,
                 histtype="stepfilled",
@@ -360,7 +370,7 @@ class Plotter:
                 linewidth=1.0,
             )
             ax.set_ylabel("Tracking objects per event", labelpad=10)
-            ax.set_title(titles[system])
+            ax.set_title(titles[dets])
             ax.semilogy()
             ax.set_ylim(0.5, None)
             ax.text(0.55, 0.85, f"Pure background (BIB)", transform=ax.transAxes, fontsize=16)
