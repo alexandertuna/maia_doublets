@@ -74,6 +74,7 @@ class Plotter:
         self.T2_DR_CUT = calibs.get("ls_dr", CUT_MISSING)
         self.T2_DTHETA_RZ_CUT = calibs.get("ls_dtheta_rz", CUT_MISSING)
         self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_012", CUT_MISSING)
+        self.T2_CHI2_SZ_CUT = calibs.get("ls_chi2_sz", CUT_MISSING)
         self.T4_DR_CUT = calibs.get("t4_dr", CUT_MISSING)
         self.T4_DZ_CUT = calibs.get("t4_dz", CUT_MISSING)
         self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", CUT_MISSING)
