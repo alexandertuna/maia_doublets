@@ -1031,8 +1031,8 @@ class Plotter:
             "ls_dqoverpt": np.linspace(-0.2, 0.2, 201),
             "ls_dtheta_rz": np.linspace(-0.024, 0.024, 241),
             "ls_dtheta_xy": np.linspace(-0.12, 0.12, 241),
-            "ls_chi2_xy": np.logspace(-7, 0, 201),
-            "ls_chi2_sz": np.logspace(-7, 0, 201),
+            "ls_chi2_xy": np.logspace(-5.5, 0, 201),
+            "ls_chi2_sz": np.logspace(-5.5, 0, 201),
         }
         xlabel = {
             "ls_deta": r"upper doublet eta - lower doublet eta",
@@ -1111,7 +1111,7 @@ class Plotter:
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("Line Segments")
                         ax.set_title(f"{NICKNAMES[system]}. DL={doublelayer}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
-                        ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
+                        ax.text(0.66, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
                         logger.info(f"{NICKNAMES[system]} doublelayer {doublelayer} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
@@ -1423,7 +1423,7 @@ class Plotter:
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("T4s")
                         ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
-                        ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
+                        ax.text(0.66, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
                         logger.info(f"GDL {gdl_l}-{gdl_u} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
@@ -1703,7 +1703,7 @@ class Plotter:
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("T8s")
                         ax.set_title(f"GDL={gdl_l}-{gdl_u}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
-                        ax.text(0.30, 0.92, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
+                        ax.text(0.66, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
                         logger.info(f"GDL {gdl_l}-{gdl_u} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
