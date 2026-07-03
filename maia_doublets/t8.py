@@ -33,6 +33,8 @@ class T8Maker:
 
         self.T8_DZ_CUT = calibs.get("t8_dz", np.zeros((10, 10)))
         self.T8_DR_CUT = calibs.get("t8_dr", np.zeros((10, 10)))
+        self.T8_CHI2_XY_CUT = calibs.get("t8_chi2_xy", np.zeros((10, 10)))
+        self.T8_CHI2_SZ_CUT = calibs.get("t8_chi2_sz", np.zeros((10, 10)))
 
         # how to merge lower and upper T4s into T8s
         self.merge_keys = [
@@ -130,10 +132,10 @@ class T8Maker:
                 cands.append(lower.merge(shifted, on=self.merge_keys, suffixes=("_lower", "_upper")))
 
         # combine candidates into one dataframe
-        t4s = pd.concat(cands, ignore_index=True)
+        t8s = pd.concat(cands, ignore_index=True)
 
         # calculate T8 features and cuts
-        t8s, cutflow = self.consolidate_t8_features(t4s)
+        t8s, cutflow = self.consolidate_t8_features(t8s)
         return t8s, cutflow
 
 
@@ -303,9 +305,13 @@ class T8Maker:
         gdl_u = t8s["t8_gdoublelayer_upper"]
         t8s["t8_ok_dz"] = np.abs(t8s["t8_dz"]) < self.T8_DZ_CUT[gdl_l, gdl_u]
         t8s["t8_ok_dr"] = np.abs(t8s["t8_dr"]) < self.T8_DR_CUT[gdl_l, gdl_u]
+        t8s["t8_ok_chi2_xy"] = np.abs(new["t8_chi2_xy"]) < self.T8_CHI2_XY_CUT[gdl_l, gdl_u]
+        t8s["t8_ok_chi2_sz"] = np.abs(new["t8_chi2_sz"]) < self.T8_CHI2_SZ_CUT[gdl_l, gdl_u]
         t8s["t8_ok"] = (
             t8s["t8_ok_dz"] &
             t8s["t8_ok_dr"] &
+            t8s["t8_ok_chi2_xy"] &
+            t8s["t8_ok_chi2_sz"] &
             np.ones(len(t8s), dtype=bool)
         )
         if self.signal:
@@ -318,6 +324,8 @@ class T8Maker:
                 t8s["t8_ok_first_exit"] &
                 t8s["t8_ok_from_fiducial_mcp"] &
                 t8s["t8_ok_mcp"] &
+                t8s["t8_ok_chi2_xy"] &
+                t8s["t8_ok_chi2_sz"] &
                 np.ones(len(t8s), dtype=bool)
             )
 
