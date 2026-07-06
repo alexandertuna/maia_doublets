@@ -106,6 +106,7 @@ class T8Maker:
         if len(all_t8s) == 0:
             logger.warning("No T8s were made!")
             self.df = pd.DataFrame()
+            self.cutflow = pd.DataFrame()
             return
 
         # merge dataframes
@@ -113,9 +114,9 @@ class T8Maker:
         self.df = pd.concat(all_t8s, ignore_index=True)
 
         # merge cutflow
-        cutflow = pd.DataFrame(all_cutflows)
-        for col in cutflow.columns:
-            logger.info(f"T8s cutflow, {col}: {cutflow[col].sum()}")
+        self.cutflow = pd.DataFrame(all_cutflows)
+        for col in self.cutflow.columns:
+            logger.info(f"T8s cutflow, {col}: {self.cutflow[col].sum()}")
 
         # announce memory
         memory = self.df.memory_usage(deep=True).sum() * BYTE_TO_MB

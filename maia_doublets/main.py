@@ -120,12 +120,12 @@ def main():
         t4s, t4_cutflow, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
 
     # t8s
-    t8s, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
+    t8s, t8_cutflow, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
     write_t8s(ops, t8s)
     if ops.calibrate:
         calib_t8s(ops, t8s)
         calibs = CalibConstants(calib_json(ops)).calibs
-        t8s, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
+        t8s, t8_cutflow, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
 
     # plot stuff
     with Timer() as plot_time:
@@ -151,6 +151,7 @@ def main():
             ndjson.dump([
                 t2_cutflow.to_dict(orient="records"),
                 t4_cutflow.to_dict(orient="records"),
+                t8_cutflow.to_dict(orient="records"),
             ], fi)
 
     # log timing info
@@ -309,7 +310,9 @@ def calib_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
     calib.calibrate()
 
 
-def get_t8s(ops: argparse.Namespace, t4s: pd.DataFrame, signal: bool, cut_t8s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
+def get_t8s(ops: argparse.Namespace, t4s: pd.DataFrame, signal: bool, cut_t8s: bool, calibs: dict) -> tuple[pd.DataFrame,
+                                                                                                            pd.DataFrame,
+                                                                                                            float]:
     with Timer() as t8_time:
         if ops.read_t8s:
             logger.info(f"Reading T8s from {ops.read_t8s} ...")
@@ -317,14 +320,16 @@ def get_t8s(ops: argparse.Namespace, t4s: pd.DataFrame, signal: bool, cut_t8s: b
         else:
             # make T8s from T4s
             t8s = None
-            t8s = T8Maker(
+            maker = T8Maker(
                 signal=signal,
                 cut_t8s=cut_t8s,
                 calibs=calibs,
                 t4s=t4s,
-            ).df
+            )
+            t8s = maker.df
+            cutflow = maker.cutflow
 
-    return t8s, t8_time.duration
+    return t8s, cutflow, t8_time.duration
 
 
 def write_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
