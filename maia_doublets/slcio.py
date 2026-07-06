@@ -132,7 +132,7 @@ class HitMaker:
         sys.exit("Testing purposes")
 
 
-    def convert(self) -> pd.DataFrame:
+    def convert(self) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         mcps, simhits = self.convert_all_files()
         mcps = sort_mcps(mcps)
         simhits = sort_simhits(simhits)
@@ -143,9 +143,12 @@ class HitMaker:
             "simhit_system",
             "simhit_layer",
         ]).size()
+        cutflow = {}
         for (system, layer), total in counts.items():
             logger.info(f"N(simhits) in system {system} layer {layer}: {total}")
-        return mcps, simhits
+            cutflow[f"system_{system}_layer_{layer}"] = total
+        cutflow = pd.DataFrame([cutflow])
+        return mcps, simhits, cutflow
 
 
     def convert_all_files(self) -> pd.DataFrame:

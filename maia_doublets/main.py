@@ -81,8 +81,8 @@ def main():
     calibs = CalibConstants(calib_json(ops)).calibs
 
     # simhits and mcparticles
-    simhits, mcps, hit_time = get_simhits_and_mcps(ops, fnames, geometry, signal, layers)
-    write_simhits_and_mcps(ops, simhits, mcps)
+    simhits, mcps, hit_cutflow, hit_time = get_simhits_and_mcps(ops, fnames, geometry, signal, layers)
+    write_simhits_and_mcps(ops, simhits, mcps, hit_cutflow)
 
     # mini-doublets (mds)
     mds, md_cutflow, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
@@ -138,6 +138,7 @@ def main():
         logger.info(f"Writing cutflows to {ops.cutflow} ...")
         with open(ops.cutflow, "w") as fi:
             ndjson.dump([
+                hit_cutflow.to_dict(orient="records"),
                 md_cutflow.to_dict(orient="records"),
                 t2_cutflow.to_dict(orient="records"),
                 t4_cutflow.to_dict(orient="records"),
@@ -189,13 +190,14 @@ def get_simhits_and_mcps(
     geometry: bool,
     signal: bool,
     layers: dict[int, set[int]]
-) -> tuple[pd.DataFrame, pd.DataFrame, float]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, float]:
 
     with Timer() as hit_time:
         if ops.read_mcps and ops.read_simhits:
             logger.info(f"Reading simhits {ops.read_simhits} and mcps {ops.read_mcps} ...")
             mcps = pd.read_pickle(ops.read_mcps)
             simhits = pd.read_pickle(ops.read_simhits)
+            cutflow = pd.read_json(cutflow_path(ops.read_simhits))
         elif any([
             ops.read_mcps and not ops.read_simhits,
             ops.read_simhits and not ops.read_mcps,
@@ -209,18 +211,20 @@ def get_simhits_and_mcps(
                                 sim=ops.sim,
                                 layers=layers,
                                 )
-            mcps, simhits = converter.convert()
+            mcps, simhits, cutflow = converter.convert()
 
-    return simhits, mcps, hit_time.duration
+    return simhits, mcps, cutflow, hit_time.duration
 
 
-def write_simhits_and_mcps(ops: argparse.Namespace, simhits: pd.DataFrame, mcps: pd.DataFrame) -> None:
+def write_simhits_and_mcps(ops: argparse.Namespace, simhits: pd.DataFrame, mcps: pd.DataFrame, cutflow: pd.DataFrame) -> None:
     if ops.write_mcps:
         logger.info(f"Saving mcps to {ops.write_mcps} ...")
         mcps.to_pickle(ops.write_mcps)
     if ops.write_simhits:
-        logger.info(f"Saving simhits to {ops.write_simhits} ...")
+        jname = cutflow_path(ops.write_simhits)
+        logger.info(f"Saving simhits to {ops.write_simhits} and cutflow to {jname} ...")
         simhits.to_pickle(ops.write_simhits)
+        cutflow.to_json(jname, indent=4)
 
 
 def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_mds: bool, calibs: dict) -> tuple[pd.DataFrame,
