@@ -106,7 +106,7 @@ class MDCalibrator:
                 if system not in self.calib[feature]:
                     self.calib[feature][system] = {}
                 interval = np.percentile(np.abs(group[mask][feature]), self.percentile)
-                self.calib[feature][system][doublelayer] = format_interval(interval)
+                self.calib[feature][system][doublelayer] = format_interval(interval, feature=feature)
                 if self.sequential:
                     mask &= (np.abs(group[feature]) < interval)
         if update_calib:
@@ -255,8 +255,10 @@ class T8Calibrator:
         write_calibration(calib_dict, self.calib_json)
 
 
-def format_interval(interval: float) -> float:
+def format_interval(interval: float, feature: str = "") -> float:
     # return interval
+    if feature.startswith("doublet_") or feature.startswith("md_"):
+        return np.round(interval)
     return float(np.format_float_positional(interval, precision=INTERVAL_PRECISION, fractional=False))
 
 
