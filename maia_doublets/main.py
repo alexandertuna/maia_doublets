@@ -31,12 +31,7 @@ def main():
 
     # parse options
     ops = options()
-    valid_geos = ["v01", "v04", "v05"]
-    valid_smears = ["00um", "10um"]
-    if ops.geo not in valid_geos:
-        raise ValueError(f"Invalid geometry version specified, must be one of {valid_geos}")
-    if ops.smear not in valid_smears:
-        raise ValueError(f"Invalid smear value specified, must be one of {valid_smears}")
+    check_options(ops)
     if ops.i:
         fnames = parse_filepaths(ops.i)
     else:
@@ -51,8 +46,6 @@ def main():
         )
     if not fnames:
         raise ValueError("No input files found")
-    if not ops.layers:
-        raise ValueError("At least one layer must be specified")
     layers = parse_layers(ops.layers)
     geometry = ops.geometry
     signal = ops.signal or any(SIGNAL in os.path.basename(fname) for fname in fnames)
@@ -61,10 +54,6 @@ def main():
     cut_t2s = ops.cut_t2s or not signal
     cut_t4s = ops.cut_t4s or not signal
     cut_t8s = ops.cut_t8s or not signal
-    if not ops.sim and not ops.digi:
-        raise ValueError("At least one of --sim or --digi must be specified")
-    if ops.sim and ops.digi:
-        raise ValueError("Only one of --sim or --digi can be specified, not both")
     if ops.calibrate and (cut_mds or cut_t2s or cut_t4s or cut_t8s):
         raise ValueError("Cannot use --calibrate with any of --cut-mds, --cut-t2s, --cut-t4s, or --cut-t8s")
 
@@ -105,7 +94,7 @@ def main():
 
     # t2s
     t2s, t2_cutflow, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
-    write_t2s(ops, t2s)
+    write_t2s(ops, t2s, t2_cutflow)
     if ops.calibrate:
         calib_t2s(ops, t2s)
         calibs = CalibConstants(calib_json(ops)).calibs
@@ -113,7 +102,7 @@ def main():
 
     # t4s
     t4s, t4_cutflow, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
-    write_t4s(ops, t4s)
+    write_t4s(ops, t4s, t4_cutflow)
     if ops.calibrate:
         calib_t4s(ops, t4s)
         calibs = CalibConstants(calib_json(ops)).calibs
@@ -121,7 +110,7 @@ def main():
 
     # t8s
     t8s, t8_cutflow, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
-    write_t8s(ops, t8s)
+    write_t8s(ops, t8s, t8_cutflow)
     if ops.calibrate:
         calib_t8s(ops, t8s)
         calibs = CalibConstants(calib_json(ops)).calibs
@@ -164,6 +153,29 @@ def main():
     logger.info(f"  Plotting: {plot_time.duration:.2f}")
 
 
+def check_options(ops: argparse.Namespace) -> None:
+    valid_geos = ["v01", "v04", "v05"]
+    valid_smears = ["00um", "10um"]
+    if ops.geo not in valid_geos:
+        raise ValueError(f"Invalid geometry version specified, must be one of {valid_geos}")
+    if ops.smear not in valid_smears:
+        raise ValueError(f"Invalid smear value specified, must be one of {valid_smears}")
+    if not ops.sim and not ops.digi:
+        raise ValueError("At least one of --sim or --digi must be specified")
+    if ops.sim and ops.digi:
+        raise ValueError("Only one of --sim or --digi can be specified, not both")
+    if not ops.layers:
+        raise ValueError("At least one layer must be specified")
+    if ops.write_simhits and not ops.write_simhits.endswith(".pkl"):
+        raise ValueError("Output file for --write-simhits must end with .pkl")
+    if ops.write_mcps and not ops.write_mcps.endswith(".pkl"):
+        raise ValueError("Output file for --write-mcps must end with .pkl")
+    if ops.write_mds and not ops.write_mds.endswith(".pkl"):
+        raise ValueError("Output file for --write-mds must end with .pkl")
+    if ops.write_t2s and not ops.write_t2s.endswith(".pkl"):
+        raise ValueError("Output file for --write-t2s must end with .pkl")
+    if ops.write_t4s and not ops.write_t4s.endswith(".pkl"):
+        raise ValueError("Output file for --write-t4s must end with .pkl")
 
 def get_simhits_and_mcps(
     ops: argparse.Namespace,
@@ -260,10 +272,13 @@ def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: b
     return t2s, cutflow, t2_time.duration
 
 
-def write_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
-    if ops.write_t2s:
-        logger.info(f"Saving T2s (line segments) to {ops.write_t2s} ...")
-        t2s.to_pickle(ops.write_t2s)
+def write_t2s(ops: argparse.Namespace, t2s: pd.DataFrame, cutflow: pd.DataFrame) -> None:
+    if not ops.write_t2s:
+        return
+    jname = ops.write_t2s.replace(".pkl", ".json")
+    logger.info(f"Saving T2s to {ops.write_t2s} and cutflow to {jname} ...")
+    t2s.to_pickle(ops.write_t2s)
+    cutflow.to_json(jname, indent=4)
 
 
 def calib_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
@@ -296,10 +311,13 @@ def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: b
     return t4s, cutflow, t4_time.duration
 
 
-def write_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
-    if ops.write_t4s:
-        logger.info(f"Saving T4s to {ops.write_t4s} ...")
-        t4s.to_pickle(ops.write_t4s)
+def write_t4s(ops: argparse.Namespace, t4s: pd.DataFrame, cutflow: pd.DataFrame) -> None:
+    if not ops.write_t4s:
+        return
+    jname = ops.write_t4s.replace(".pkl", ".json")
+    logger.info(f"Saving T4s to {ops.write_t4s} and cutflow to {jname} ...")
+    t4s.to_pickle(ops.write_t4s)
+    cutflow.to_json(jname, indent=4)
 
 
 def calib_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
@@ -332,10 +350,13 @@ def get_t8s(ops: argparse.Namespace, t4s: pd.DataFrame, signal: bool, cut_t8s: b
     return t8s, cutflow, t8_time.duration
 
 
-def write_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
-    if ops.write_t8s:
-        logger.info(f"Saving T8s to {ops.write_t8s} ...")
-        t8s.to_pickle(ops.write_t8s)
+def write_t8s(ops: argparse.Namespace, t8s: pd.DataFrame, cutflow: pd.DataFrame) -> None:
+    if not ops.write_t8s:
+        return
+    jname = ops.write_t8s.replace(".pkl", ".json")
+    logger.info(f"Saving T8s to {ops.write_t8s} and cutflow to {jname} ...")
+    t8s.to_pickle(ops.write_t8s)
+    cutflow.to_json(jname, indent=4)
 
 
 def calib_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
