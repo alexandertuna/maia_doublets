@@ -110,9 +110,9 @@ class T2Maker:
         self.df = pd.concat(all_t2s, ignore_index=True) if len(all_t2s) > 0 else pd.DataFrame()
 
         # merge cutflow
-        cutflow = pd.DataFrame(all_cutflows)
-        for col in cutflow.columns:
-            logger.info(f"T2s cutflow, {col}: {cutflow[col].sum()}")
+        self.cutflow = pd.DataFrame(all_cutflows)
+        for col in self.cutflow.columns:
+            logger.info(f"T2s cutflow, {col}: {self.cutflow[col].sum()}")
 
         # announce memory
         memory = self.df.memory_usage(deep=True).sum() * BYTE_TO_MB

@@ -3,6 +3,7 @@ Steering file for counting doublets in a LST-friendly MAIA detector
 """
 import argparse
 from glob import glob
+import ndjson
 import os
 import pandas as pd
 import time
@@ -82,6 +83,7 @@ def main():
     logger.info(f"Geometry version: {ops.geo}")
     logger.info(f"Using sim hits: {ops.sim}")
     logger.info(f"Using digi hits: {ops.digi}")
+    logger.info(f"Writing ndjson: {ops.cutflow}")
     logger.info(f"Writing pdf: {pdf}")
     if ops.digi:
         logger.info(f"Smear value for digi hits: {ops.smear}")
@@ -102,20 +104,20 @@ def main():
         mds, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
 
     # t2s
-    t2s, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
+    t2s, t2_cutflow, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
     write_t2s(ops, t2s)
     if ops.calibrate:
         calib_t2s(ops, t2s)
         calibs = CalibConstants(calib_json(ops)).calibs
-        t2s, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
+        t2s, t2_cutflow, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
 
     # t4s
-    t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
+    t4s, t4_cutflow, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
     write_t4s(ops, t4s)
     if ops.calibrate:
         calib_t4s(ops, t4s)
         calibs = CalibConstants(calib_json(ops)).calibs
-        t4s, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
+        t4s, t4_cutflow, t4_time = get_t4s(ops, t2s, signal, cut_t4s, calibs)
 
     # t8s
     t8s, t8_time = get_t8s(ops, t4s, signal, cut_t8s, calibs)
@@ -141,6 +143,15 @@ def main():
                 pdf=pdf,
             )
             plotter.plot()
+
+    # write cutflows
+    if ops.cutflow:
+        logger.info(f"Writing cutflows to {ops.cutflow} ...")
+        with open(ops.cutflow, "w") as fi:
+            ndjson.dump([
+                t2_cutflow.to_dict(orient="records"),
+                t4_cutflow.to_dict(orient="records"),
+            ], fi)
 
     # log timing info
     logger.info(f"Timing info (in seconds):")
@@ -226,7 +237,9 @@ def calib_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
     calib.calibrate()
 
 
-def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
+def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: bool, calibs: dict) -> tuple[pd.DataFrame,
+                                                                                                            pd.DataFrame,
+                                                                                                            float]:
     with Timer() as t2_time:
         if ops.read_t2s:
             logger.info(f"Reading T2s (line segments) from {ops.read_t2s} ...")
@@ -234,14 +247,16 @@ def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: b
         else:
             # make T2s (line segments) from mini-doublets
             t2s = None
-            t2s = T2Maker(
+            maker = T2Maker(
                 signal=signal,
                 cut_t2s=cut_t2s,
                 calibs=calibs,
                 mds=mds,
-            ).df
+            )
+            t2s = maker.df
+            cutflow = maker.cutflow
 
-    return t2s, t2_time.duration
+    return t2s, cutflow, t2_time.duration
 
 
 def write_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
@@ -258,7 +273,9 @@ def calib_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
     calib.calibrate()
 
 
-def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
+def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: bool, calibs: dict) -> tuple[pd.DataFrame,
+                                                                                                            pd.DataFrame,
+                                                                                                            float]:
     with Timer() as t4_time:
         if ops.read_t4s:
             logger.info(f"Reading T4s from {ops.read_t4s} ...")
@@ -266,14 +283,16 @@ def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: b
         else:
             # make T4s from T2s (line segments)
             t4s = None
-            t4s = T4Maker(
+            maker = T4Maker(
                 signal=signal,
                 cut_t4s=cut_t4s,
                 calibs=calibs,
                 t2s=t2s,
-            ).df
+            )
+            t4s = maker.df
+            cutflow = maker.cutflow
 
-    return t4s, t4_time.duration
+    return t4s, cutflow, t4_time.duration
 
 
 def write_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
@@ -376,6 +395,7 @@ def options():
     parser.add_argument("--signal", action="store_true", help="Use signal files in the analysis")
     parser.add_argument("--background10", action="store_true", help="Use background files (10 percent) in the analysis")
     parser.add_argument("--background100", action="store_true", help="Use background files (100 percent) in the analysis")
+    parser.add_argument("--cutflow", type=str, default="cutflow.ndjson", help="Path to output newline-delimited JSON for cutflows file")
     parser.add_argument("--debug", action="store_true", help="Print some debug information")
     parser.add_argument("--pdf", type=str, default="", help="Path to output PDF file")
     return parser.parse_args()

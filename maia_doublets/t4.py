@@ -106,9 +106,9 @@ class T4Maker:
         self.df = pd.concat(all_t4s, ignore_index=True)
 
         # merge cutflow
-        cutflow = pd.DataFrame(all_cutflows)
-        for col in cutflow.columns:
-            logger.info(f"T4s cutflow, {col}: {cutflow[col].sum()}")
+        self.cutflow = pd.DataFrame(all_cutflows)
+        for col in self.cutflow.columns:
+            logger.info(f"T4s cutflow, {col}: {self.cutflow[col].sum()}")
 
         # announce memory
         memory = self.df.memory_usage(deep=True).sum() * BYTE_TO_MB

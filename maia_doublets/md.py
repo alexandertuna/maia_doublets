@@ -33,10 +33,10 @@ class MDMaker:
             "simhit_sensor", # the z-sensor
         ]
         self.fast_merge = fast_merge
-        self.df = self.make_doublets(simhits)
+        self.df, self.cutflow = self.make_doublets(simhits)
 
 
-    def make_doublets(self, df: pd.DataFrame) -> pd.DataFrame:
+    def make_doublets(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         logger.info("Making doublets ...")
 
         groupby_cols = [
@@ -85,7 +85,7 @@ class MDMaker:
         for (system, doublelayer), total in counts.items():
             logger.info(f"n(doublets) for system {system}, doublelayer {doublelayer}: {total}")
 
-        return doublets
+        return doublets, cutflow
 
 
     def make_doublets_from_group(self, group: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
