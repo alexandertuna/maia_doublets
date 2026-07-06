@@ -20,6 +20,7 @@ class MDMaker:
         simhits: pd.DataFrame,
     ):
         self.signal = signal
+        self.cutflow = None
         self.cut_mds = cut_mds
         self.MD_DZ_CUT = calibs.get("doublet_dz", np.zeros((10, 10)))
         self.MD_DR_CUT = calibs.get("doublet_dr", np.zeros((10, 10)))

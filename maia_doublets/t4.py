@@ -26,6 +26,7 @@ class T4Maker:
         t2s: pd.DataFrame,
     ):
         self.df = None
+        self.cutflow = None
         self.signal = signal
         self.cut_t4s = cut_t4s
         self.t2s = t2s.copy()

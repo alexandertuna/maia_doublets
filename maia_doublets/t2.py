@@ -25,6 +25,7 @@ class T2Maker:
             mds: pd.DataFrame,
         ):
         self.df = None
+        self.cutflow = None
         self.signal = signal
         self.cut_t2s = cut_t2s
         self.lower_suffix = "lower"
