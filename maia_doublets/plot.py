@@ -66,6 +66,14 @@ class Plotter:
         self.t8s = t8s
         self.calibs = calibs
         self.pdf = pdf
+        self.hatch = None if self.signal else "/"
+        self.colors = {
+            "hits": "lightgray",
+            "mds": "red",
+            "t2s": "yellow",
+            "t4s": "green",
+            "t8s": "blue",
+        }
 
         # shorthands for cuts
         self.MD_DZ_CUT = calibs.get("doublet_dz", CUT_MISSING)
@@ -330,6 +338,7 @@ class Plotter:
 
     def plot_multiplicity(self, pdf: PdfPages):
         logger.info(f"Plotting multiplicity")
+        blarb = "Muon gun" if self.signal else "Pure background (BIB)"
 
         detectors = [
             (INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL),
@@ -365,7 +374,8 @@ class Plotter:
                 bins=bins,
                 weights=mult,
                 histtype="stepfilled",
-                color="lightgray",
+                color=self.colors["hits"],
+                hatch=self.hatch,
                 edgecolor="black",
                 linewidth=1.0,
             )
@@ -373,14 +383,14 @@ class Plotter:
             ax.set_title(titles[dets])
             ax.semilogy()
             ax.set_ylim(0.5, None)
-            ax.text(0.55, 0.85, f"Pure background (BIB)", transform=ax.transAxes, fontsize=16)
+            ax.text(0.55, 0.85, f"{blarb}", transform=ax.transAxes, fontsize=16)
             pdf.savefig()
             plt.close()
 
 
     def plot_time(self, pdf: PdfPages):
         logger.info(f"Plotting time")
-        xlabel = "Sim. hit time [ns]" + r" minus $R/c$"
+        xlabel = "Hit time [ns]" + r" minus $R/c$"
         for (system, simhits) in self.simhits.groupby("simhit_system"):
             bins = np.linspace(-10, 20, 301)
             fig, ax = plt.subplots()
@@ -388,13 +398,14 @@ class Plotter:
                 simhits["simhit_t_corrected"],
                 bins=bins,
                 histtype="stepfilled",
-                color="lightgray",
+                color=self.colors["hits"],
+                hatch=self.hatch,
                 edgecolor="black",
                 linewidth=1.0,
                 alpha=0.9,
             )
             ax.set_xlabel(xlabel)
-            ax.set_ylabel("Sim. hits")
+            ax.set_ylabel("Hits")
             ax.set_title(f"{NICKNAMES[system]}")
             ax.semilogy()
             ax.set_ylim(0.8, None)
@@ -413,14 +424,15 @@ class Plotter:
                 simhits["simhit_layer"],
                 bins=bins,
                 histtype="stepfilled",
-                color="lightgray",
+                color=self.colors["hits"],
+                hatch=self.hatch,
                 edgecolor="black",
                 linewidth=1.0,
                 alpha=0.9,
             )
             # ax.set_ylim(0, 280e3)
             ax.set_xlabel("Layer")
-            ax.set_ylabel("Sim. hits")
+            ax.set_ylabel("Hits")
             ax.set_title(f"{NICKNAMES[system]}")
             pdf.savefig()
             plt.close()
@@ -810,7 +822,8 @@ class Plotter:
             (mds["simhit_z_upper"] - mds["simhit_z_lower"])[ok],
             bins=bins,
             histtype="stepfilled",
-            color="yellow",
+            color=self.colors["mds"],
+            hatch=self.hatch,
             edgecolor="black",
             linewidth=1.0,
             alpha=0.9,
@@ -887,12 +900,12 @@ class Plotter:
                             continue
 
                         fig, ax = plt.subplots()
-                        color = "pink" if self.signal else "crimson"
                         ax.hist(
                             group[feature],
                             bins=bins[feature],
                             histtype="stepfilled",
-                            color=color,
+                            color=self.colors["mds"],
+                            hatch=self.hatch,
                             edgecolor="black",
                             linewidth=1.0,
                             alpha=0.9,
@@ -1070,7 +1083,6 @@ class Plotter:
             "ls_chi2_xy": ".5f",
             "ls_chi2_sz": ".5f",
         }
-        color = "yellow" if self.signal else "tan"
 
         # 1d histograms
         for feature in [
@@ -1103,7 +1115,8 @@ class Plotter:
                             group[feature],
                             bins=bins[feature],
                             histtype="stepfilled",
-                            color=color,
+                            color=self.colors["t2s"],
+                            hatch=self.hatch,
                             edgecolor="black",
                             linewidth=1.0,
                             alpha=0.9,
@@ -1384,7 +1397,6 @@ class Plotter:
             "t4_chi2_xy": ".5f",
             "t4_chi2_sz": ".5f",
         }
-        color = "lightblue" if self.signal else "blue"
 
         # 1d histograms
         for feature in [
@@ -1413,7 +1425,8 @@ class Plotter:
                             group[feature],
                             bins=bins[feature],
                             histtype="stepfilled",
-                            color=color,
+                            color=self.colors["t4s"],
+                            hatch=self.hatch,
                             edgecolor="black",
                             linewidth=1.0,
                             alpha=0.9,
@@ -1667,7 +1680,6 @@ class Plotter:
             "t8_chi2_xy": ".4f",
             "t8_chi2_sz": ".4f",
         }
-        color = "palegreen" if self.signal else "green"
 
         # 1d histograms
         for feature in [
@@ -1695,7 +1707,8 @@ class Plotter:
                             group[feature],
                             bins=bins[feature],
                             histtype="stepfilled",
-                            color=color,
+                            color=self.colors["t8s"],
+                            hatch=self.hatch,
                             edgecolor="black",
                             linewidth=1.0,
                             alpha=0.9,
