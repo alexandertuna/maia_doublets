@@ -85,12 +85,12 @@ def main():
     write_simhits_and_mcps(ops, simhits, mcps)
 
     # mini-doublets (mds)
-    mds, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
-    write_mds(ops, mds)
+    mds, md_cutflow, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
+    write_mds(ops, mds, md_cutflow)
     if ops.calibrate:
         calib_mds(ops, mds)
         calibs = CalibConstants(calib_json(ops)).calibs
-        mds, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
+        mds, md_cutflow, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
 
     # t2s
     t2s, t2_cutflow, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
@@ -138,6 +138,7 @@ def main():
         logger.info(f"Writing cutflows to {ops.cutflow} ...")
         with open(ops.cutflow, "w") as fi:
             ndjson.dump([
+                md_cutflow.to_dict(orient="records"),
                 t2_cutflow.to_dict(orient="records"),
                 t4_cutflow.to_dict(orient="records"),
                 t8_cutflow.to_dict(orient="records"),
@@ -176,6 +177,11 @@ def check_options(ops: argparse.Namespace) -> None:
         raise ValueError("Output file for --write-t2s must end with .pkl")
     if ops.write_t4s and not ops.write_t4s.endswith(".pkl"):
         raise ValueError("Output file for --write-t4s must end with .pkl")
+
+
+def cutflow_path(df_path: str) -> str:
+    return df_path.replace(".pkl", ".json")
+
 
 def get_simhits_and_mcps(
     ops: argparse.Namespace,
@@ -217,29 +223,38 @@ def write_simhits_and_mcps(ops: argparse.Namespace, simhits: pd.DataFrame, mcps:
         simhits.to_pickle(ops.write_simhits)
 
 
-def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_mds: bool, calibs: dict) -> tuple[pd.DataFrame, float]:
+def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_mds: bool, calibs: dict) -> tuple[pd.DataFrame,
+                                                                                                                pd.DataFrame,
+                                                                                                                float]:
     with Timer() as md_time:
         if ops.read_mds:
-            logger.info(f"Reading mini-doublets from {ops.read_mds} ...")
+            cpath = cutflow_path(ops.read_mds)
+            logger.info(f"Reading mini-doublets from {ops.read_mds} and cutflow from {cpath} ...")
             doublets = pd.read_pickle(ops.read_mds)
+            cutflow = pd.read_json(cpath)
         else:
             # make mini-doublets from hits
             doublets = None
-            doublets = MDMaker(
+            maker = MDMaker(
                 signal=signal,
                 cut_mds=cut_mds,
                 fast_merge=ops.fast_mds,
                 calibs=calibs,
                 simhits=simhits,
-            ).df
+            )
+            doublets = maker.df
+            cutflow = maker.cutflow
 
-    return doublets, md_time.duration
+    return doublets, cutflow, md_time.duration
 
 
-def write_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
-    if ops.write_mds:
-        logger.info(f"Saving mini-doublets to {ops.write_mds} ...")
-        doublets.to_pickle(ops.write_mds)
+def write_mds(ops: argparse.Namespace, doublets: pd.DataFrame, cutflow: pd.DataFrame) -> None:
+    if not ops.write_mds:
+        return
+    jname = ops.write_mds.replace(".pkl", ".json")
+    logger.info(f"Saving mini-doublets to {ops.write_mds} and cutflow to {jname} ...")
+    doublets.to_pickle(ops.write_mds)
+    cutflow.to_json(jname, indent=4)
 
 
 def calib_mds(ops: argparse.Namespace, doublets: pd.DataFrame) -> None:
@@ -255,7 +270,8 @@ def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: b
                                                                                                             float]:
     with Timer() as t2_time:
         if ops.read_t2s:
-            logger.info(f"Reading T2s (line segments) from {ops.read_t2s} ...")
+            cpath = cutflow_path(ops.read_t2s)
+            logger.info(f"Reading T2s from {ops.read_t2s} and cutflow from {cpath} ...")
             t2s = pd.read_pickle(ops.read_t2s)
         else:
             # make T2s (line segments) from mini-doublets
@@ -275,10 +291,10 @@ def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: b
 def write_t2s(ops: argparse.Namespace, t2s: pd.DataFrame, cutflow: pd.DataFrame) -> None:
     if not ops.write_t2s:
         return
-    jname = ops.write_t2s.replace(".pkl", ".json")
-    logger.info(f"Saving T2s to {ops.write_t2s} and cutflow to {jname} ...")
+    cpath = cutflow_path(ops.write_t2s)
+    logger.info(f"Saving T2s to {ops.write_t2s} and cutflow to {cpath} ...")
     t2s.to_pickle(ops.write_t2s)
-    cutflow.to_json(jname, indent=4)
+    cutflow.to_json(cpath, indent=4)
 
 
 def calib_t2s(ops: argparse.Namespace, t2s: pd.DataFrame) -> None:
@@ -314,10 +330,10 @@ def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: b
 def write_t4s(ops: argparse.Namespace, t4s: pd.DataFrame, cutflow: pd.DataFrame) -> None:
     if not ops.write_t4s:
         return
-    jname = ops.write_t4s.replace(".pkl", ".json")
-    logger.info(f"Saving T4s to {ops.write_t4s} and cutflow to {jname} ...")
+    cpath = cutflow_path(ops.write_t4s)
+    logger.info(f"Saving T4s to {ops.write_t4s} and cutflow to {cpath} ...")
     t4s.to_pickle(ops.write_t4s)
-    cutflow.to_json(jname, indent=4)
+    cutflow.to_json(cpath, indent=4)
 
 
 def calib_t4s(ops: argparse.Namespace, t4s: pd.DataFrame) -> None:
@@ -353,10 +369,10 @@ def get_t8s(ops: argparse.Namespace, t4s: pd.DataFrame, signal: bool, cut_t8s: b
 def write_t8s(ops: argparse.Namespace, t8s: pd.DataFrame, cutflow: pd.DataFrame) -> None:
     if not ops.write_t8s:
         return
-    jname = ops.write_t8s.replace(".pkl", ".json")
-    logger.info(f"Saving T8s to {ops.write_t8s} and cutflow to {jname} ...")
+    cpath = cutflow_path(ops.write_t8s)
+    logger.info(f"Saving T8s to {ops.write_t8s} and cutflow to {cpath} ...")
     t8s.to_pickle(ops.write_t8s)
-    cutflow.to_json(jname, indent=4)
+    cutflow.to_json(cpath, indent=4)
 
 
 def calib_t8s(ops: argparse.Namespace, t8s: pd.DataFrame) -> None:
