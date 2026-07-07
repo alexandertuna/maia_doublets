@@ -202,24 +202,24 @@ class T8Maker:
         # collect new columns
         new = {}
 
-        # pass-through the simhit positions
+        # pass-through the simhit positions as float64 for now
         for coord in ["x", "y", "r", "z"]:
-            new[f"t8_{coord}_0"] = t8s[f"t4_{coord}_0_lower"]
-            new[f"t8_{coord}_1"] = t8s[f"t4_{coord}_1_lower"]
-            new[f"t8_{coord}_2"] = t8s[f"t4_{coord}_2_lower"]
-            new[f"t8_{coord}_3"] = t8s[f"t4_{coord}_3_lower"]
-            new[f"t8_{coord}_4"] = t8s[f"t4_{coord}_4_lower"]
-            new[f"t8_{coord}_5"] = t8s[f"t4_{coord}_5_lower"]
-            new[f"t8_{coord}_6"] = t8s[f"t4_{coord}_6_lower"]
-            new[f"t8_{coord}_7"] = t8s[f"t4_{coord}_7_lower"]
-            new[f"t8_{coord}_8"] = t8s[f"t4_{coord}_0_upper"]
-            new[f"t8_{coord}_9"] = t8s[f"t4_{coord}_1_upper"]
-            new[f"t8_{coord}_10"] = t8s[f"t4_{coord}_2_upper"]
-            new[f"t8_{coord}_11"] = t8s[f"t4_{coord}_3_upper"]
-            new[f"t8_{coord}_12"] = t8s[f"t4_{coord}_4_upper"]
-            new[f"t8_{coord}_13"] = t8s[f"t4_{coord}_5_upper"]
-            new[f"t8_{coord}_14"] = t8s[f"t4_{coord}_6_upper"]
-            new[f"t8_{coord}_15"] = t8s[f"t4_{coord}_7_upper"]
+            new[f"t8_{coord}_0"] = t8s[f"t4_{coord}_0_lower"].astype(np.float64)
+            new[f"t8_{coord}_1"] = t8s[f"t4_{coord}_1_lower"].astype(np.float64)
+            new[f"t8_{coord}_2"] = t8s[f"t4_{coord}_2_lower"].astype(np.float64)
+            new[f"t8_{coord}_3"] = t8s[f"t4_{coord}_3_lower"].astype(np.float64)
+            new[f"t8_{coord}_4"] = t8s[f"t4_{coord}_4_lower"].astype(np.float64)
+            new[f"t8_{coord}_5"] = t8s[f"t4_{coord}_5_lower"].astype(np.float64)
+            new[f"t8_{coord}_6"] = t8s[f"t4_{coord}_6_lower"].astype(np.float64)
+            new[f"t8_{coord}_7"] = t8s[f"t4_{coord}_7_lower"].astype(np.float64)
+            new[f"t8_{coord}_8"] = t8s[f"t4_{coord}_0_upper"].astype(np.float64)
+            new[f"t8_{coord}_9"] = t8s[f"t4_{coord}_1_upper"].astype(np.float64)
+            new[f"t8_{coord}_10"] = t8s[f"t4_{coord}_2_upper"].astype(np.float64)
+            new[f"t8_{coord}_11"] = t8s[f"t4_{coord}_3_upper"].astype(np.float64)
+            new[f"t8_{coord}_12"] = t8s[f"t4_{coord}_4_upper"].astype(np.float64)
+            new[f"t8_{coord}_13"] = t8s[f"t4_{coord}_5_upper"].astype(np.float64)
+            new[f"t8_{coord}_14"] = t8s[f"t4_{coord}_6_upper"].astype(np.float64)
+            new[f"t8_{coord}_15"] = t8s[f"t4_{coord}_7_upper"].astype(np.float64)
 
         # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
@@ -274,6 +274,11 @@ class T8Maker:
         resid2 = (resid ** 2).sum(axis=1)
         new[f"t8_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
+
+        # downscope the simhit positions to float32
+        for coord in ["x", "y", "r", "z"]:
+            for it in range(N_LAYERS_IN_T8):
+                new[f"t8_{coord}_{it}"] = new[f"t8_{coord}_{it}"].astype(np.float32)
 
         # rename some things
         rename = {

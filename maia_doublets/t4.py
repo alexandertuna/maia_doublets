@@ -182,16 +182,16 @@ class T4Maker:
         # collect new columns
         new = {}
 
-        # pass-through the simhit positions
+        # pass-through the simhit positions as float64 for now
         for coord in ["x", "y", "r", "z"]:
-            new[f"t4_{coord}_0"] = t4s[f"ls_{coord}_0_lower"]
-            new[f"t4_{coord}_1"] = t4s[f"ls_{coord}_1_lower"]
-            new[f"t4_{coord}_2"] = t4s[f"ls_{coord}_2_lower"]
-            new[f"t4_{coord}_3"] = t4s[f"ls_{coord}_3_lower"]
-            new[f"t4_{coord}_4"] = t4s[f"ls_{coord}_0_upper"]
-            new[f"t4_{coord}_5"] = t4s[f"ls_{coord}_1_upper"]
-            new[f"t4_{coord}_6"] = t4s[f"ls_{coord}_2_upper"]
-            new[f"t4_{coord}_7"] = t4s[f"ls_{coord}_3_upper"]
+            new[f"t4_{coord}_0"] = t4s[f"ls_{coord}_0_lower"].astype(np.float64)
+            new[f"t4_{coord}_1"] = t4s[f"ls_{coord}_1_lower"].astype(np.float64)
+            new[f"t4_{coord}_2"] = t4s[f"ls_{coord}_2_lower"].astype(np.float64)
+            new[f"t4_{coord}_3"] = t4s[f"ls_{coord}_3_lower"].astype(np.float64)
+            new[f"t4_{coord}_4"] = t4s[f"ls_{coord}_0_upper"].astype(np.float64)
+            new[f"t4_{coord}_5"] = t4s[f"ls_{coord}_1_upper"].astype(np.float64)
+            new[f"t4_{coord}_6"] = t4s[f"ls_{coord}_2_upper"].astype(np.float64)
+            new[f"t4_{coord}_7"] = t4s[f"ls_{coord}_3_upper"].astype(np.float64)
 
         # more features
         new["t4_deta"] = t4s["ls_eta_upper"] - t4s["ls_eta_lower"]
@@ -263,6 +263,17 @@ class T4Maker:
         resid2 = (resid ** 2).sum(axis=1)
         new[f"t4_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
+
+        # downscope the simhit positions to float32
+        for coord in ["x", "y", "r", "z"]:
+            new[f"t4_{coord}_0"] = new[f"t4_{coord}_0"].astype(np.float32)
+            new[f"t4_{coord}_1"] = new[f"t4_{coord}_1"].astype(np.float32)
+            new[f"t4_{coord}_2"] = new[f"t4_{coord}_2"].astype(np.float32)
+            new[f"t4_{coord}_3"] = new[f"t4_{coord}_3"].astype(np.float32)
+            new[f"t4_{coord}_4"] = new[f"t4_{coord}_4"].astype(np.float32)
+            new[f"t4_{coord}_5"] = new[f"t4_{coord}_5"].astype(np.float32)
+            new[f"t4_{coord}_6"] = new[f"t4_{coord}_6"].astype(np.float32)
+            new[f"t4_{coord}_7"] = new[f"t4_{coord}_7"].astype(np.float32)
 
         # rename some things
         rename = {

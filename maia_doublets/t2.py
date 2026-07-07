@@ -208,7 +208,7 @@ class T2Maker:
         return t2s
 
 
-    def consolidate_t2_features(self, t2s: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
+    def consolidate_t2_features(self, t2s: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
         t2s = self.add_basic_t2_features(t2s)
 
@@ -253,12 +253,12 @@ class T2Maker:
         new["ls_dphi"] = (new["ls_dphi"] + np.pi) % (2 * np.pi) - np.pi
         new["ls_dqoverpt"] = t2s["doublet_qoverpt_upper"] - t2s["doublet_qoverpt_lower"]
 
-        # pass-through the simhit positions
+        # pass-through the simhit positions as float64 for now
         for coord in ["x", "y", "r", "z"]:
-            new[f"ls_{coord}_0"] = t2s[f"doublet_{coord}_0_lower"]
-            new[f"ls_{coord}_1"] = t2s[f"doublet_{coord}_1_lower"]
-            new[f"ls_{coord}_2"] = t2s[f"doublet_{coord}_0_upper"]
-            new[f"ls_{coord}_3"] = t2s[f"doublet_{coord}_1_upper"]
+            new[f"ls_{coord}_0"] = t2s[f"doublet_{coord}_0_lower"].astype(np.float64)
+            new[f"ls_{coord}_1"] = t2s[f"doublet_{coord}_1_lower"].astype(np.float64)
+            new[f"ls_{coord}_2"] = t2s[f"doublet_{coord}_0_upper"].astype(np.float64)
+            new[f"ls_{coord}_3"] = t2s[f"doublet_{coord}_1_upper"].astype(np.float64)
 
         # angle differences (handle wraparound)
         new["ls_dtheta_rz"] = t2s["doublet_theta_rz_upper"] - t2s["doublet_theta_rz_lower"]
@@ -314,6 +314,13 @@ class T2Maker:
         new[f"ls_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
 
+        # downscope the simhit positions to float32
+        for coord in ["x", "y", "r", "z"]:
+            new[f"ls_{coord}_0"] = new[f"ls_{coord}_0"].astype(np.float32)
+            new[f"ls_{coord}_1"] = new[f"ls_{coord}_1"].astype(np.float32)
+            new[f"ls_{coord}_2"] = new[f"ls_{coord}_2"].astype(np.float32)
+            new[f"ls_{coord}_3"] = new[f"ls_{coord}_3"].astype(np.float32)
+
         # assign features from lower doublet (arbitrary choice)
         t2s["ls_module"] = t2s["ls_module_lower"]
         t2s["ls_sensor"] = t2s["ls_sensor_lower"]
@@ -346,7 +353,6 @@ class T2Maker:
             t2s["ls_ok_dz"] &
             t2s["ls_ok_dr"] &
             new["ls_ok_dphi"] &
-            # new["ls_ok_dtheta_rz"] &
             new["ls_ok_chi2_xy"] &
             new["ls_ok_chi2_sz"] &
             np.ones(len(t2s), dtype=bool)
