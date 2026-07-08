@@ -143,11 +143,15 @@ class T2Calibrator:
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating T2 {self.features}")
         logger.info(f"len(t2s) = {len(t2s)}")
-        logger.info(f"Systems: {self.df[self.system].unique()}")
-        logger.info(f"Doublelayers: {self.df[self.doublelayer].unique()}")
+        if len(t2s) > 0:
+            logger.info(f"Systems: {self.df[self.system].unique()}")
+            logger.info(f"Doublelayers: {self.df[self.doublelayer].unique()}")
 
 
     def calibrate(self, update_calib: bool = True) -> None:
+        if len(self.df) == 0:
+            logger.warning("No T2s to calibrate")
+            return
         for (cols, group) in self.df.groupby(self.groupby):
             mask = group[self.detectable]
             for feature in self.features:
@@ -190,10 +194,14 @@ class T4Calibrator:
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating T4 {self.features}")
         logger.info(f"len(t4s) = {len(t4s)}")
-        logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
+        if len(t4s) > 0:
+            logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
 
 
     def calibrate(self, update_calib: bool = True) -> None:
+        if len(self.df) == 0:
+            logger.warning("No T4s to calibrate")
+            return
         for (cols, group) in self.df.groupby(self.groupby):
             mask = group[self.detectable]
             for feature in self.features:
@@ -233,10 +241,14 @@ class T8Calibrator:
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating T8 {self.features}")
         logger.info(f"len(t8s) = {len(t8s)}")
-        logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
+        if len(t8s) > 0:
+            logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
 
 
     def calibrate(self, update_calib: bool = True) -> None:
+        if len(self.df) == 0:
+            logger.warning("No T8s to calibrate")
+            return
         for (cols, group) in self.df.groupby(self.groupby):
             mask = group[self.detectable]
             for feature in self.features:
