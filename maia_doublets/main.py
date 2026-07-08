@@ -157,7 +157,7 @@ def main():
 
 def check_options(ops: argparse.Namespace) -> None:
     valid_geos = ["v01", "v04", "v05"]
-    valid_smears = ["00um", "10um"]
+    valid_smears = ["00um", "05um", "10um", "20um"]
     if ops.geo not in valid_geos:
         raise ValueError(f"Invalid geometry version specified, must be one of {valid_geos}")
     if ops.smear not in valid_smears:
