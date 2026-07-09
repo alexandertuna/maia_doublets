@@ -119,6 +119,7 @@ class Plotter:
                 # self.plot_segment_efficiency_vs_kinematics(pdf)
                 # self.plot_segment_quality_efficiency(pdf)
                 self.plot_t4_efficiency_vs_kinematics_overall(pdf)
+                self.plot_t8_efficiency_vs_kinematics_overall(pdf)
                 # self.plot_t4_efficiency_vs_kinematics(pdf)
                 # self.plot_t4_quality_efficiency(pdf)
 
@@ -1730,3 +1731,64 @@ class Plotter:
                         logger.info(f"GDL {gdl_l}-{gdl_u} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
+
+
+    def plot_t8_efficiency_vs_kinematics_overall(self, pdf: PdfPages):
+
+        if self.t8s is None or len(self.t8s) == 0:
+            logger.info("No T8s to plot")
+            return
+
+        bins = {
+            "mcp_q": np.array([-2, 0, 2]),
+            "mcp_pt": np.linspace(0.0, 10.0, 21),
+            "mcp_eta": np.linspace(-0.7, 0.7, 281),
+            "mcp_phi": np.linspace(-3.2, 3.2, 321),
+        }
+        xlabel = {
+            "mcp_q": "Inclusive",
+            "mcp_pt": r"Muon $p_T$ [GeV]",
+            "mcp_eta": r"Muon $\eta$",
+            "mcp_phi": r"Muon $\phi$ [rad]",
+        }
+
+        # denominator
+        dmask = self.get_denominator_mask()
+        denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]]
+        if denom.duplicated().any():
+            raise ValueError("Denominator has duplicated rows!")
+
+        # numerator
+        numer_cols = [
+            "file", # the file
+            "i_event", # the event
+            "i_mcp", # the parent mc particle
+        ]
+
+        # filter doublets to only those with same parent mcp
+        same_parent = self.t8s["i_mcp"] != NO_MCP
+        t8s = self.t8s[same_parent][numer_cols].drop_duplicates()
+
+        # check if t8s's [file, i_event, i_mcp] is in denominator
+        for kin in ["mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]:
+
+            merged = denom.merge(t8s, on=numer_cols, how="inner")
+            n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
+            n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+            efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
+            centers = 0.5 * (edges[1:] + edges[:-1])
+            fig, ax = plt.subplots()
+            ax.plot(
+                centers,
+                efficiency,
+                marker="o",
+                markersize=1,
+                linestyle="-",
+                color="dodgerblue",
+            )
+            ax.set_xlabel(xlabel[kin])
+            ax.set_ylabel("T8 finding efficiency")
+            ax.set_title(f"Considering all T8s")
+            ax.set_ylim(0.5, 1.03)
+            pdf.savefig()
+            plt.close()
