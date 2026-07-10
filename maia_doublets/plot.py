@@ -75,6 +75,20 @@ class Plotter:
             "t8s": "blue",
         }
 
+        # common plotting
+        self.bins = {
+            "mcp_q": np.array([-2, 0, 2]),
+            "mcp_pt": np.linspace(0.0, 10.0, 101),
+            "mcp_eta": np.linspace(-0.7, 0.7, 141),
+            "mcp_phi": np.linspace(-3.2, 3.2, 161),
+        }
+        self.xlabel = {
+            "mcp_q": "Inclusive",
+            "mcp_pt": r"Muon $p_T$ [GeV]",
+            "mcp_eta": r"Muon $\eta$",
+            "mcp_phi": r"Muon $\phi$ [rad]",
+        }
+
         # shorthands for cuts
         self.MD_DZ_CUT = calibs.get("doublet_dz", CUT_MISSING)
         self.MD_DR_CUT = calibs.get("doublet_dr", CUT_MISSING)
@@ -580,17 +594,6 @@ class Plotter:
 
     def plot_detectable_efficiency_vs_kinematics(self, pdf: PdfPages):
 
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
-
         # denominator
         dmask = self.get_denominator_mask()
         denom = self.mcps[dmask]
@@ -607,8 +610,8 @@ class Plotter:
 
             for numer in numers:
 
-                n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                n_numer, edges = np.histogram(numers[numer][kin], bins=bins[kin])
+                n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                n_numer, edges = np.histogram(numers[numer][kin], bins=self.bins[kin])
                 efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                 centers = 0.5 * (edges[1:] + edges[:-1])
                 fig, ax = plt.subplots()
@@ -620,7 +623,7 @@ class Plotter:
                     linestyle="-",
                     color="dodgerblue",
                 )
-                ax.set_xlabel(xlabel[kin])
+                ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("Detector efficiency")
                 ax.set_title(f"{numer}")
                 ax.set_ylim(0.7, 1.03)
@@ -629,17 +632,6 @@ class Plotter:
 
 
     def plot_doublet_efficiency_vs_kinematics_2(self, pdf: PdfPages):
-
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
 
         # denominator
         dmask = self.get_denominator_mask() & (self.mcps["mcp_detectable_OTB"] == True)
@@ -675,8 +667,8 @@ class Plotter:
                 doublet_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
                 merged = denom.merge(doublet_keys, on=["file", "i_event", "i_mcp"], how="inner")
 
-                n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+                n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
                 efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                 centers = 0.5 * (edges[1:] + edges[:-1])
                 fig, ax = plt.subplots()
@@ -688,7 +680,7 @@ class Plotter:
                     linestyle="-",
                     color="dodgerblue",
                 )
-                ax.set_xlabel(xlabel[kin])
+                ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("Doublet algorithm efficiency")
                 ax.set_title(f"{NICKNAMES[system]}, layers {layers}")
                 ax.set_ylim(0.7, 1.03)
@@ -697,17 +689,6 @@ class Plotter:
 
 
     def plot_doublet_efficiency_vs_kinematics(self, pdf: PdfPages):
-
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
 
         # denominator
         dmask = self.get_denominator_mask()
@@ -739,8 +720,8 @@ class Plotter:
                 doublet_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
                 merged = denom.merge(doublet_keys, on=["file", "i_event", "i_mcp"], how="inner")
 
-                n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+                n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
                 efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                 centers = 0.5 * (edges[1:] + edges[:-1])
                 fig, ax = plt.subplots()
@@ -752,7 +733,7 @@ class Plotter:
                     linestyle="-",
                     color="dodgerblue",
                 )
-                ax.set_xlabel(xlabel[kin])
+                ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("Doublet finding efficiency")
                 ax.set_title(f"{NICKNAMES[system]}, layers {layers}")
                 ax.set_ylim(0.7, 1.03)
@@ -968,17 +949,6 @@ class Plotter:
 
     def plot_doublet_quality_efficiency(self, pdf: PdfPages):
 
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
-
         # only consider truth-match doublets
         baseline = self.doublets["doublet_detectable"]
         logger.info(f"Doublet efficiency: total doublets: {len(self.doublets)}")
@@ -1006,8 +976,8 @@ class Plotter:
                         logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} doublets")
                         logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} doublets")
 
-                    n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                    n_numer, edges = np.histogram(numer[kin], bins=bins[kin])
+                    n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                    n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
                     efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                     centers = 0.5 * (edges[1:] + edges[:-1])
 
@@ -1020,7 +990,7 @@ class Plotter:
                         linestyle="-",
                         color="dodgerblue",
                     )
-                    ax.set_xlabel(xlabel[kin])
+                    ax.set_xlabel(self.xlabel[kin])
                     ax.set_ylabel("Doublet quality efficiency")
                     ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req_text}")
                     ax.set_ylim(0.965, 1.004)
@@ -1173,17 +1143,6 @@ class Plotter:
 
     def plot_segment_efficiency_vs_kinematics(self, pdf: PdfPages):
 
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
-
         # denominator
         dmask = self.get_denominator_mask()
         denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_pt", "mcp_eta", "mcp_phi"]]
@@ -1214,8 +1173,8 @@ class Plotter:
                 segment_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
                 merged = denom.merge(segment_keys, on=["file", "i_event", "i_mcp"], how="inner")
 
-                n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+                n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
                 efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                 centers = 0.5 * (edges[1:] + edges[:-1])
                 fig, ax = plt.subplots()
@@ -1227,7 +1186,7 @@ class Plotter:
                     linestyle="-",
                     color="dodgerblue",
                 )
-                ax.set_xlabel(xlabel[kin])
+                ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("T2 finding efficiency")
                 ax.set_title(f"{NICKNAMES[system]}, layers {list(layers)}")
                 ax.set_ylim(0.7, 1.03)
@@ -1236,17 +1195,6 @@ class Plotter:
 
 
     def plot_segment_quality_efficiency(self, pdf: PdfPages):
-
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
 
         # only consider truth-match doublets
         baseline = self.linesegments["ls_detectable"]
@@ -1276,8 +1224,8 @@ class Plotter:
                         logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} doublets")
                         logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} doublets")
 
-                    n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                    n_numer, edges = np.histogram(numer[kin], bins=bins[kin])
+                    n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                    n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
                     efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                     centers = 0.5 * (edges[1:] + edges[:-1])
 
@@ -1290,7 +1238,7 @@ class Plotter:
                         linestyle="-",
                         color="dodgerblue",
                     )
-                    ax.set_xlabel(xlabel[kin])
+                    ax.set_xlabel(self.xlabel[kin])
                     ax.set_ylabel("Segment quality efficiency")
                     ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req_text}")
                     ax.set_ylim(0.965, 1.004)
@@ -1459,19 +1407,6 @@ class Plotter:
             logger.info("No T4s to plot")
             return
 
-        bins = {
-            "mcp_q": np.array([-2, 0, 2]),
-            "mcp_pt": np.linspace(0.0, 10.0, 21),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_q": "Inclusive",
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
-
         # denominator
         dmask = self.get_denominator_mask()
         denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]]
@@ -1493,8 +1428,8 @@ class Plotter:
         for kin in ["mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]:
 
             merged = denom.merge(t4s, on=numer_cols, how="inner")
-            n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-            n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+            n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+            n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
             efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
             centers = 0.5 * (edges[1:] + edges[:-1])
             fig, ax = plt.subplots()
@@ -1506,10 +1441,10 @@ class Plotter:
                 linestyle="-",
                 color="dodgerblue",
             )
-            ax.set_xlabel(xlabel[kin])
+            ax.set_xlabel(self.xlabel[kin])
             ax.set_ylabel("T4 finding efficiency")
             ax.set_title(f"Considering all T4s")
-            ax.set_ylim(0.7, 1.03)
+            ax.set_ylim(0.0, 1.03)
             pdf.savefig()
             plt.close()
 
@@ -1519,17 +1454,6 @@ class Plotter:
         if self.t4s is None or len(self.t4s) == 0:
             logger.info("No T4s to plot")
             return
-
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
 
         # denominator
         dmask = self.get_denominator_mask()
@@ -1561,8 +1485,8 @@ class Plotter:
                 keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
                 merged = denom.merge(keys, on=["file", "i_event", "i_mcp"], how="inner")
 
-                n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+                n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
                 efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                 centers = 0.5 * (edges[1:] + edges[:-1])
                 fig, ax = plt.subplots()
@@ -1574,7 +1498,7 @@ class Plotter:
                     linestyle="-",
                     color="dodgerblue",
                 )
-                ax.set_xlabel(xlabel[kin])
+                ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("T4 finding efficiency")
                 ax.set_title(f"{NICKNAMES[system]}, layers {list(layers)}")
                 ax.set_ylim(0.7, 1.03)
@@ -1587,17 +1511,6 @@ class Plotter:
         if self.t4s is None or len(self.t4s) == 0:
             logger.info("No T4s to plot")
             return
-
-        bins = {
-            "mcp_pt": np.linspace(0.0, 10.0, 201),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
 
         # the cuts
         reqs = [col for col in self.t4s.columns if col.startswith("t4_ok")]
@@ -1628,8 +1541,8 @@ class Plotter:
                         logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} doublets")
                         logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} doublets")
 
-                    n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-                    n_numer, edges = np.histogram(numer[kin], bins=bins[kin])
+                    n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+                    n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
                     efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
                     centers = 0.5 * (edges[1:] + edges[:-1])
 
@@ -1642,7 +1555,7 @@ class Plotter:
                         linestyle="-",
                         color="dodgerblue",
                     )
-                    ax.set_xlabel(xlabel[kin])
+                    ax.set_xlabel(self.xlabel[kin])
                     ax.set_ylabel("T4 quality efficiency")
                     ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req}")
                     ax.set_ylim(0.965, 1.004)
@@ -1739,19 +1652,6 @@ class Plotter:
             logger.info("No T8s to plot")
             return
 
-        bins = {
-            "mcp_q": np.array([-2, 0, 2]),
-            "mcp_pt": np.linspace(0.0, 10.0, 21),
-            "mcp_eta": np.linspace(-0.7, 0.7, 281),
-            "mcp_phi": np.linspace(-3.2, 3.2, 321),
-        }
-        xlabel = {
-            "mcp_q": "Inclusive",
-            "mcp_pt": r"Muon $p_T$ [GeV]",
-            "mcp_eta": r"Muon $\eta$",
-            "mcp_phi": r"Muon $\phi$ [rad]",
-        }
-
         # denominator
         dmask = self.get_denominator_mask()
         denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]]
@@ -1773,8 +1673,8 @@ class Plotter:
         for kin in ["mcp_q", "mcp_pt", "mcp_eta", "mcp_phi"]:
 
             merged = denom.merge(t8s, on=numer_cols, how="inner")
-            n_denom, edges = np.histogram(denom[kin], bins=bins[kin])
-            n_numer, edges = np.histogram(merged[kin], bins=bins[kin])
+            n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
+            n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
             efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
             centers = 0.5 * (edges[1:] + edges[:-1])
             fig, ax = plt.subplots()
@@ -1786,9 +1686,9 @@ class Plotter:
                 linestyle="-",
                 color="dodgerblue",
             )
-            ax.set_xlabel(xlabel[kin])
+            ax.set_xlabel(self.xlabel[kin])
             ax.set_ylabel("T8 finding efficiency")
             ax.set_title(f"Considering all T8s")
-            ax.set_ylim(0.5, 1.03)
+            ax.set_ylim(0.0, 1.03)
             pdf.savefig()
             plt.close()
