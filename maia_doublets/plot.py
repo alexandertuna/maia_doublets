@@ -115,7 +115,7 @@ class Plotter:
             self.plot_time(pdf)
             # self.plot_layer_occupancy_1d(pdf)
             # self.plot_layer_occupancy_2d(pdf)
-            # self.plot_radius_vs_layer(pdf)
+            self.plot_radius_vs_layer(pdf)
             # self.plot_doublet_occupancy(pdf)
             # self.plot_hit_features(pdf)
             self.plot_md_features(pdf)
