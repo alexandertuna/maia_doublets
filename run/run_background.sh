@@ -1,9 +1,11 @@
-GEO="v01"
+GEO="v05"
 SMEAR="10um"
 DATA_DIR="/ceph/users/atuna/work/maia/maia_noodling/samples/${GEO}/neutrinoGun/${SMEAR}"
 # neutrinoGun_digi_3.slcio
 
 for IT in $(seq 0 9); do
+
+    OUTDIR=${GEO}_background100_digi_${SMEAR}
 
     maia_doublets \
     -i ${DATA_DIR}/neutrinoGun_digi_${IT}.slcio \
@@ -11,9 +13,10 @@ for IT in $(seq 0 9); do
     --digi \
     --smear ${SMEAR} \
     --fast-mds \
-    --write-mcps ${GEO}_background100_digi_${SMEAR}/mcps_${IT}.pkl \
-    --write-simhits ${GEO}_background100_digi_${SMEAR}/simhits_${IT}.pkl \
-    --write-mds ${GEO}_background100_digi_${SMEAR}/mds_${IT}.pkl \
-    &> ${GEO}_background100_digi_${SMEAR}/log_${IT}.txt
+    --cutflow ${OUTDIR}/cutflow_${IT}.ndjson \
+    --write-mcps ${OUTDIR}/mcps_${IT}.pkl \
+    --write-simhits ${OUTDIR}/simhits_${IT}.pkl \
+    --write-mds ${OUTDIR}/mds_${IT}.pkl \
+    &> ${OUTDIR}/log_${IT}.txt
 
 done
