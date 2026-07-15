@@ -3,7 +3,7 @@ SMEAR="10um"
 DATA_DIR="/ceph/users/atuna/work/maia/maia_noodling/samples/${GEO}/neutrinoGun/${SMEAR}"
 # neutrinoGun_digi_3.slcio
 
-for IT in $(seq 0 9); do
+for IT in $(seq 10 19); do
 
     OUTDIR=${GEO}_background100_digi_${SMEAR}
 
