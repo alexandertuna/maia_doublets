@@ -119,12 +119,21 @@ class MDMaker:
         doublets["doublet_dz"] = doublets["simhit_z_lower"] - doublets["simhit_r_lower"] * slope_rz
         doublets["doublet_theta_rz"] = np.arctan(slope_rz)
 
+        # deal with xy slope is NaN
+        feature = "doublet_dr"
+        isnull = doublets[feature].isnull()
+        if isnull.any():
+            if np.any(isnull != (doublets["simhit_x_upper"] == doublets["simhit_x_lower"])):
+                raise ValueError(f"Found NaN in {feature}, but not all are due to infinite slope")
+            doublets[feature] = doublets[feature].fillna(doublets["simhit_x_lower"])
+
         # announce any nans
         for feature in ["doublet_dr", "doublet_dz"]:
             if doublets[feature].isnull().any():
                 n_nan = doublets[feature].isnull().sum()
-                logger.warning(f"Found {n_nan} NaN in {feature}, replacing with {BAD_CHI2}")
-                doublets[feature] = doublets[feature].fillna(BAD_CHI2)
+                msg = f"Found {n_nan} unexpected NaN in {feature}"
+                logger.error(msg)
+                raise ValueError(msg)
 
         # record some numbers
         cutflow = {"all": len(doublets)}
