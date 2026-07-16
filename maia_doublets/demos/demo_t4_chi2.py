@@ -21,17 +21,17 @@ COLOR = {
 }
 GAP = 2.0 # mm
 RADIUS = {
-    "v01": [127, 127+GAP, 167, 167+GAP, 510, 510+GAP, 550, 550+GAP,
-            819, 819+GAP, 899, 899+GAP, 1366, 1366+GAP, 1446, 1446+GAP],
-    "v05": [127, 127+GAP, 268, 268+GAP, 409, 409+GAP, 550, 550+GAP,
-            819, 819+GAP, 1028, 1028+GAP, 1237, 1237+GAP, 1446, 1446+GAP],
+    ("v01", "IT"): [127, 127+GAP, 167, 167+GAP, 510, 510+GAP, 550, 550+GAP],
+    ("v01", "OT"): [819, 819+GAP, 899, 899+GAP, 1366, 1366+GAP, 1446, 1446+GAP],
+    ("v05", "IT"): [127, 127+GAP, 268, 268+GAP, 409, 409+GAP, 550, 550+GAP],
+    ("v05", "OT"): [819, 819+GAP, 1028, 1028+GAP, 1237, 1237+GAP, 1446, 1446+GAP],
 } # mm
 EPSILON = 1e-7
 
 def main():
     df = get_dataframes()
     with PdfPages("demo_t4_chi2.pdf") as pdf:
-        plot_pt(df, pdf)
+        # plot_pt(df, pdf)
         plot_chi2_cols(df, pdf)
 
 
@@ -135,8 +135,8 @@ def plot_chi2_cols(df, pdf):
                     row = [col] + [f"{percs[version, col]:0.5f}" for version in df]
                     try:
                         index = int(col[-1])
-                        row.append(f"{RADIUS['v01'][index]:.0f}")
-                        row.append(f"{RADIUS['v05'][index]:.0f}")
+                        row.append(f"{RADIUS['v01', name][index]:.0f}")
+                        row.append(f"{RADIUS['v05', name][index]:.0f}")
                     except:
                         row.extend(["", ""])
                 for i_col in range(n_cols):
