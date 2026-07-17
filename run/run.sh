@@ -2,7 +2,21 @@
 # maia_doublets --geo v01 --signal --digi --smear 10um --calibrate
 
 # How to make plots
-# maia_doublets --geo v01 --signal --digi --smear 10um --plot
+GEO="v01"
+SMEAR="10um"
+OUTDIR=${GEO}_signal_digi_${SMEAR}
+maia_doublets \
+    --geo ${GEO} \
+    --signal \
+    --digi \
+    --smear ${SMEAR} \
+    --write-simhits ${OUTDIR}/hits.pkl \
+    --write-mcps ${OUTDIR}/mcps.pkl \
+    --write-mds ${OUTDIR}/mds.pkl \
+    --write-t2s ${OUTDIR}/t2s.pkl \
+    --write-t4s ${OUTDIR}/t4s.pkl \
+    --write-t8s ${OUTDIR}/t8s.pkl \
+    --plot
 
 # How to find the overall efficiency
 # maia_doublets --geo v01 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
