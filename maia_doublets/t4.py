@@ -15,6 +15,7 @@ from maia_doublets.constants import BYTE_TO_MB, NO_MCP
 from maia_doublets.constants import N_T4_PHI_SLICES
 from maia_doublets.constants import N_LAYERS_IN_T4
 from maia_doublets.constants import N_T8_PHI_SLICES, N_T8_ETA_SLICES, DETECTOR_MAX_ETA
+from maia_doublets.constants import SPEED_OF_LIGHT, MAGNETIC_FIELD
 
 class T4Maker:
 
@@ -213,7 +214,6 @@ class T4Maker:
         # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
         i0, i1, i2 = 0, 4, 7
-        ixs = [1, 2, 3, 5, 6]
         circle_d = 2 * (new[f"t4_x_{i0}"] * (new[f"t4_y_{i1}"] - new[f"t4_y_{i2}"]) +
                         new[f"t4_x_{i1}"] * (new[f"t4_y_{i2}"] - new[f"t4_y_{i0}"]) +
                         new[f"t4_x_{i2}"] * (new[f"t4_y_{i0}"] - new[f"t4_y_{i1}"]))
@@ -227,14 +227,17 @@ class T4Maker:
                              circle_d)
         circle_r = np.sqrt((new[f"t4_x_{i0}"] - circle_x)**2 + (new[f"t4_y_{i0}"] - circle_y)**2)
         circle_ok = circle_d != 0
+        new["t4_pt"] = SPEED_OF_LIGHT * MAGNETIC_FIELD * circle_r * 1e-6
         if np.any(~circle_ok):
             logger.warning(f"Found {np.sum(~circle_ok)} invalid circles with circle_d = 0")
+            raise ValueError("Invalid circles found, cannot calculate chi2_xy")
 
         # calculate the average diff
         diff2s = []
-        for ix in ixs:
+        for ix in range(N_LAYERS_IN_T4):
             circle_diff = np.sqrt((new[f"t4_x_{ix}"] - circle_x)**2 + (new[f"t4_y_{ix}"] - circle_y)**2) - circle_r
             diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
+            new[f"t4_chi2_xy_{ix}"] = diff2s[-1]
         new[f"t4_chi2_xy"] = np.sum(diff2s, axis=0)
 
         # calculate chi2 for sz fit, where s is the arc length along the circle
@@ -262,6 +265,8 @@ class T4Maker:
         resid = z_all - (z0_ref[:, None] + tanlambda[:, None] * s_all)
         resid2 = (resid ** 2).sum(axis=1)
         new[f"t4_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
+        for it in range(N_LAYERS_IN_T4):
+            new[f"t4_chi2_sz_{it}"] = np.where(circle_ok, resid[:, it] ** 2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
 
         # downscope the simhit positions to float32
