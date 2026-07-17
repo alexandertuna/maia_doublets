@@ -79,6 +79,7 @@ class OccupancyPlotter:
                  ):
         self.input_files_hits = input_files_hits
         self.output_file = output_file
+        self.keys = ["simhit_x", "simhit_y", "simhit_z"]
         self.hits_cols = {
             "simhit_x": "x",
             "simhit_y": "y",
@@ -107,9 +108,13 @@ class OccupancyPlotter:
     def get_input_data(self):
         for fi in self.input_files_hits:
             logger.info(f"Reading input file: {fi}")
-        self.hits_df = pd.concat([pd.read_pickle(fi) for fi in self.input_files_hits], ignore_index=True)
-        self.hits_df = self.hits_df[list(self.hits_cols.keys())].rename(columns=self.hits_cols)
+        self.n_events = len(self.input_files_hits)
+        self.hits_df = pd.concat([pd.read_pickle(fi)[self.keys] for fi in self.input_files_hits], ignore_index=True)
+        self.hits_df = self.hits_df.rename(columns=self.hits_cols)
+        self.hits_df["w"] = 1 / self.n_events
         logger.info(f"Total hits read: {len(self.hits_df)}")
+        logger.info(f"Total events read: {self.n_events}")
+        logger.info(f"Total hits per event: {len(self.hits_df)/self.n_events:.2f}")
 
 
     def plot(self):
@@ -123,11 +128,13 @@ class OccupancyPlotter:
         _, _, _, im = ax.hist2d(self.hits_df["z"],
                                 np.sqrt(self.hits_df["x"]**2 + self.hits_df["y"]**2),
                                 bins=self.bins_rz,
+                                weights=self.hits_df["w"],
                                 **self.cargs,
                                 )
         fig.colorbar(im, ax=ax, pad=0.01, label="Number of hits")
         ax.set_xlabel("z [mm]")
         ax.set_ylabel("r [mm]")
+        ax.set_title(f"Average hits per event: {len(self.hits_df)/self.n_events:.1e}")
         pdf.savefig()
         plt.close()
 
@@ -137,6 +144,7 @@ class OccupancyPlotter:
         _, _, _, im = ax.hist2d(self.hits_df["x"],
                                 self.hits_df["y"],
                                 bins=self.bins_xy,
+                                weights=self.hits_df["w"],
                                 **self.cargs,
                                 )
         ax.set_xlabel("x [mm]")
