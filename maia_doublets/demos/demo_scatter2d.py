@@ -33,6 +33,13 @@ RADII = [
     127, 167, 510, 550,
     819, 899, 1366, 1446,
 ]
+AX_IDX = {
+    "hits": (0, 1),
+    "mds": (0, 2),
+    "t2s": (1, 0),
+    "t4s": (1, 1),
+    "t8s": (1, 2),
+}
 RADII = [rad + GAP for rad in RADII]
 R_MAX = max(RADII) * 1.1
 N_LAYERS_IN_MDS = 2
@@ -49,6 +56,9 @@ def main():
     scatter = HitsScatter2d(
         input_files_hits=get_input_files(args.hits),
         input_files_mds=get_input_files(args.mds),
+        input_files_t2s=get_input_files(args.t2s),
+        input_files_t4s=get_input_files(args.t4s),
+        input_files_t8s=get_input_files(args.t8s),
         output_file=args.output,
         n_random=args.n,
     )
@@ -56,9 +66,12 @@ def main():
 
 
 def options():
-    parser = argparse.ArgumentParser(description="Demo for 3D scatter plot")
-    parser.add_argument("--hits", type=str, help="Comma-separated list of input hits file paths")
-    parser.add_argument("--mds", type=str, help="Comma-separated list of input mds file paths")
+    parser = argparse.ArgumentParser(description="Demo for 2D scatter plot")
+    parser.add_argument("--hits", type=str, default="", help="Comma-separated list of input hits file paths")
+    parser.add_argument("--mds", type=str, default="", help="Comma-separated list of input mds file paths")
+    parser.add_argument("--t2s", type=str, default="", help="Comma-separated list of input t2s file paths")
+    parser.add_argument("--t4s", type=str, default="", help="Comma-separated list of input t4s file paths")
+    parser.add_argument("--t8s", type=str, default="", help="Comma-separated list of input t8s file paths")
     parser.add_argument("-n", type=int, help="Sample n random points to speed things up")
     parser.add_argument("--output", type=str, help="Output pdf file path")
     return parser.parse_args()
@@ -85,16 +98,33 @@ class HitsScatter2d:
     def __init__(self,
                  input_files_hits: list[str],
                  input_files_mds: list[str],
+                 input_files_t2s: list[str],
+                 input_files_t4s: list[str],
+                 input_files_t8s: list[str],
                  output_file: str,
                  n_random: int,
                  ):
         self.input_files_hits = input_files_hits
         self.input_files_mds = input_files_mds
+        self.input_files_t2s = input_files_t2s
+        self.input_files_t4s = input_files_t4s
+        self.input_files_t8s = input_files_t8s
+        self.objs = ["hits", "mds", "t2s", "t4s", "t8s"]
+        if len(self.input_files_hits) == 0:
+            self.objs.remove("hits")
+        if len(self.input_files_mds) == 0:
+            self.objs.remove("mds")
+        if len(self.input_files_t2s) == 0:
+            self.objs.remove("t2s")
+        if len(self.input_files_t4s) == 0:
+            self.objs.remove("t4s")
+        if len(self.input_files_t8s) == 0:
+            self.objs.remove("t8s")
         self.output_file = output_file
         self.hits_cols = {
             "simhit_x": "x",
             "simhit_y": "y",
-            # "simhit_z": "z",
+            "simhit_z": "z",
         }
         self.n_random = n_random
         self.df = {}
@@ -102,37 +132,80 @@ class HitsScatter2d:
 
 
     def get_input_data(self):
-        # for fi in self.input_files_hits:
-        #     logger.info(f"Reading input file: {fi}")
-        # self.hits_df = pd.concat([pd.read_pickle(fi) for fi in self.input_files_hits], ignore_index=True)
-        # self.hits_df = self.hits_df[list(self.hits_cols.keys())].rename(columns=self.hits_cols)
-        # logger.info(f"Total hits read: {len(self.hits_df)}")
-
         self.df["hits"] = self.get_input_hits()
         self.df["mds"] = self.get_input_mds()
+        self.df["t2s"] = self.get_input_t2s()
+        self.df["t4s"] = self.get_input_t4s()
+        self.df["t8s"] = self.get_input_t8s()
 
 
     def get_input_hits(self) -> pd.DataFrame:
+        if len(self.input_files_hits) == 0:
+            return pd.DataFrame()
         tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_hits], ignore_index=True)
         df = tmp[list(self.hits_cols.keys())].rename(columns=self.hits_cols)
-
-        if self.n_random and self.n_random < len(df):
-            logger.info(f"Sampling {self.n_random} random hits from {len(df)} total hits")
-            random_n_indices = np.random.choice(df.index, size=self.n_random, replace=False)
-            df = df.loc[random_n_indices]
+        df = self.sample_random(df)
         logger.info(f"Total hits read: {len(df)}")
-
         return df
 
 
     def get_input_mds(self) -> pd.DataFrame:
-
+        if len(self.input_files_mds) == 0:
+            return pd.DataFrame()
         tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_mds], ignore_index=True)
         df = pd.concat([
             tmp[[f"doublet_x_{it}", f"doublet_y_{it}"]].rename(columns={f"doublet_x_{it}": "x", f"doublet_y_{it}": "y"})
             for it in range(N_LAYERS_IN_MDS)
         ])
+        df = self.sample_random(df)
         logger.info(f"Total mds read: {len(df)}")
+        return df
+
+
+    def get_input_t2s(self) -> pd.DataFrame:
+        if len(self.input_files_t2s) == 0:
+            return pd.DataFrame()
+        tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_t2s], ignore_index=True)
+        df = pd.concat([
+            tmp[[f"t2_x_{it}", f"t2_y_{it}"]].rename(columns={f"t2_x_{it}": "x", f"t2_y_{it}": "y"})
+            for it in range(N_LAYERS_IN_T2S)
+        ])
+        df = self.sample_random(df)
+        logger.info(f"Total t2s read: {len(df)}")
+        return df
+
+
+    def get_input_t4s(self) -> pd.DataFrame:
+        if len(self.input_files_t4s) == 0:
+            return pd.DataFrame()
+        tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_t4s], ignore_index=True)
+        df = pd.concat([
+            tmp[[f"t4_x_{it}", f"t4_y_{it}"]].rename(columns={f"t4_x_{it}": "x", f"t4_y_{it}": "y"})
+            for it in range(N_LAYERS_IN_T4S)
+        ])
+        df = self.sample_random(df)
+        logger.info(f"Total t4s read: {len(df)}")
+        return df
+
+
+    def get_input_t8s(self) -> pd.DataFrame:
+        if len(self.input_files_t8s) == 0:
+            return pd.DataFrame()
+        tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_t8s], ignore_index=True)
+        df = pd.concat([
+            tmp[[f"t8_x_{it}", f"t8_y_{it}"]].rename(columns={f"t8_x_{it}": "x", f"t8_y_{it}": "y"})
+            for it in range(N_LAYERS_IN_T8S)
+        ])
+        df = self.sample_random(df)
+        logger.info(f"Total t8s read: {len(df)}")
+        return df
+
+
+    def sample_random(self, df: pd.DataFrame) -> pd.DataFrame:
+        if self.n_random and self.n_random < len(df):
+            logger.info(f"Sampling {self.n_random} random hits from {len(df)} total hits")
+            random_n_indices = np.random.choice(df.index, size=self.n_random, replace=False)
+            df = df.loc[random_n_indices]
         return df
 
 
@@ -155,16 +228,19 @@ class HitsScatter2d:
 
         # basic 2d
         logger.info(f"Making scatter plot ... ")
-        fig, ax = plt.subplots()
-        circles = [plt.Circle((0,0), rad, **cargs) for rad in RADII]
-        ax.scatter(self.df["hits"]["x"], self.df["hits"]["y"], **sargs)
-        for circle in circles:
-            ax.add_patch(circle)
-        ax.set_xlabel("x [mm]")
-        ax.set_ylabel("y [mm]")
-        ax.set_xlim(-R_MAX, R_MAX)
-        ax.set_ylim(-R_MAX, R_MAX)
-        ax.grid(True, alpha=0.3, linewidth=0.5)
+        fig, ax = plt.subplots(nrows=2, ncols=3)
+        for obj in self.objs:
+            logger.info(f"Plotting {obj} ... ")
+            circles = [plt.Circle((0,0), rad, **cargs) for rad in RADII]
+            row, col = AX_IDX[obj]
+            ax[row, col].scatter(self.df[obj]["x"], self.df[obj]["y"], **sargs)
+            for circle in circles:
+                ax[row, col].add_patch(circle)
+            ax[row, col].set_xlabel("x [mm]")
+            ax[row, col].set_ylabel("y [mm]")
+            ax[row, col].set_xlim(-R_MAX, R_MAX)
+            ax[row, col].set_ylim(-R_MAX, R_MAX)
+            ax[row, col].grid(True, alpha=0.3, linewidth=0.5)
         logger.info(f"Saving scatter plot ... ")
         fig.savefig(self.output_file, dpi=500)
         plt.close(fig)
