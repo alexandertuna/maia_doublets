@@ -8,6 +8,9 @@ from matplotlib import rcParams
 rcParams.update({
     "font.size": 16,
     "figure.figsize": (8, 8),
+    "axes.labelsize": 10,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
     "xtick.direction": "in",
     "ytick.direction": "in",
     "xtick.top": True,
@@ -41,11 +44,11 @@ AX_IDX = {
     "t8s": (1, 2),
 }
 GOVT_NAME = {
-    "hits": "All hits",
-    "mds": "Hits in MDs",
-    "t2s": "Hits in T2s",
-    "t4s": "Hits in T4s",
-    "t8s": "Hits in T8s",
+    "hits": "All BIB hits",
+    "mds": "BIB hits in MDs",
+    "t2s": "BIB hits in T2s",
+    "t4s": "BIB hits in T4s",
+    "t8s": "BIB hits in T8s",
 }
 RADII = [rad + GAP for rad in RADII]
 R_MAX = max(RADII) * 1.02
@@ -66,6 +69,7 @@ def main():
         input_files_t2s=get_input_files(args.t2s),
         input_files_t4s=get_input_files(args.t4s),
         input_files_t8s=get_input_files(args.t8s),
+        input_files_signal=get_input_files(args.signal),
         output_file=args.output,
         n_random=args.n,
     )
@@ -79,6 +83,7 @@ def options():
     parser.add_argument("--t2s", type=str, default="", help="Comma-separated list of input t2s file paths")
     parser.add_argument("--t4s", type=str, default="", help="Comma-separated list of input t4s file paths")
     parser.add_argument("--t8s", type=str, default="", help="Comma-separated list of input t8s file paths")
+    parser.add_argument("--signal", type=str, default="", help="Comma-separated list of input signal file paths")
     parser.add_argument("-n", type=int, help="Sample n random points to speed things up")
     parser.add_argument("--output", type=str, help="Output pdf file path")
     return parser.parse_args()
@@ -89,6 +94,14 @@ def check_options(args):
         raise ValueError("Hits input file(s) must be specified")
     if not args.mds:
         raise ValueError("MDs input file(s) must be specified")
+    if not args.t2s:
+        raise ValueError("T2s input file(s) must be specified")
+    if not args.t4s:
+        raise ValueError("T4s input file(s) must be specified")
+    if not args.t8s:
+        raise ValueError("T8s input file(s) must be specified")
+    if not args.signal:
+        raise ValueError("Signal input file(s) must be specified")
     if not args.output:
         raise ValueError("Output file must be specified")
 
@@ -108,6 +121,7 @@ class HitsScatter2d:
                  input_files_t2s: list[str],
                  input_files_t4s: list[str],
                  input_files_t8s: list[str],
+                 input_files_signal: list[str],
                  output_file: str,
                  n_random: int,
                  ):
@@ -116,6 +130,7 @@ class HitsScatter2d:
         self.input_files_t2s = input_files_t2s
         self.input_files_t4s = input_files_t4s
         self.input_files_t8s = input_files_t8s
+        self.input_files_signal = input_files_signal
         self.objs = ["hits", "mds", "t2s", "t4s", "t8s"]
         if len(self.input_files_hits) == 0:
             self.objs.remove("hits")
@@ -144,6 +159,7 @@ class HitsScatter2d:
         self.df["t2s"] = self.get_input_t2s()
         self.df["t4s"] = self.get_input_t4s()
         self.df["t8s"] = self.get_input_t8s()
+        self.df["signal"] = self.get_input_signal()
 
 
     def get_input_hits(self) -> pd.DataFrame:
@@ -239,6 +255,39 @@ class HitsScatter2d:
         return df
 
 
+    def get_input_signal(self) -> pd.DataFrame:
+        """
+        Get the first signal event only
+        """
+        if len(self.input_files_signal) == 0:
+            return pd.DataFrame()
+        tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_signal], ignore_index=True)
+        if len(tmp) == 0:
+            logger.warning(f"No signal events found in input files: {self.input_files_signal}")
+            return pd.DataFrame()
+        logger.info(f"Total signal t8s read: {len(tmp)}")
+
+        # filter for good t8s
+        tmp = tmp[ tmp["t8_ok"] ]
+        logger.info(f"Total signal t8s filtered: {len(tmp)}")
+
+        # keep a limited subset of signal
+        tmp = tmp.reset_index(drop=True)
+        mask = tmp.index.isin([30]) # 7, 11, 30, 60 are good (30 and 60 are best)
+        tmp = tmp[mask]
+        logger.info(f"Total signal t8s kept: {mask.sum()}")
+
+        df = pd.concat([
+            tmp[[f"t8_x_{it}",
+                 f"t8_y_{it}",
+                 f"t8_z_{it}",]].rename(columns={f"t8_x_{it}": "x",
+                                                 f"t8_y_{it}": "y",
+                                                 f"t8_z_{it}": "z"})
+            for it in range(N_LAYERS_IN_T8S)
+        ])
+        return df
+
+
     def sample_random(self, df: pd.DataFrame) -> pd.DataFrame:
         if self.n_random and self.n_random < len(df):
             logger.info(f"Sampling {self.n_random} random hits from {len(df)} total hits")
@@ -265,6 +314,12 @@ class HitsScatter2d:
             "facecolor": "none",
             "edgecolors": "blue",
         }
+        margs = {
+            "s": 8,
+            "alpha": 1,
+            "facecolor": "red",
+            "edgecolors": "none",
+        }
 
         # basic 2d
         logger.info(f"Making scatter plot ... ")
@@ -273,12 +328,25 @@ class HitsScatter2d:
                                ncols=3,
                                subplot_kw={'projection': '3d'},
                                )
-        ax[0, 0].axis("off")
+
+        # Legend in the first subplot
+        big = 32
+        ax[0, 0].view_init(elev=90, azim=-90)   # x right, y up, z toward viewer
+        ax[0, 0].set_proj_type('ortho')         # no perspective — truly flat
+        ax[0, 0].set_axis_off()
+        ax[0, 0].text(-0.2, 0.6, 0, "Background BIB hits", fontsize=big, ha='left', va='center', color='blue')
+        ax[0, 0].text(-0.2, 0.4, 0, "Signal muon hits", fontsize=big, ha='left', va='center', color='red')
+
         for obj in self.objs:
             logger.info(f"Plotting {obj} ... ")
             circles = [plt.Circle((0,0), rad, **cargs) for rad in RADII]
             row, col = AX_IDX[obj]
             n_hits = len(self.df[obj])
+            # always draw signal
+            ax[row, col].scatter(self.df["signal"]["z"],
+                                 self.df["signal"]["x"],
+                                 self.df["signal"]["y"],
+                                 **margs)
             if n_hits > 0:
                 ax[row, col].scatter(self.df[obj]["z"],
                                      self.df[obj]["x"],
@@ -296,6 +364,12 @@ class HitsScatter2d:
             ax[row, col].set_ylim(-R_MAX, R_MAX)
             ax[row, col].set_zlim(-R_MAX, R_MAX)
             ax[row, col].grid(True, alpha=0.3, linewidth=0.5)
+            for axis in (ax[row, col].xaxis,
+                         ax[row, col].yaxis,
+                         ax[row, col].zaxis):
+                axis.pane.fill = False
+                axis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 1)
+
         logger.info(f"Saving scatter plot ... ")
         fig.savefig(self.output_file, dpi=500)
         plt.close(fig)
