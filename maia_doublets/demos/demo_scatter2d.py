@@ -40,8 +40,15 @@ AX_IDX = {
     "t4s": (1, 1),
     "t8s": (1, 2),
 }
+GOVT_NAME = {
+    "hits": "All hits",
+    "mds": "Hits in MDs",
+    "t2s": "Hits in T2s",
+    "t4s": "Hits in T4s",
+    "t8s": "Hits in T8s",
+}
 RADII = [rad + GAP for rad in RADII]
-R_MAX = max(RADII) * 1.1
+R_MAX = max(RADII) * 1.02
 N_LAYERS_IN_MDS = 2
 N_LAYERS_IN_T2S = 4
 N_LAYERS_IN_T4S = 8
@@ -143,6 +150,9 @@ class HitsScatter2d:
         if len(self.input_files_hits) == 0:
             return pd.DataFrame()
         tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_hits], ignore_index=True)
+        if len(tmp) == 0:
+            logger.warning(f"No hits found in input files: {self.input_files_hits}")
+            return pd.DataFrame()
         df = tmp[list(self.hits_cols.keys())].rename(columns=self.hits_cols)
         df = self.sample_random(df)
         logger.info(f"Total hits read: {len(df)}")
@@ -153,8 +163,15 @@ class HitsScatter2d:
         if len(self.input_files_mds) == 0:
             return pd.DataFrame()
         tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_mds], ignore_index=True)
+        if len(tmp) == 0:
+            logger.warning(f"No mds found in input files: {self.input_files_mds}")
+            return pd.DataFrame()
         df = pd.concat([
-            tmp[[f"doublet_x_{it}", f"doublet_y_{it}"]].rename(columns={f"doublet_x_{it}": "x", f"doublet_y_{it}": "y"})
+            tmp[[f"doublet_x_{it}",
+                 f"doublet_y_{it}",
+                 f"doublet_z_{it}",]].rename(columns={f"doublet_x_{it}": "x",
+                                                      f"doublet_y_{it}": "y",
+                                                      f"doublet_z_{it}": "z"})
             for it in range(N_LAYERS_IN_MDS)
         ])
         df = self.sample_random(df)
@@ -166,8 +183,15 @@ class HitsScatter2d:
         if len(self.input_files_t2s) == 0:
             return pd.DataFrame()
         tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_t2s], ignore_index=True)
+        if len(tmp) == 0:
+            logger.warning(f"No t2s found in input files: {self.input_files_t2s}")
+            return pd.DataFrame()
         df = pd.concat([
-            tmp[[f"t2_x_{it}", f"t2_y_{it}"]].rename(columns={f"t2_x_{it}": "x", f"t2_y_{it}": "y"})
+            tmp[[f"ls_x_{it}",
+                 f"ls_y_{it}",
+                 f"ls_z_{it}",]].rename(columns={f"ls_x_{it}": "x",
+                                                 f"ls_y_{it}": "y",
+                                                 f"ls_z_{it}": "z"})
             for it in range(N_LAYERS_IN_T2S)
         ])
         df = self.sample_random(df)
@@ -179,8 +203,15 @@ class HitsScatter2d:
         if len(self.input_files_t4s) == 0:
             return pd.DataFrame()
         tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_t4s], ignore_index=True)
+        if len(tmp) == 0:
+            logger.warning(f"No t4s found in input files: {self.input_files_t4s}")
+            return pd.DataFrame()
         df = pd.concat([
-            tmp[[f"t4_x_{it}", f"t4_y_{it}"]].rename(columns={f"t4_x_{it}": "x", f"t4_y_{it}": "y"})
+            tmp[[f"t4_x_{it}",
+                 f"t4_y_{it}",
+                 f"t4_z_{it}",]].rename(columns={f"t4_x_{it}": "x",
+                                                 f"t4_y_{it}": "y",
+                                                 f"t4_z_{it}": "z"})
             for it in range(N_LAYERS_IN_T4S)
         ])
         df = self.sample_random(df)
@@ -192,8 +223,15 @@ class HitsScatter2d:
         if len(self.input_files_t8s) == 0:
             return pd.DataFrame()
         tmp = pd.concat([pd.read_pickle(fi) for fi in self.input_files_t8s], ignore_index=True)
+        if len(tmp) == 0:
+            logger.warning(f"No t8s found in input files: {self.input_files_t8s}")
+            return pd.DataFrame()
         df = pd.concat([
-            tmp[[f"t8_x_{it}", f"t8_y_{it}"]].rename(columns={f"t8_x_{it}": "x", f"t8_y_{it}": "y"})
+            tmp[[f"t8_x_{it}",
+                 f"t8_y_{it}",
+                 f"t8_z_{it}",]].rename(columns={f"t8_x_{it}": "x",
+                                                 f"t8_y_{it}": "y",
+                                                 f"t8_z_{it}": "z"})
             for it in range(N_LAYERS_IN_T8S)
         ])
         df = self.sample_random(df)
@@ -216,30 +254,47 @@ class HitsScatter2d:
             "fill": False,
             "edgecolor": "black",
             "linestyle": "-",
-            "linewidth": 0.5,
+            "linewidth": 0.2,
             "zorder": 0,
         }
         sargs = {
-            "s": 10,
-            "c": "blue",
-            "alpha": 0.5,
-            "edgecolors": "none",
+            "s": 8,
+            "alpha": 0.05,
+            # "facecolor": "blue",
+            # "edgecolors": "none",
+            "facecolor": "none",
+            "edgecolors": "blue",
         }
 
         # basic 2d
         logger.info(f"Making scatter plot ... ")
-        fig, ax = plt.subplots(nrows=2, ncols=3)
+        fig, ax = plt.subplots(figsize=(20, 12),
+                               nrows=2,
+                               ncols=3,
+                               subplot_kw={'projection': '3d'},
+                               )
+        ax[0, 0].axis("off")
         for obj in self.objs:
             logger.info(f"Plotting {obj} ... ")
             circles = [plt.Circle((0,0), rad, **cargs) for rad in RADII]
             row, col = AX_IDX[obj]
-            ax[row, col].scatter(self.df[obj]["x"], self.df[obj]["y"], **sargs)
-            for circle in circles:
-                ax[row, col].add_patch(circle)
-            ax[row, col].set_xlabel("x [mm]")
-            ax[row, col].set_ylabel("y [mm]")
+            n_hits = len(self.df[obj])
+            if n_hits > 0:
+                ax[row, col].scatter(self.df[obj]["z"],
+                                     self.df[obj]["x"],
+                                     self.df[obj]["y"],
+                                     **sargs)
+            else:
+                logger.warning(f"Skipping {obj} ... ")
+            # for circle in circles:
+            #     ax[row, col].add_patch(circle)
+            ax[row, col].set_title(f"{GOVT_NAME[obj]}: {n_hits}")
+            ax[row, col].set_xlabel("z [mm]")
+            ax[row, col].set_ylabel("x [mm]")
+            ax[row, col].set_zlabel("y [mm]")
             ax[row, col].set_xlim(-R_MAX, R_MAX)
             ax[row, col].set_ylim(-R_MAX, R_MAX)
+            ax[row, col].set_zlim(-R_MAX, R_MAX)
             ax[row, col].grid(True, alpha=0.3, linewidth=0.5)
         logger.info(f"Saving scatter plot ... ")
         fig.savefig(self.output_file, dpi=500)
