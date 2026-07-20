@@ -41,16 +41,23 @@ class DataGrabber:
                  pdf_path: str,
                  ):
         self.paths = {}
+        self.nfiles_per_key = {}
         for key, objs in data_paths.items():
             self.paths[key] = self.get_input_filenames(objs)
+            self.nfiles_per_key[key] = len(self.paths[key])
         self.pdf_path = pdf_path
         self.load_data()
 
 
     def get_input_filenames(self, input_str):
         fnames = []
-        for pattern in input_str.split(","):
-            fnames.extend(glob(pattern))
+        if isinstance(input_str, list):
+            for pattern in input_str:
+                for patt in pattern.split(","):
+                    fnames.extend(glob(patt))
+        else:
+            for patt in input_str.split(","):
+                fnames.extend(glob(patt))
         return fnames
 
 
@@ -59,12 +66,13 @@ class DataGrabber:
         self.df = {}
         for key, file_paths in self.paths.items():
             logger.info(f"Loading {key} from {file_paths} ...")
-            # tmp
-            if key == "background_t8s":
-                logger.info(f"EXCEPTIONALLY SKIPPING {key} ...")
+            for fi in file_paths:
+                if len(pd.read_pickle(fi)) > 0:
+                    break
+            else:
+                logger.warning(f"No non-empty files found for {key} in {file_paths}. Skipping.")
                 self.df[key] = pd.DataFrame(columns=save_keys)
                 continue
-            # /tmp
             self.df[key] = pd.concat([pd.read_pickle(fi)[save_keys] for fi in file_paths], ignore_index=True)
         self.announce_sizes()
 
@@ -72,6 +80,8 @@ class DataGrabber:
     def announce_sizes(self):
         for key in self.df.keys():
             logger.info(f"{key}: {len(self.df[key])} entries")
+        for key, nfiles in self.nfiles_per_key.items():
+            logger.info(f"{key}: {nfiles} files")
 
 
     def plot(self):
@@ -84,24 +94,55 @@ class DataGrabber:
         ax.set_title("BIB Yields and Muon Efficiency")
         ax.set_xlabel("Object abstraction")
         ax.set_ylabel("Average per event")
-        ax.plot([len(self.df["background_hits"]),
-                 len(self.df["background_mds"]),
-                 len(self.df["background_t2s"]),
-                 len(self.df["background_t4s"]),
-                 len(self.df["background_t8s"])],
-                label="Background",
-                marker="o",
-                alpha=0.5,
+
+        y_vals = [
+            len(self.df["background_hits"]) / self.nfiles_per_key["background_hits"],
+            len(self.df["background_mds"]) / self.nfiles_per_key["background_mds"],
+            len(self.df["background_t2s"]) / self.nfiles_per_key["background_t2s"],
+            len(self.df["background_t4s"]) / self.nfiles_per_key["background_t4s"],
+            len(self.df["background_t8s"]) / self.nfiles_per_key["background_t8s"],
+        ]
+        x_vals = np.arange(len(y_vals))
+        bins = np.arange(len(y_vals) + 1) - 0.5
+
+        ax.hist(
+            ["Hits", "Doublets", "T2s", "T4s", "T8s"],
+            bins=bins,
+            weights=y_vals,
+            histtype="stepfilled",
+            hatch=None,
+            color="blue",
+            edgecolor="black",
+            linewidth=1.0,
         )
+
+        # ax.hist(x_vals,
+        #         weights=y_vals,
+        #         bins=bins,
+        #         color="blue",
+        #         edgecolor="black",
+        # )
+        # ax.plot([len(self.df["background_hits"]),
+        #          len(self.df["background_mds"]),
+        #          len(self.df["background_t2s"]),
+        #          len(self.df["background_t4s"]),
+        #          len(self.df["background_t8s"])],
+        #         label="Background",
+        #         marker="o",
+        #         linestyle="--",
+        #         # filled steps
+        #         drawstyle="steps-mid",
+        #         alpha=0.5,
+        # )
         ax.semilogy()
-        ax.set_ylim(0.8, None)
+        ax.set_ylim(0.08, None)
         pdf.savefig(fig)
         plt.close(fig)
 
 
 
 def options():
-    _num = 0
+    _num = "1"
     _default = {
         "--background-mcps": f"v01_background100_digi_10um/mcps_{_num}.pkl",
         "--background-hits": f"v01_background100_digi_10um/simhits_{_num}.pkl",
