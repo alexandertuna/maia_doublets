@@ -53,6 +53,11 @@ class DataGrabber:
         self.unique_keys = ["file", "i_event", "i_mcp"]
         self.load_data()
         self.calculate_efficiency()
+        self.pad_r = 10
+        self.color_r = "#1f77b4"
+        # self.color_l = "#ff7f0e"
+        # self.color_l = "#0e7c7b"
+        self.color_l = "lightgrey"
 
 
     def get_input_filenames(self, input_str):
@@ -159,20 +164,33 @@ class DataGrabber:
             weights=y_vals_l,
             histtype="stepfilled",
             hatch=None,
-            color="blue",
+            color=self.color_l,
             edgecolor="black",
             linewidth=1.0,
         )
         ax_l.set_xlabel("")
         ax_l.set_ylabel("Average BIB yield per event")
         ax_l.semilogy()
-        ax_l.set_ylim(0.08, None)
+        ymin, ymax = ax_l.get_ylim()
+        ax_l.set_ylim(0.08, ymax * 1.35)
+
+        # force y-axis ticks at 1e-1 to 1e7, with minor ticks at 2, 3, 4, 5, 6, 7, 8, 9 times each power of ten
+        ax_l.set_yticks([10 ** i for i in range(-1, 8)], minor=False)
+        ax_l.set_yticks([j * 10 ** i for i in range(-1, 8) for j in range(2, 10)], minor=True)
 
         # plot signal efficiency
         ax_r = ax_l.twinx()
-        ax_r.plot(x_vals, y_vals_r, marker="o", color="red")
-        ax_r.set_ylabel(r"Muon efficiency for $\geq 1$ reconstructed object")
-        ax_r.set_ylim(0.0, 1.01)
+        ax_r.plot(x_vals, y_vals_r, marker="o", color=self.color_r)
+        ax_r.set_ylabel(r"Muon efficiency for $\geq 1$ reconstructed object", color=self.color_r, labelpad=self.pad_r)
+        ax_r.set_ylim(0.5, 1.02)
+        ax_r.tick_params(axis="y", colors=self.color_r)
+
+        # add bonus text
+        ax_l.text(0.02, 1.01, "Background", color=self.color_l, transform=ax_l.transAxes)
+        ax_r.text(0.87, 1.01, "Signal", color=self.color_r, transform=ax_r.transAxes)
+
+        # add line to right y-axis for efficiency = 1
+        ax_r.axhline(y=1.0, xmin=0.5, color=self.color_r, linestyle="--", linewidth=1.0)
 
         # save
         pdf.savefig(fig)
@@ -222,8 +240,8 @@ rcParams.update({
     "ytick.right": True,
     "xtick.minor.visible": True,
     "ytick.minor.visible": True,
-    "axes.grid": True,
-    "axes.grid.which": "both",
+    # "axes.grid": True,
+    # "axes.grid.which": "both",
     # "axes.axisbelow": True,
     "grid.linewidth": 0.5,
     "grid.alpha": 0.1,
