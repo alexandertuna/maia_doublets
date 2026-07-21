@@ -9,6 +9,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 import logging
 logger = logging.getLogger(__name__)
 
+MUON = 13
+ZERO_POINT_ZERO_ONE_MM = 0.01
+ONE_POINT_FIVE_GEV = 1.5
+BARREL_TRACKER_MAX_ETA = 0.65
 
 def main():
     logging.basicConfig(level=logging.INFO,
@@ -46,7 +50,9 @@ class DataGrabber:
             self.paths[key] = self.get_input_filenames(objs)
             self.nfiles_per_key[key] = len(self.paths[key])
         self.pdf_path = pdf_path
+        self.unique_keys = ["file", "i_event", "i_mcp"]
         self.load_data()
+        self.calculate_efficiency()
 
 
     def get_input_filenames(self, input_str):
@@ -62,7 +68,6 @@ class DataGrabber:
 
 
     def load_data(self):
-        save_keys = ["file", "i_event", "i_mcp"]
         self.df = {}
         for key, file_paths in self.paths.items():
             logger.info(f"Loading {key} from {file_paths} ...")
@@ -71,9 +76,10 @@ class DataGrabber:
                     break
             else:
                 logger.warning(f"No non-empty files found for {key} in {file_paths}. Skipping.")
-                self.df[key] = pd.DataFrame(columns=save_keys)
+                self.df[key] = pd.DataFrame(columns=self.unique_keys)
                 continue
-            self.df[key] = pd.concat([pd.read_pickle(fi)[save_keys] for fi in file_paths], ignore_index=True)
+            keys = self.unique_keys + (["mcp_pdg", "mcp_q", "mcp_pt", "mcp_eta", "mcp_vertex_r", "mcp_vertex_z"] if key == "signal_mcps" else [])
+            self.df[key] = pd.concat([pd.read_pickle(fi)[keys] for fi in file_paths], ignore_index=True)
         self.announce_sizes()
 
 
@@ -84,58 +90,91 @@ class DataGrabber:
             logger.info(f"{key}: {nfiles} files")
 
 
+    def denominator_mask(self):
+        mask = (
+            (np.abs(self.df["signal_mcps"]["mcp_pdg"]) == MUON) &
+            (self.df["signal_mcps"]["mcp_q"] != 0) &
+            (self.df["signal_mcps"]["mcp_pt"] > ONE_POINT_FIVE_GEV) &
+            (self.df["signal_mcps"]["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
+            (np.abs(self.df["signal_mcps"]["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM) &
+            (np.abs(self.df["signal_mcps"]["mcp_eta"]) < BARREL_TRACKER_MAX_ETA)
+        )
+        return mask
+
+
+    def calculate_efficiency(self):
+        mask = self.denominator_mask()
+        if mask.sum() == 0:
+            msg = "No signal mcps found that satisfy denominator criteria"
+            logger.error(msg)
+            raise ValueError(msg)
+        denom = self.df["signal_mcps"][mask]
+        logger.info(f"Denominator mask: {mask.sum()} entries")
+        self.efficiency = {}
+        for key in self.df.keys():
+            if key.startswith("background"):
+                continue
+            df = self.df[key].drop_duplicates(subset=self.unique_keys)
+            # for each row in df, check if it exists in mcps
+            merged = pd.merge(df, denom, on=self.unique_keys, how="inner")
+            eff = len(merged) / len(denom)
+            logger.info(f"Efficiency for {key}: {len(merged)} / {len(denom)} = {eff}")
+            self.efficiency[key] = eff
+
+
     def plot(self):
         with PdfPages(self.pdf_path) as pdf:
             self.plot_yields_and_efficiency(pdf)
 
 
     def plot_yields_and_efficiency(self, pdf):
-        fig, ax = plt.subplots(figsize=(8, 8))
-        ax.set_title("BIB Yields and Muon Efficiency")
-        ax.set_xlabel("Object abstraction")
-        ax.set_ylabel("Average per event")
-
-        y_vals = [
+        y_vals_l = [
             len(self.df["background_hits"]) / self.nfiles_per_key["background_hits"],
             len(self.df["background_mds"]) / self.nfiles_per_key["background_mds"],
             len(self.df["background_t2s"]) / self.nfiles_per_key["background_t2s"],
             len(self.df["background_t4s"]) / self.nfiles_per_key["background_t4s"],
             len(self.df["background_t8s"]) / self.nfiles_per_key["background_t8s"],
         ]
-        x_vals = np.arange(len(y_vals))
-        bins = np.arange(len(y_vals) + 1) - 0.5
+        y_vals_r = [
+            self.efficiency["signal_hits"],
+            self.efficiency["signal_mds"],
+            self.efficiency["signal_t2s"],
+            self.efficiency["signal_t4s"],
+            self.efficiency["signal_t8s"]
+        ]
+        x_vals = ["Hits", "MDs", "T2s", "T4s", "T8s"]
+        bins = np.arange(len(x_vals) + 1) - 0.5
 
-        ax.hist(
-            ["Hits", "Doublets", "T2s", "T4s", "T8s"],
+        # check
+        if len(y_vals_l) != len(y_vals_r) or len(y_vals_l) != len(x_vals):
+            msg = f"Length mismatch: y_vals_l={len(y_vals_l)}, y_vals_r={len(y_vals_r)}, x_vals={len(x_vals)}"
+            logger.error(msg)
+            raise ValueError(msg)
+
+        # plot background yields
+        fig, ax_l = plt.subplots(figsize=(8, 8))
+        ax_l.hist(
+            x_vals,
             bins=bins,
-            weights=y_vals,
+            weights=y_vals_l,
             histtype="stepfilled",
             hatch=None,
             color="blue",
             edgecolor="black",
             linewidth=1.0,
         )
+        ax_l.set_xlabel("")
+        ax_l.set_ylabel("Average BIB yield per event")
+        ax_l.semilogy()
+        ax_l.set_ylim(0.08, None)
 
-        # ax.hist(x_vals,
-        #         weights=y_vals,
-        #         bins=bins,
-        #         color="blue",
-        #         edgecolor="black",
-        # )
-        # ax.plot([len(self.df["background_hits"]),
-        #          len(self.df["background_mds"]),
-        #          len(self.df["background_t2s"]),
-        #          len(self.df["background_t4s"]),
-        #          len(self.df["background_t8s"])],
-        #         label="Background",
-        #         marker="o",
-        #         linestyle="--",
-        #         # filled steps
-        #         drawstyle="steps-mid",
-        #         alpha=0.5,
-        # )
-        ax.semilogy()
-        ax.set_ylim(0.08, None)
+        # plot signal efficiency
+        ax_r = ax_l.twinx()
+        ax_r.plot(x_vals, y_vals_r, marker="o", color="red")
+        ax_r.set_ylabel(r"Muon efficiency for $\geq 1$ reconstructed object")
+        ax_r.set_ylim(0.0, 1.01)
+
+        # save
         pdf.savefig(fig)
         plt.close(fig)
 
@@ -189,9 +228,9 @@ rcParams.update({
     "grid.linewidth": 0.5,
     "grid.alpha": 0.1,
     "grid.color": "gray",
-    "figure.subplot.left": 0.15,
-    "figure.subplot.bottom": 0.09,
-    "figure.subplot.right": 0.97,
+    "figure.subplot.left": 0.13,
+    "figure.subplot.bottom": 0.07,
+    "figure.subplot.right": 0.90,
     "figure.subplot.top": 0.95,
 })
 
