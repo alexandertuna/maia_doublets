@@ -33,6 +33,7 @@ COLLECTIONS = [
     "OuterTrackerBarrelCollection",
 ]
 MUON = 13
+MAX_ETA = 0.65
 N_PLOTS = 50
 FNAME = "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_1p0_1p1/10um/muonGun_pT_1p0_1p1_sim_300.slcio"
 RADII = [
@@ -110,7 +111,7 @@ def slcio_to_df(slcio_file_path):
                 mcp_pt = np.sqrt(mcp_px**2 + mcp_py**2)
                 mcp_theta = np.arctan2(mcp_pt, mcp_pz)
                 mcp_eta = -np.log(np.tan(mcp_theta / 2))
-                if np.abs(mcp_eta) > 0.65:
+                if np.abs(mcp_eta) > MAX_ETA:
                     continue
 
                 position = hit.getPosition()
