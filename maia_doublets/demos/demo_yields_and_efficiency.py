@@ -34,7 +34,7 @@ def main():
         "signal_t8s": args.signal_t8s,
     }
 
-    data = DataGrabber(paths, args.pdf)
+    data = DataGrabber(paths, args.pdf, args.precision_timing)
     data.plot()
 
 
@@ -43,6 +43,7 @@ class DataGrabber:
     def __init__(self,
                  data_paths: dict,
                  pdf_path: str,
+                 do_precision_timing: bool,
                  ):
         self.paths = {}
         self.nfiles_per_key = {}
@@ -50,8 +51,10 @@ class DataGrabber:
             self.paths[key] = self.get_input_filenames(objs)
             self.nfiles_per_key[key] = len(self.paths[key])
         self.pdf_path = pdf_path
+        self.do_precision_timing = do_precision_timing
         self.unique_keys = ["file", "i_event", "i_mcp"]
         self.load_data()
+        self.load_precision_timing_data()
         self.calculate_efficiency()
         self.pad_r = 10
         self.color_r = "#1f77b4"
@@ -94,6 +97,26 @@ class DataGrabber:
             logger.info(f"{key}: {nfiles} files")
 
 
+    def load_precision_timing_data(self):
+        """
+        See: https://github.com/MuonColliderSoft/MAIAConfig/blob/main/MAIAConfig/TrackerDigi/
+        """
+        if not self.do_precision_timing:
+            return
+        key = "background_hits"
+        time_key = "simhit_t_corrected"
+        TimeWindowMax = 0.3
+        TimeWindowMin = -0.18
+        logger.info(f"Loading precision timing data for {key} ...")
+        time_df = pd.concat([pd.read_pickle(fi)[time_key] for fi in self.paths[key]], ignore_index=True)
+        n_pass = ((time_df > TimeWindowMin) & (time_df < TimeWindowMax)).sum()
+        n_files = self.nfiles_per_key[key]
+        logger.info(f"Precision timing: {len(time_df)} hits in {n_files} files")
+        logger.info(f"Precision timing: {n_pass} hits within time window")
+        logger.info(f"Precision timing: {n_pass / n_files} hits per file within time window")
+        self.n_precision_timing = n_pass / n_files
+
+
     def denominator_mask(self):
         mask = (
             (np.abs(self.df["signal_mcps"]["mcp_pdg"]) == MUON) &
@@ -112,8 +135,10 @@ class DataGrabber:
             msg = "No signal mcps found that satisfy denominator criteria"
             logger.error(msg)
             raise ValueError(msg)
+
         denom = self.df["signal_mcps"][mask]
         logger.info(f"Denominator mask: {mask.sum()} entries")
+
         self.efficiency = {}
         for key in self.df.keys():
             if key.startswith("background"):
@@ -130,9 +155,15 @@ class DataGrabber:
         with PdfPages(self.pdf_path) as pdf:
             self.plot_yields_and_efficiency(pdf, do_signal=True)
             self.plot_yields_and_efficiency(pdf, do_signal=False)
+            if self.do_precision_timing:
+                self.plot_yields_and_efficiency(pdf, do_signal=True, do_precision_timing=True)
 
 
-    def plot_yields_and_efficiency(self, pdf, do_signal):
+    def plot_yields_and_efficiency(self,
+                                   pdf,
+                                   do_signal,
+                                   do_precision_timing=False,
+                                   ):
         y_vals_l = [
             len(self.df["background_hits"]) / self.nfiles_per_key["background_hits"],
             len(self.df["background_mds"]) / self.nfiles_per_key["background_mds"],
@@ -181,6 +212,16 @@ class DataGrabber:
         ax_l.set_yticks([10 ** i for i in range(-1, 8)], minor=False)
         ax_l.set_yticks([j * 10 ** i for i in range(-1, 8) for j in range(2, 10)], minor=True)
 
+        # add line where number of hits with precision timing would be
+        if do_precision_timing:
+            ax_l.axhline(y=self.n_precision_timing,
+                        color="red",
+                        xmin=0.050, # suffering
+                        xmax=0.222, # suffering
+                        linestyle="--",
+                        linewidth=2.0,
+                        )
+
         # plot signal efficiency
         if do_signal:
             ax_r = ax_l.twinx()
@@ -223,6 +264,7 @@ def options():
         "--signal-t8s": f"v01_signal_digi_10um/t8s.pkl",
     }
     parser = argparse.ArgumentParser(description="Demo for 2D scatter plot")
+    parser.add_argument("--precision-timing", action="store_true", help="Mention precision timing for the plots")
     parser.add_argument("--background-mcps", default=_default["--background-mcps"], help="Comma-separated list of input mcps file paths")
     parser.add_argument("--background-hits", default=_default["--background-hits"], help="Comma-separated list of input hits file paths")
     parser.add_argument("--background-mds", default=_default["--background-mds"], help="Comma-separated list of input mds file paths")
