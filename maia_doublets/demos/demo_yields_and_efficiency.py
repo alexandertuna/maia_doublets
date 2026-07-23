@@ -55,9 +55,8 @@ class DataGrabber:
         self.calculate_efficiency()
         self.pad_r = 10
         self.color_r = "#1f77b4"
-        # self.color_l = "#ff7f0e"
-        # self.color_l = "#0e7c7b"
         self.color_l = "lightgrey"
+        self.hatch = None
 
 
     def get_input_filenames(self, input_str):
@@ -129,10 +128,11 @@ class DataGrabber:
 
     def plot(self):
         with PdfPages(self.pdf_path) as pdf:
-            self.plot_yields_and_efficiency(pdf)
+            self.plot_yields_and_efficiency(pdf, do_signal=True)
+            self.plot_yields_and_efficiency(pdf, do_signal=False)
 
 
-    def plot_yields_and_efficiency(self, pdf):
+    def plot_yields_and_efficiency(self, pdf, do_signal):
         y_vals_l = [
             len(self.df["background_hits"]) / self.nfiles_per_key["background_hits"],
             len(self.df["background_mds"]) / self.nfiles_per_key["background_mds"],
@@ -140,13 +140,16 @@ class DataGrabber:
             len(self.df["background_t4s"]) / self.nfiles_per_key["background_t4s"],
             len(self.df["background_t8s"]) / self.nfiles_per_key["background_t8s"],
         ]
-        y_vals_r = [
-            self.efficiency["signal_hits"],
-            self.efficiency["signal_mds"],
-            self.efficiency["signal_t2s"],
-            self.efficiency["signal_t4s"],
-            self.efficiency["signal_t8s"]
-        ]
+        if do_signal:
+            y_vals_r = [
+                self.efficiency["signal_hits"],
+                self.efficiency["signal_mds"],
+                self.efficiency["signal_t2s"],
+                self.efficiency["signal_t4s"],
+                self.efficiency["signal_t8s"]
+            ]
+        else:
+            y_vals_r = [0] * len(y_vals_l)
         x_vals = ["Hits", "MDs", "T2s", "T4s", "T8s"]
         bins = np.arange(len(x_vals) + 1) - 0.5
 
@@ -163,7 +166,7 @@ class DataGrabber:
             bins=bins,
             weights=y_vals_l,
             histtype="stepfilled",
-            hatch=None,
+            hatch=self.hatch,
             color=self.color_l,
             edgecolor="black",
             linewidth=1.0,
@@ -179,18 +182,23 @@ class DataGrabber:
         ax_l.set_yticks([j * 10 ** i for i in range(-1, 8) for j in range(2, 10)], minor=True)
 
         # plot signal efficiency
-        ax_r = ax_l.twinx()
-        ax_r.plot(x_vals, y_vals_r, marker="o", color=self.color_r)
-        ax_r.set_ylabel(r"Muon efficiency for $\geq 1$ reconstructed object", color=self.color_r, labelpad=self.pad_r)
-        ax_r.set_ylim(0.5, 1.02)
-        ax_r.tick_params(axis="y", colors=self.color_r)
+        if do_signal:
+            ax_r = ax_l.twinx()
+            ax_r.plot(x_vals, y_vals_r, marker="o", color=self.color_r)
+            ax_r.set_ylabel(r"Muon efficiency for $\geq 1$ reconstructed object", color=self.color_r, labelpad=self.pad_r)
+            ax_r.set_ylim(0.5, 1.02)
+            ax_r.tick_params(axis="y", colors=self.color_r)
 
-        # add bonus text
-        ax_l.text(0.02, 1.01, "Background", color=self.color_l, transform=ax_l.transAxes)
-        ax_r.text(0.87, 1.01, "Signal", color=self.color_r, transform=ax_r.transAxes)
+            # add bonus text
+            # textfill = {"bbox": dict(boxstyle="square,pad=0.2", ec="black", fc=self.color_l)}
+            ax_l.text(0.02, 1.015, "Background", color="black", transform=ax_l.transAxes)
+            ax_r.text(0.87, 1.010, "Signal", color=self.color_r, transform=ax_r.transAxes)
 
-        # add line to right y-axis for efficiency = 1
-        ax_r.axhline(y=1.0, xmin=0.5, color=self.color_r, linestyle="--", linewidth=1.0)
+            # add line to right y-axis for efficiency = 1
+            ax_r.axhline(y=1.0, xmin=0.5, color=self.color_r, linestyle="--", linewidth=1.0)
+        else:
+            ax_l.grid(True)
+            ax_l.set_title("Inner and outer trackers, barrel")
 
         # save
         pdf.savefig(fig)
@@ -242,7 +250,7 @@ rcParams.update({
     "ytick.minor.visible": True,
     # "axes.grid": True,
     # "axes.grid.which": "both",
-    # "axes.axisbelow": True,
+    "axes.axisbelow": True,
     "grid.linewidth": 0.5,
     "grid.alpha": 0.1,
     "grid.color": "gray",
