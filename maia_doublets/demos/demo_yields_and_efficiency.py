@@ -1,3 +1,6 @@
+"""
+
+"""
 import argparse
 from glob import glob
 import numpy as np
@@ -13,6 +16,7 @@ MUON = 13
 ZERO_POINT_ZERO_ONE_MM = 0.01
 ONE_POINT_FIVE_GEV = 1.5
 BARREL_TRACKER_MAX_ETA = 0.65
+ZERO_EVENTS_AT_95_CL = 3.0
 
 def main():
     logging.basicConfig(level=logging.INFO,
@@ -52,7 +56,9 @@ class DataGrabber:
             self.nfiles_per_key[key] = len(self.paths[key])
         self.pdf_path = pdf_path
         self.do_precision_timing = do_precision_timing
-        self.unique_keys = ["file", "i_event", "i_mcp"]
+        self.columns_signal = ["file", "i_event", "i_mcp", "mcp_pdg", "mcp_q", "mcp_pt", "mcp_eta", "mcp_vertex_r", "mcp_vertex_z"]
+        self.columns_background = ["file"]
+        self.unique_cols = ["file", "i_event", "i_mcp"]
         self.load_data()
         self.load_precision_timing_data()
         self.calculate_efficiency()
@@ -77,16 +83,16 @@ class DataGrabber:
     def load_data(self):
         self.df = {}
         for key, file_paths in self.paths.items():
+            columns = self.columns_signal if key.startswith("signal") else self.columns_background
             logger.info(f"Loading {key} from {file_paths} ...")
             for fi in file_paths:
                 if len(pd.read_pickle(fi)) > 0:
                     break
             else:
                 logger.warning(f"No non-empty files found for {key} in {file_paths}. Skipping.")
-                self.df[key] = pd.DataFrame(columns=self.unique_keys)
+                self.df[key] = pd.DataFrame(columns=columns)
                 continue
-            keys = self.unique_keys + (["mcp_pdg", "mcp_q", "mcp_pt", "mcp_eta", "mcp_vertex_r", "mcp_vertex_z"] if key == "signal_mcps" else [])
-            self.df[key] = pd.concat([pd.read_pickle(fi)[keys] for fi in file_paths], ignore_index=True)
+            self.df[key] = pd.concat([pd.read_pickle(fi)[columns] for fi in file_paths], ignore_index=True)
         self.announce_sizes()
 
 
@@ -143,9 +149,9 @@ class DataGrabber:
         for key in self.df.keys():
             if key.startswith("background"):
                 continue
-            df = self.df[key].drop_duplicates(subset=self.unique_keys)
+            df = self.df[key].drop_duplicates(subset=self.unique_cols)
             # for each row in df, check if it exists in mcps
-            merged = pd.merge(df, denom, on=self.unique_keys, how="inner")
+            merged = pd.merge(df, denom, on=self.unique_cols, how="inner")
             eff = len(merged) / len(denom)
             logger.info(f"Efficiency for {key}: {len(merged)} / {len(denom)} = {eff}")
             self.efficiency[key] = eff
@@ -207,6 +213,23 @@ class DataGrabber:
         ax_l.semilogy()
         ymin, ymax = ax_l.get_ylim()
         ax_l.set_ylim(0.08, ymax * 1.35)
+        ymin, ymax = ax_l.get_ylim()
+
+        # make a horizontal dotted line in case no tracks are found in the last bin
+        if y_vals_l[-1] == 0:
+            upper_limit = ZERO_EVENTS_AT_95_CL / self.nfiles_per_key["background_t8s"]
+            logger.info(f"Upper limit for last bin: {upper_limit} (95% CL tracks per event)")
+            if upper_limit > ymin:
+                center = len(x_vals) - 1
+                ax_l.hlines(y=upper_limit,
+                            xmin=center - 0.15,
+                            xmax=center + 0.15,
+                            color="black")
+                ax_l.annotate("",
+                              xy=(center, upper_limit),
+                              xytext=(center, upper_limit / 2.5),
+                              arrowprops=dict(arrowstyle="<-"),
+                              )
 
         # force y-axis ticks at 1e-1 to 1e7, with minor ticks at 2, 3, 4, 5, 6, 7, 8, 9 times each power of ten
         ax_l.set_yticks([10 ** i for i in range(-1, 8)], minor=False)
@@ -248,7 +271,7 @@ class DataGrabber:
 
 
 def options():
-    _num = "1"
+    _num = "1*"
     _default = {
         "--background-mcps": f"v01_background100_digi_10um/mcps_{_num}.pkl",
         "--background-hits": f"v01_background100_digi_10um/simhits_{_num}.pkl",
