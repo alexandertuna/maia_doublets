@@ -6,14 +6,17 @@ DOUBLET_PKL = "doublets.pkl"
 
 MUON = 13
 MUON_NEUTRINO = 14
+CHARGED_PION = 211
 PARTICLES_OF_INTEREST = [
     MUON,
     MUON_NEUTRINO,
+    CHARGED_PION,
 ]
 
 SPEED_OF_LIGHT = 299.792458  # mm/ns
 
 SIGNAL = "muonGun"
+PIONGUN = "pionGun"
 NO_MCP = np.uint32(0xffffffff)
 
 # https://github.com/AIDASoft/podio/blob/master/include/podio/ObjectID.h
