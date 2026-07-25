@@ -245,7 +245,10 @@ background10_filepaths = {
     ("v01", "sim"): [
         # neutrinoGun 10% (-5, 15)
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun_n5_p15_0.10/neutrinoGun_digi_3.slcio",
-    ]
+    ],
+    ("v01", "digi", "10um"): [
+        "/ceph/users/atuna/work/maia/maia_noodling/experiments/simulate_neutrinoGun.2026_06_05_14h51m00s/0.010/neutrinoGun_digi_0.slcio",
+    ],
 }
 
 def parse_filepaths(
