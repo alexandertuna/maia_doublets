@@ -19,7 +19,7 @@ from maia_doublets.constants import BYTE_TO_MB, NO_MCP, PODIO_NO_MCP
 from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
 from maia_doublets.constants import NICKNAMES, LAYER_OFFSET
-from maia_doublets.constants import MUON, ONE_POINT_FIVE_GEV, BARREL_TRACKER_MAX_ETA, ZERO_POINT_ZERO_ONE_MM
+from maia_doublets.constants import PARTICLES_OF_INTEREST, ONE_POINT_FIVE_GEV, BARREL_TRACKER_MAX_ETA, ZERO_POINT_ZERO_ONE_MM
 
 _detector = None
 _surfman = None
@@ -819,7 +819,7 @@ def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
                                  df["simhit_z"] * df["simhit_pz"]) / (df["simhit_R"] * df["simhit_p"])
         df["simhit_from_fiducial_mcp"] = (
             (df["i_mcp"] != NO_MCP) &
-            (np.abs(df["mcp_pdg"]) == MUON) &
+            (np.abs(df["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)) &
             (df["mcp_q"] != 0) &
             (df["mcp_pt"] > ONE_POINT_FIVE_GEV) &
             (np.abs(df["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &

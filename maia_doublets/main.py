@@ -10,7 +10,7 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import SIGNAL, NICKNAME_TO_SYSTEM
+from maia_doublets.constants import SIGNAL, PIONGUN, NICKNAME_TO_SYSTEM
 from maia_doublets.datasets import get_filepaths, parse_filepaths
 from maia_doublets.slcio import HitMaker
 from maia_doublets.md import MDMaker
@@ -48,7 +48,9 @@ def main():
         raise ValueError("No input files found")
     layers = parse_layers(ops.layers)
     geometry = ops.geometry
-    signal = ops.signal or any(SIGNAL in os.path.basename(fname) for fname in fnames)
+    signal = (ops.signal or
+              any(SIGNAL in os.path.basename(fname) for fname in fnames) or
+              any(PIONGUN in os.path.basename(fname) for fname in fnames))
     pdf = ops.pdf or f"{calib_key(ops)}_{'signal' if signal else 'background'}.pdf"
     cut_mds = ops.cut_mds or not signal
     cut_t2s = ops.cut_t2s or not signal

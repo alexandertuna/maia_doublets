@@ -31,7 +31,7 @@ rcParams.update({
     "figure.subplot.top": 0.95,
 })
 
-from maia_doublets.constants import MUON
+from maia_doublets.constants import PARTICLES_OF_INTEREST, MUON
 from maia_doublets.constants import BARREL_TRACKER_MAX_ETA
 from maia_doublets.constants import ONE_POINT_FIVE_GEV, ZERO_POINT_ZERO_ONE_MM
 from maia_doublets.constants import NICKNAMES, INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
@@ -158,7 +158,7 @@ class Plotter:
         mask = np.ones(len(self.simhits), dtype=bool)
         for [req, label] in [
             [self.simhits["simhit_layer"].isin([0, 1]), "All simhits in layers 0 and 1"],
-            [np.abs(self.simhits["mcp_pdg"]) == MUON, "abs(pdg) == muon"],
+            [np.abs(self.simhits["mcp_pdg"]).isin(PARTICLES_OF_INTEREST), "abs(pdg).isin(PARTICLES_OF_INTEREST)"],
             [self.simhits["mcp_q"] != 0, "q is not 0"],
             [self.simhits["mcp_pt"] > ONE_POINT_FIVE_GEV, "pT > 1.5 GeV"],
             [np.abs(self.simhits["mcp_eta"]) < BARREL_TRACKER_MAX_ETA, f"abs(eta) < {BARREL_TRACKER_MAX_ETA}"],
@@ -202,7 +202,7 @@ class Plotter:
         dl_1 = doublelayer == 1
         baseline_cuts = (
             (self.doublets["i_mcp"] >= 0) &
-            (np.abs(self.doublets["mcp_pdg"]) == MUON) &
+            (np.abs(self.doublets["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)) &
             (self.doublets["mcp_q"] != 0) &
             (self.doublets["mcp_pt"] > ONE_POINT_FIVE_GEV) &
             (np.abs(self.doublets["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &
@@ -747,7 +747,7 @@ class Plotter:
 
     def get_denominator_mask(self):
         mask = (
-            (np.abs(self.mcps["mcp_pdg"]) == MUON) &
+            (np.abs(self.mcps["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)) &
             (self.mcps["mcp_q"] != 0) &
             (self.mcps["mcp_pt"] > ONE_POINT_FIVE_GEV) &
             (self.mcps["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
@@ -831,8 +831,8 @@ class Plotter:
         baseline = self.doublets["doublet_detectable"] if self.signal else np.ones(len(self.doublets), dtype=bool)
 
         bins = {
-            # "doublet_dz": np.linspace(-150, 150, 301) if self.signal else np.linspace(-49e3, 49e3, 101),
-            "doublet_dz": np.linspace(-49e3, 49e3, 101),
+            "doublet_dz": np.linspace(-150, 150, 301) if self.signal else np.linspace(-49e3, 49e3, 101),
+            # "doublet_dz": np.linspace(-49e3, 49e3, 101),
             "doublet_dr": np.linspace(0, 1000, 101) if self.signal else np.linspace(0, 1500, 101),
             "doublet_dphi": np.linspace(-1.0, 1.0, 201) if self.signal else np.linspace(-3.2, 3.2, 201),
             "doublet_pt": np.linspace(0, 10, 101),
