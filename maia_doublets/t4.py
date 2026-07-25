@@ -93,6 +93,9 @@ class T4Maker:
         ]
         all_t4s, all_cutflows = [], []
         for (lower, upper) in gdoublelayer_pairs:
+            if (lower not in t2s) or (upper not in t2s):
+                logger.warning(f"No T2s in gdl={lower} and/or gdl={upper}, skipping ...")
+                continue
             logger.info(f"Making T4s from gdl={lower} and gdl={upper} ...")
             lower_df = t2s[lower]
             upper_df = t2s[upper]
