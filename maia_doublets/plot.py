@@ -831,7 +831,8 @@ class Plotter:
         baseline = self.doublets["doublet_detectable"] if self.signal else np.ones(len(self.doublets), dtype=bool)
 
         bins = {
-            "doublet_dz": np.linspace(-150, 150, 301) if self.signal else np.linspace(-49e3, 49e3, 101),
+            # "doublet_dz": np.linspace(-150, 150, 301) if self.signal else np.linspace(-49e3, 49e3, 101),
+            "doublet_dz": np.linspace(-49e3, 49e3, 101),
             "doublet_dr": np.linspace(0, 1000, 101) if self.signal else np.linspace(0, 1500, 101),
             "doublet_dphi": np.linspace(-1.0, 1.0, 201) if self.signal else np.linspace(-3.2, 3.2, 201),
             "doublet_pt": np.linspace(0, 10, 101),
