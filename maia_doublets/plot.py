@@ -78,7 +78,11 @@ class Plotter:
         # common plotting
         self.bins = {
             "mcp_q": np.array([-2, 0, 2]),
-            "mcp_pt": np.linspace(0.0, 10.0, 101),
+            "mcp_pt": np.unique(np.concatenate([np.linspace(0, 2, 21), # 0.1
+                                                np.linspace(2, 3, 6), # 0.2
+                                                np.linspace(3, 5, 7), # 0.333
+                                                np.linspace(5, 10, 11), # 0.5
+                                                ])),
             "mcp_eta": np.linspace(-0.7, 0.7, 141),
             "mcp_phi": np.linspace(-3.2, 3.2, 161),
         }
@@ -111,7 +115,7 @@ class Plotter:
             # self.plot_numbers_for_comparison(pdf)
             self.write_date(pdf)
             # self.write_quality_cuts(pdf)
-            self.plot_multiplicity(pdf)
+            # self.plot_multiplicity(pdf)
             self.plot_time(pdf)
             # self.plot_layer_occupancy_1d(pdf)
             # self.plot_layer_occupancy_2d(pdf)
@@ -1012,6 +1016,9 @@ class Plotter:
 
 
     def plot_t2_features(self, pdf: PdfPages):
+        if self.linesegments is None or len(self.linesegments) == 0:
+            logger.info("No T2s to plot")
+            return
         logger.info("Plotting linesegment features ...")
         baseline = self.linesegments["ls_detectable"] if self.signal else np.ones(len(self.linesegments), dtype=bool)
 
@@ -1439,6 +1446,7 @@ class Plotter:
                 marker="o",
                 markersize=1,
                 linestyle="-",
+                linewidth=4.0,
                 color="dodgerblue",
             )
             ax.set_xlabel(self.xlabel[kin])
@@ -1684,6 +1692,7 @@ class Plotter:
                 marker="o",
                 markersize=1,
                 linestyle="-",
+                linewidth=4.0,
                 color="dodgerblue",
             )
             ax.set_xlabel(self.xlabel[kin])
