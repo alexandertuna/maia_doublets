@@ -56,9 +56,17 @@ class DataGrabber:
             self.nfiles_per_key[key] = len(self.paths[key])
         self.pdf_path = pdf_path
         self.do_precision_timing = do_precision_timing
-        self.columns_signal = ["file", "i_event", "i_mcp", "mcp_pdg", "mcp_q", "mcp_pt", "mcp_eta", "mcp_vertex_r", "mcp_vertex_z"]
-        self.columns_background = ["file"]
         self.unique_cols = ["file", "i_event", "i_mcp"]
+        self.columns_background = ["file"]
+        self.columns_signal = self.unique_cols + ["mcp_pdg",
+                                                  "mcp_q",
+                                                  "mcp_pt",
+                                                  "mcp_eta",
+                                                  "mcp_phi",
+                                                  "mcp_vertex_r",
+                                                  "mcp_vertex_z"]
+        self.columns_mcp = self.columns_signal + ["mcp_detectable_ITB",
+                                                  "mcp_detectable_OTB"]
         self.load_data()
         self.load_precision_timing_data()
         self.calculate_efficiency()
@@ -84,6 +92,8 @@ class DataGrabber:
         self.df = {}
         for key, file_paths in self.paths.items():
             columns = self.columns_signal if key.startswith("signal") else self.columns_background
+            if key == "signal_mcps":
+                columns = self.columns_mcp
             logger.info(f"Loading {key} from {file_paths} ...")
             for fi in file_paths:
                 if len(pd.read_pickle(fi)) > 0:
@@ -123,7 +133,7 @@ class DataGrabber:
         self.n_precision_timing = n_pass / n_files
 
 
-    def denominator_mask(self):
+    def get_denominator_mask(self):
         mask = (
             (np.abs(self.df["signal_mcps"]["mcp_pdg"]) == MUON) &
             (self.df["signal_mcps"]["mcp_q"] != 0) &
@@ -135,26 +145,46 @@ class DataGrabber:
         return mask
 
 
+    def get_algorithmic_mask(self):
+        mask = (
+            self.get_denominator_mask() &
+            (self.df["signal_mcps"]["mcp_detectable_ITB"] == True) &
+            (self.df["signal_mcps"]["mcp_detectable_OTB"] == True)
+        )
+        return mask
+
+
     def calculate_efficiency(self):
-        mask = self.denominator_mask()
-        if mask.sum() == 0:
+        overall_mask = self.get_denominator_mask()
+        algorithmic_mask = self.get_algorithmic_mask()
+        if overall_mask.sum() == 0:
             msg = "No signal mcps found that satisfy denominator criteria"
             logger.error(msg)
             raise ValueError(msg)
 
-        denom = self.df["signal_mcps"][mask]
-        logger.info(f"Denominator mask: {mask.sum()} entries")
+        overall_denom = self.df["signal_mcps"][overall_mask]
+        algorithmic_denom = self.df["signal_mcps"][algorithmic_mask]
+        logger.info(f"Denominator mask: {overall_mask.sum()} entries")
+        logger.info(f"Algorithmic mask: {algorithmic_mask.sum()} entries")
 
-        self.efficiency = {}
+        self.overall_efficiency = {}
+        self.algorithmic_efficiency = {}
         for key in self.df.keys():
             if key.startswith("background"):
                 continue
-            df = self.df[key].drop_duplicates(subset=self.unique_cols)
+
             # for each row in df, check if it exists in mcps
-            merged = pd.merge(df, denom, on=self.unique_cols, how="inner")
-            eff = len(merged) / len(denom)
-            logger.info(f"Efficiency for {key}: {len(merged)} / {len(denom)} = {eff}")
-            self.efficiency[key] = eff
+            df = self.df[key].drop_duplicates(subset=self.unique_cols)
+            overall_merged = pd.merge(df, overall_denom, on=self.unique_cols, how="inner")
+            algorithmic_merged = pd.merge(df, algorithmic_denom, on=self.unique_cols, how="inner")
+
+            # calculate efficiency
+            overall_eff = len(overall_merged) / len(overall_denom)
+            algorithmic_eff = len(algorithmic_merged) / len(algorithmic_denom)
+            self.overall_efficiency[key] = overall_eff
+            self.algorithmic_efficiency[key] = algorithmic_eff
+            logger.info(f"Overall efficiency for {key}: {len(overall_merged)} / {len(overall_denom)} = {overall_eff:.6f}")
+            logger.info(f"Algorithmic efficiency for {key}: {len(algorithmic_merged)} / {len(algorithmic_denom)} = {algorithmic_eff:.6f}")
 
 
     def plot(self):
@@ -163,6 +193,7 @@ class DataGrabber:
             self.plot_yields_and_efficiency(pdf, do_signal=False)
             if self.do_precision_timing:
                 self.plot_yields_and_efficiency(pdf, do_signal=True, do_precision_timing=True)
+            self.plot_efficiency_vs_kinematics(pdf)
 
 
     def plot_yields_and_efficiency(self,
@@ -178,21 +209,32 @@ class DataGrabber:
             len(self.df["background_t8s"]) / self.nfiles_per_key["background_t8s"],
         ]
         if do_signal:
-            y_vals_r = [
-                self.efficiency["signal_hits"],
-                self.efficiency["signal_mds"],
-                self.efficiency["signal_t2s"],
-                self.efficiency["signal_t4s"],
-                self.efficiency["signal_t8s"]
+            y_vals_r_overall = [
+                self.overall_efficiency["signal_hits"],
+                self.overall_efficiency["signal_mds"],
+                self.overall_efficiency["signal_t2s"],
+                self.overall_efficiency["signal_t4s"],
+                self.overall_efficiency["signal_t8s"],
+            ]
+            y_vals_r_algorithmic = [
+                self.algorithmic_efficiency["signal_hits"],
+                self.algorithmic_efficiency["signal_mds"],
+                self.algorithmic_efficiency["signal_t2s"],
+                self.algorithmic_efficiency["signal_t4s"],
+                self.algorithmic_efficiency["signal_t8s"],
             ]
         else:
-            y_vals_r = [0] * len(y_vals_l)
+            y_vals_r_overall = [0] * len(y_vals_l)
+            y_vals_r_algorithmic = [0] * len(y_vals_l)
         x_vals = ["Hits", "MDs", "T2s", "T4s", "T8s"]
         bins = np.arange(len(x_vals) + 1) - 0.5
 
         # check
-        if len(y_vals_l) != len(y_vals_r) or len(y_vals_l) != len(x_vals):
-            msg = f"Length mismatch: y_vals_l={len(y_vals_l)}, y_vals_r={len(y_vals_r)}, x_vals={len(x_vals)}"
+        if (len(y_vals_l) != len(y_vals_r_overall) or
+            len(y_vals_l) != len(y_vals_r_algorithmic) or
+            len(y_vals_l) != len(x_vals)
+            ):
+            msg = f"Length mismatch: y_vals_l={len(y_vals_l)}, y_vals_r_overall={len(y_vals_r_overall)}, y_vals_r_algorithmic={len(y_vals_r_algorithmic)}, x_vals={len(x_vals)}"
             logger.error(msg)
             raise ValueError(msg)
 
@@ -221,15 +263,15 @@ class DataGrabber:
             logger.info(f"Upper limit for last bin: {upper_limit} (95% CL tracks per event)")
             if upper_limit > ymin:
                 center = len(x_vals) - 1
-                ax_l.hlines(y=upper_limit,
-                            xmin=center - 0.15,
-                            xmax=center + 0.15,
-                            color="black")
-                ax_l.annotate("",
-                              xy=(center, upper_limit),
-                              xytext=(center, upper_limit / 2.5),
-                              arrowprops=dict(arrowstyle="<-"),
-                              )
+                # ax_l.hlines(y=upper_limit,
+                #             xmin=center - 0.15,
+                #             xmax=center + 0.15,
+                #             color="black")
+                # ax_l.annotate("",
+                #               xy=(center, upper_limit),
+                #               xytext=(center, upper_limit / 2.5),
+                #               arrowprops=dict(arrowstyle="<-"),
+                #               )
 
         # force y-axis ticks at 1e-1 to 1e7, with minor ticks at 2, 3, 4, 5, 6, 7, 8, 9 times each power of ten
         ax_l.set_yticks([10 ** i for i in range(-1, 8)], minor=False)
@@ -248,7 +290,12 @@ class DataGrabber:
         # plot signal efficiency
         if do_signal:
             ax_r = ax_l.twinx()
-            ax_r.plot(x_vals, y_vals_r, marker="o", color=self.color_r)
+
+            # plot overall efficiency as filled circle
+            ax_r.plot(x_vals, y_vals_r_overall, marker="o", color=self.color_r)
+
+            # plot algorithmic efficiency as unfilled circle
+            ax_r.plot(x_vals, y_vals_r_algorithmic, marker="o", color=self.color_r, fillstyle="none")
             ax_r.set_ylabel(r"Muon efficiency for $\geq 1$ reconstructed object", color=self.color_r, labelpad=self.pad_r)
             ax_r.set_ylim(0.5, 1.02)
             ax_r.tick_params(axis="y", colors=self.color_r)
@@ -269,9 +316,81 @@ class DataGrabber:
         plt.close(fig)
 
 
+    def plot_efficiency_vs_kinematics(self, pdf: PdfPages):
+
+        # kinematics
+        kin_cols = [
+            # "mcp_q",
+            "mcp_pt",
+            "mcp_eta",
+            "mcp_phi",
+        ]
+        self.bins = {
+            "mcp_q": np.array([-2, 0, 2]),
+            "mcp_pt": np.unique(np.concatenate([np.linspace(0, 2, 21), # 0.1
+                                                np.linspace(2, 3, 6), # 0.2
+                                                np.linspace(3, 5, 7), # 0.333
+                                                np.linspace(5, 10, 11), # 0.5
+                                                ])),
+            "mcp_eta": np.linspace(-0.7, 0.7, 141),
+            "mcp_phi": np.linspace(-3.2, 3.2, 161),
+        }
+        self.xlabel = {
+            "mcp_q": "Inclusive",
+            "mcp_pt": r"Muon $p_T$ [GeV]",
+            "mcp_eta": r"Muon $\eta$",
+            "mcp_phi": r"Muon $\phi$ [rad]",
+        }
+
+        # denominators
+        overall_mask = self.get_denominator_mask()
+        algorithmic_mask = self.get_algorithmic_mask()
+        overall_denom = self.df["signal_mcps"][overall_mask][self.unique_cols + kin_cols]
+        algorithmic_denom = self.df["signal_mcps"][algorithmic_mask][self.unique_cols + kin_cols]
+        if overall_denom.duplicated().any():
+            raise ValueError("Denominator has duplicated rows!")
+
+        for obj in ["signal_t4s", "signal_t8s"]:
+
+            objects = self.df[obj][self.unique_cols].drop_duplicates()
+            overall_numer = pd.merge(overall_denom, objects, on=self.unique_cols, how="inner")
+            algorithmic_numer = pd.merge(algorithmic_denom, objects, on=self.unique_cols, how="inner")
+            print(f"All numerator for {obj}: {len(overall_numer)} entries")
+            print(f"Alg numerator for {obj}: {len(algorithmic_numer)} entries")
+            print(f"All denomator for {obj}: {len(overall_denom)} entries")
+            print(f"Alg denomator for {obj}: {len(algorithmic_denom)} entries")
+
+            # if not overall_numer.equals(algorithmic_numer):
+            #     raise ValueError(f"Overall and algorithmic numerators are different for {obj}!")
+
+            for kin in kin_cols:
+                n_denom_overall, edges = np.histogram(overall_denom[kin], bins=self.bins[kin])
+                n_numer_overall, edges = np.histogram(overall_numer[kin], bins=self.bins[kin])
+                eff_overall = np.divide(n_numer_overall, n_denom_overall, out=np.zeros_like(n_numer_overall, dtype=float), where=n_denom_overall!=0)
+                n_denom_algorithmic, edges = np.histogram(algorithmic_denom[kin], bins=self.bins[kin])
+                n_numer_algorithmic, edges = np.histogram(algorithmic_numer[kin], bins=self.bins[kin])
+                eff_algorithmic = np.divide(n_numer_algorithmic, n_denom_algorithmic, out=np.zeros_like(n_numer_algorithmic, dtype=float), where=n_denom_algorithmic!=0)
+                centers = 0.5 * (edges[1:] + edges[:-1])
+                fig, ax = plt.subplots()
+                color_alg = "#83BAE2"
+                pargs = dict(marker="o", markersize=1, linewidth=4.0, linestyle="-")
+                targs = dict(fontsize=20, va="top", ha="left", transform=ax.transAxes)
+                ax.plot(centers, eff_algorithmic, color=color_alg, **pargs)
+                ax.plot(centers, eff_overall, color=self.color_r, **pargs)
+                ax.text(0.50, 0.30, "Algorithm efficiency", color=color_alg, **targs)
+                ax.text(0.50, 0.24, "Overall efficiency", color=self.color_r, **targs)
+                ax.set_xlabel(self.xlabel[kin])
+                ax.set_ylabel("Efficiency")
+                ax.set_title(f"{obj}")
+                ax.set_ylim(0.65, 1.04)
+                ax.grid(True)
+                pdf.savefig()
+                plt.close()
+
+
 
 def options():
-    _num = "1*"
+    _num = "1"
     _default = {
         "--background-mcps": f"v01_background100_digi_10um/mcps_{_num}.pkl",
         "--background-hits": f"v01_background100_digi_10um/simhits_{_num}.pkl",
@@ -279,12 +398,18 @@ def options():
         "--background-t2s": f"v01_background100_digi_10um/t2s_{_num}.pkl",
         "--background-t4s": f"v01_background100_digi_10um/t4s_{_num}.pkl",
         "--background-t8s": f"v01_background100_digi_10um/t8s_{_num}.pkl",
-        "--signal-mcps": f"v01_signal_digi_10um/mcps.pkl",
-        "--signal-hits": f"v01_signal_digi_10um/hits.pkl",
-        "--signal-mds": f"v01_signal_digi_10um/mds.pkl",
-        "--signal-t2s": f"v01_signal_digi_10um/t2s.pkl",
-        "--signal-t4s": f"v01_signal_digi_10um/t4s.pkl",
-        "--signal-t8s": f"v01_signal_digi_10um/t8s.pkl",
+        # "--signal-mcps": f"v01_signal_digi_10um/mcps.pkl",
+        # "--signal-hits": f"v01_signal_digi_10um/hits.pkl",
+        # "--signal-mds": f"v01_signal_digi_10um/mds.pkl",
+        # "--signal-t2s": f"v01_signal_digi_10um/t2s.pkl",
+        # "--signal-t4s": f"v01_signal_digi_10um/t4s.pkl",
+        # "--signal-t8s": f"v01_signal_digi_10um/t8s.pkl",
+        "--signal-mcps": f"v01_muonGun_pT_0_10_digi_10um/mcps.pkl",
+        "--signal-hits": f"v01_muonGun_pT_0_10_digi_10um/hits.pkl",
+        "--signal-mds": f"v01_muonGun_pT_0_10_digi_10um/mds.pkl",
+        "--signal-t2s": f"v01_muonGun_pT_0_10_digi_10um/t2s.pkl",
+        "--signal-t4s": f"v01_muonGun_pT_0_10_digi_10um/t4s.pkl",
+        "--signal-t8s": f"v01_muonGun_pT_0_10_digi_10um/t8s.pkl",
     }
     parser = argparse.ArgumentParser(description="Demo for 2D scatter plot")
     parser.add_argument("--precision-timing", action="store_true", help="Mention precision timing for the plots")
