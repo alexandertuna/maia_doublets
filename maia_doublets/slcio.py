@@ -937,8 +937,8 @@ def add_detectable_columns(mcps: pd.DataFrame, simhits: pd.DataFrame) -> pd.Data
             # merge detectable mcps with the main mcp df
             mcps = mcps.merge(detectable_mcps, on=GROUP_COLS, how="left")
 
-            # make sure column is a bool
-            mcps[column] = mcps[column].astype(bool)
+            # make sure column is a bool (BUG)
+            # mcps[column] = mcps[column].astype(bool)
 
             # fill nan with False (not detectable)
             mcps[column] = mcps[column].fillna(False).astype(bool)
