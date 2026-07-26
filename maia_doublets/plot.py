@@ -68,6 +68,7 @@ class Plotter:
         self.pdf = pdf
         self.hatch = None if self.signal else "/"
         self.colors = {
+            "mcps": "white",
             "hits": "lightgray",
             "mds": "red",
             "t2s": "yellow",
@@ -129,6 +130,7 @@ class Plotter:
             # self.plot_t4_sz_coordinates(pdf, ndisplay=20)
             if self.signal:
                 self.write_denominator_info(pdf)
+                self.plot_denominator(pdf)
                 # self.plot_detectable_efficiency_vs_kinematics(pdf)
                 # self.plot_doublet_efficiency_vs_kinematics_2(pdf)
                 # self.plot_doublet_efficiency_vs_kinematics(pdf)
@@ -596,6 +598,28 @@ class Plotter:
         plt.close()
 
 
+    def plot_denominator(self, pdf: PdfPages):
+        logger.info(f"Plotting efficiency denominator")
+        dmask = self.get_denominator_mask()
+        denom = self.mcps[dmask]
+        for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
+            fig, ax = plt.subplots()
+            ax.hist(
+                denom[kin],
+                bins=self.bins[kin],
+                histtype="stepfilled",
+                color=self.colors["mcps"],
+                edgecolor="black",
+                linewidth=2.0,
+                alpha=0.9,
+            )
+            ax.set_xlabel(self.xlabel[kin])
+            ax.set_ylabel("Denominator")
+            ax.set_title(f"Efficiency denominator vs {kin}")
+            pdf.savefig()
+            plt.close()
+
+
     def plot_detectable_efficiency_vs_kinematics(self, pdf: PdfPages):
 
         # denominator
@@ -604,10 +628,15 @@ class Plotter:
 
         # numerator: the denominator is detectable
         numers = {}
+        numers["mcp_detectable_ITB_01"] = self.mcps[dmask & (self.mcps["mcp_detectable_ITB_01"] == True)]
+        numers["mcp_detectable_ITB_23"] = self.mcps[dmask & (self.mcps["mcp_detectable_ITB_23"] == True)]
+        numers["mcp_detectable_ITB_45"] = self.mcps[dmask & (self.mcps["mcp_detectable_ITB_45"] == True)]
+        numers["mcp_detectable_ITB_67"] = self.mcps[dmask & (self.mcps["mcp_detectable_ITB_67"] == True)]
         numers["mcp_detectable_OTB_01"] = self.mcps[dmask & (self.mcps["mcp_detectable_OTB_01"] == True)]
         numers["mcp_detectable_OTB_23"] = self.mcps[dmask & (self.mcps["mcp_detectable_OTB_23"] == True)]
         numers["mcp_detectable_OTB_45"] = self.mcps[dmask & (self.mcps["mcp_detectable_OTB_45"] == True)]
         numers["mcp_detectable_OTB_67"] = self.mcps[dmask & (self.mcps["mcp_detectable_OTB_67"] == True)]
+        numers["mcp_detectable_ITB"] = self.mcps[dmask & (self.mcps["mcp_detectable_ITB"] == True)]
         numers["mcp_detectable_OTB"] = self.mcps[dmask & (self.mcps["mcp_detectable_OTB"] == True)]
 
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
