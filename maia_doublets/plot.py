@@ -131,7 +131,7 @@ class Plotter:
             if self.signal:
                 self.write_denominator_info(pdf)
                 self.plot_denominator(pdf)
-                # self.plot_detectable_efficiency_vs_kinematics(pdf)
+                self.plot_detectable_efficiency_vs_kinematics(pdf)
                 # self.plot_doublet_efficiency_vs_kinematics_2(pdf)
                 # self.plot_doublet_efficiency_vs_kinematics(pdf)
                 # self.write_doublet_denominator_info(pdf)
