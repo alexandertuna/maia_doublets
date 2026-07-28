@@ -66,7 +66,7 @@ class ZStaggering:
         # building the detector
         self.radii = LAYER_RADII["v01"]
         self.n_layers = len(self.radii)
-        self.angles = np.deg2rad(np.linspace(90.0, 30.0, int(1e4))) # from eta=0 to eta=1.3ish
+        self.angles = np.deg2rad(np.linspace(90.0, 55.0, int(1e4))) # from eta=0 to eta=0.6ish
         self.etas = -np.log(np.tan(self.angles / 2.0))
         self.module_starts = np.array([[zsensor*LENGTHS[layer] for zsensor in range(NZS[layer])] for layer in range(self.n_layers)])
         self.module_stops = np.array([[(zsensor+1)*LENGTHS[layer] for zsensor in range(NZS[layer])] for layer in range(self.n_layers)])
@@ -77,7 +77,8 @@ class ZStaggering:
 
 
     def evaluate(self):
-        self.passes_thru = []
+        # evaluate individual layers
+        passes_thru = []
         for radius, starts, stops in zip(self.radii,
                                          self.module_starts,
                                          self.module_stops,
@@ -87,7 +88,22 @@ class ZStaggering:
                 # tan(angle) = r/z
                 z = radius / np.tan(self.angles)
                 passes.append( (z > start) & (z < stop) )
-            self.passes_thru.append(passes)
+            passes_thru.append(passes)
+
+        # evaluate layer pairs
+        self.passes_thru_both = {}
+        for (lower, upper) in LAYER_PAIRS:
+            lower_pass = passes_thru[lower]
+            upper_pass = passes_thru[upper]
+            if len(lower_pass) != len(upper_pass):
+                raise ValueError("There are different n(z-sensors) for lower and upper")
+
+            passes_thru_both = np.zeros_like(self.angles).astype(bool)
+            for lower_module_mask, upper_module_mask in zip(lower_pass, upper_pass):
+                passes_thru_both |= (lower_module_mask & upper_module_mask)
+
+            passes_thru_both = passes_thru_both.astype(float)
+            self.passes_thru_both[(lower, upper)] = passes_thru_both
 
 
     def plot(self):
@@ -96,24 +112,13 @@ class ZStaggering:
 
 
     def plot_passing(self, pdf: PdfPages):
-
-        for (lower, upper) in LAYER_PAIRS:
-            lower_pass = self.passes_thru[lower]
-            upper_pass = self.passes_thru[upper]
-            if len(lower_pass) != len(upper_pass):
-                raise ValueError("There are different n(z-sensors) for lower and upper")
-
-            passes_thru_both = np.zeros_like(self.angles).astype(bool)
-            for module, (lower_module_mask, upper_module_mask) in enumerate(zip(lower_pass, upper_pass)):
-                passes_thru_both |= (lower_module_mask & upper_module_mask)
-
-            passes_thru_both = passes_thru_both.astype(float)
-
+        for (lower, upper), passes_thru_both in self.passes_thru_both.items():
+            percent_ok = np.mean(passes_thru_both)
             fig, ax = plt.subplots()
-            ax.plot(self.etas, passes_thru_both, marker="o", markersize=1, linewidth=3, linestyle="-", color="blue")
+            ax.plot(self.etas, passes_thru_both, marker="o", markersize=1, linewidth=2, linestyle="-", color="blue")
             ax.set_xlabel("Eta")
             ax.set_ylabel("Passes through double-layer")
-            ax.set_title(f"Layer pair {lower}, {upper}")
+            ax.set_title(f"Layer pair {lower}, {upper}. Passing fraction: {percent_ok:.2%}")
             ax.set_ylim(0.0, 1.03)
             pdf.savefig()
             plt.close()
