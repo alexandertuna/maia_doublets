@@ -150,6 +150,7 @@ class HitsScatter2d:
         }
         self.n_random = n_random
         self.df = {}
+        self.dpi = 500
         self.get_input_data()
 
 
@@ -370,8 +371,13 @@ class HitsScatter2d:
                 axis.pane.fill = False
                 axis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 1)
 
+            # optionally: mess with the orientation
+            elev, azim, roll = ax[row, col].elev, ax[row, col].azim, ax[row, col].roll
+            logger.info(f"elev={elev}, azim={azim}, roll={roll}")
+            # ax[row, col].view_init(elev=0, azim=azim, roll=roll)
+
         logger.info(f"Saving scatter plot ... ")
-        fig.savefig(self.output_file, dpi=500)
+        fig.savefig(self.output_file, dpi=self.dpi)
         plt.close(fig)
 
         return
