@@ -10,27 +10,48 @@
 #     --signal \
 #     --digi \
 #     --smear ${SMEAR} \
-#     --plot
-#     # --write-simhits ${OUTDIR}/hits.pkl \
-#     # --write-mcps ${OUTDIR}/mcps.pkl \
-#     # --write-mds ${OUTDIR}/mds.pkl \
-#     # --write-t2s ${OUTDIR}/t2s.pkl \
-#     # --write-t4s ${OUTDIR}/t4s.pkl \
-#     # --write-t8s ${OUTDIR}/t8s.pkl \
-#     # --cut-mds \
-#     # --cut-t2s \
-#     # --cut-t4s \
-#     # --cut-t8s
+#     --write-simhits ${OUTDIR}/hits.pkl \
+#     --write-mcps ${OUTDIR}/mcps.pkl \
+#     --write-mds ${OUTDIR}/mds.pkl \
+#     --write-t2s ${OUTDIR}/t2s.pkl \
+#     --write-t4s ${OUTDIR}/t4s.pkl \
+#     --write-t8s ${OUTDIR}/t8s.pkl \
+#     --cut-mds \
+#     --cut-t2s \
+#     --cut-t4s \
+#     --cut-t8s
 #     # --plot
 
 # How to find the overall efficiency
-# maia_doublets --geo v01 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
-  
+maia_doublets --geo v01 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+
 # How to plot the 0-10 GeV pionGun sample
-maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/pionGun_pT_0_10/10um/pionGun_pT_0_10_digi_30*" --digi --smear 10um --plot # --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+# maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/pionGun_pT_0_10/10um/pionGun_pT_0_10_digi_3*" --digi --smear 10um --plot
+# maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/pionGun_pT_0_10/10um/pionGun_pT_0_10_digi_3*" --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
 
 # How to plot the 0-10 GeV muonGun sample
 # maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_0_10/10um/muonGun_pT_0_10_digi_3*" --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+
+# How to pickle the 0-10 GeV muonGun sample
+# GEO="v01"
+# SMEAR="10um"
+# OUTDIR=${GEO}_muonGun_pT_0_10_digi_${SMEAR}
+# maia_doublets \
+#     --geo ${GEO} \
+#     -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_0_10/10um/muonGun_pT_0_10_digi_3*" \
+#     --digi \
+#     --smear ${SMEAR} \
+#     --write-simhits ${OUTDIR}/hits.pkl \
+#     --write-mcps ${OUTDIR}/mcps.pkl \
+#     --write-mds ${OUTDIR}/mds.pkl \
+#     --write-t2s ${OUTDIR}/t2s.pkl \
+#     --write-t4s ${OUTDIR}/t4s.pkl \
+#     --write-t8s ${OUTDIR}/t8s.pkl \
+#     --cut-mds \
+#     --cut-t2s \
+#     --cut-t4s \
+#     --cut-t8s
+
 
 # How to run background neutrinoGun
 # GEO="v01"
@@ -52,10 +73,20 @@ maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v0
 # SMEAR="10um"
 # maia_doublets \
 #   --geo ${GEO} \
-#   --signal \
 #   --digi \
 #   --smear ${SMEAR} \
 #   --layers OTB0 OTB1 \
 #   --cutflow "" \
-#   --plot
-#   # --background10 \
+#   --plot \
+#   --signal
+# #   --background10
+
+# How to make the scatter plot demo
+# time python ../maia_doublets/demos/demo_scatter2d.py \
+#     --hits v01_background100_digi_10um/simhits_0.pkl \
+#     --mds v01_background100_digi_10um/mds_0.pkl \
+#     --t2s v01_background100_digi_10um/t2s_0.pkl \
+#     --t4s v01_background100_digi_10um/t4s_0.pkl \
+#     --t8s v01_background100_digi_10um/t8s_0.pkl \
+#     --signal v01_signal_digi_10um/t8s.pkl \
+#     --output tmp.png
