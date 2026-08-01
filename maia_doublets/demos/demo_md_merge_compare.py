@@ -47,8 +47,8 @@ def options():
 
 def postprocess(df: pd.DataFrame):
     columns = [
-        "doublet_eta",
-        "doublet_phi",
+        "md_eta",
+        "md_phi",
     ]
     df = df.reset_index(drop=True)[sorted(df.columns)]
     df = df.sort_values(by=columns).reset_index(drop=True)
@@ -70,7 +70,7 @@ def make_doublets_from_group(
     use_binned: bool,
 ) -> tuple[pd.DataFrame, dict]:
 
-    doublet_cols = [
+    md_cols = [
         "file",
         "i_event", # the event
         "simhit_system", # the system (IT, OT)
@@ -89,7 +89,7 @@ def make_doublets_from_group(
         doublets = pd.merge(
             lower,
             upper,
-            on=doublet_cols,
+            on=md_cols,
             how="inner",
             suffixes=("_lower", "_upper"),
         )
@@ -99,13 +99,13 @@ def make_doublets_from_group(
     slope_xy = np.divide(doublets["simhit_y_upper"] - doublets["simhit_y_lower"],
                          doublets["simhit_x_upper"] - doublets["simhit_x_lower"])
     intercept_xy = doublets["simhit_y_lower"] - slope_xy * doublets["simhit_x_lower"]
-    doublets["doublet_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
+    doublets["md_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
 
     # doublet feature: rz
     slope_rz = np.divide(doublets["simhit_z_upper"] - doublets["simhit_z_lower"],
                          doublets["simhit_r_upper"] - doublets["simhit_r_lower"])
-    doublets["doublet_dz"] = doublets["simhit_z_lower"] - doublets["simhit_r_lower"] * slope_rz
-    doublets["doublet_theta_rz"] = np.arctan(slope_rz)
+    doublets["md_dz"] = doublets["simhit_z_lower"] - doublets["simhit_r_lower"] * slope_rz
+    doublets["md_theta_rz"] = np.arctan(slope_rz)
 
     # record some numbers
     cutflow = {"all": len(doublets)}
@@ -114,10 +114,10 @@ def make_doublets_from_group(
     # record some cut results
     sy = doublets["simhit_system"]
     dl = doublets["simhit_layer_div_2"]
-    mask["dr"] = np.abs(doublets["doublet_dr"]) < MD_DR_CUT[sy, dl]
-    mask["dz"] = np.abs(doublets["doublet_dz"]) < MD_DZ_CUT[sy, dl]
+    mask["dr"] = np.abs(doublets["md_dr"]) < MD_DR_CUT[sy, dl]
+    mask["dz"] = np.abs(doublets["md_dz"]) < MD_DZ_CUT[sy, dl]
     mask["and"] = mask["dr"] & mask["dz"]
-    doublets["doublet_ok"] = mask["and"].astype(bool)
+    doublets["md_ok"] = mask["and"].astype(bool)
 
     # remove as desired
     for cut in mask.keys():
@@ -126,47 +126,47 @@ def make_doublets_from_group(
 
     # rename some columns
     rename = {
-        "simhit_system": "doublet_system",
-        "simhit_layer_div_2": "doublet_doublelayer",
-        "simhit_sensor": "doublet_sensor",
-        "simhit_module": "doublet_module",
+        "simhit_system": "md_system",
+        "simhit_layer_div_2": "md_doublelayer",
+        "simhit_sensor": "md_sensor",
+        "simhit_module": "md_module",
     }
     doublets = doublets.rename(columns=rename)
-    doublets["doublet_glayer"] = doublets["simhit_glayer_lower"]
-    doublets["doublet_gdoublelayer"] = doublets["simhit_glayer_lower"] // 2
+    doublets["md_glayer"] = doublets["simhit_glayer_lower"]
+    doublets["md_gdoublelayer"] = doublets["simhit_glayer_lower"] // 2
 
     # doublet feature, xy dphi
     phi_local = np.arctan2(doublets["simhit_y_upper"] - doublets["simhit_y_lower"],
                            doublets["simhit_x_upper"] - doublets["simhit_x_lower"])
     phi_global = np.arctan2((doublets["simhit_y_lower"] + doublets["simhit_y_upper"]) / 2.0,
                             (doublets["simhit_x_lower"] + doublets["simhit_x_upper"]) / 2.0)
-    doublets["doublet_dphi"] = phi_local - phi_global
-    doublets["doublet_dphi"] = (doublets["doublet_dphi"] + np.pi) % (2 * np.pi) - np.pi
-    doublets["doublet_theta_xy"] = phi_local
+    doublets["md_dphi"] = phi_local - phi_global
+    doublets["md_dphi"] = (doublets["md_dphi"] + np.pi) % (2 * np.pi) - np.pi
+    doublets["md_theta_xy"] = phi_local
 
     # doublet features: position
-    doublets["doublet_r"] = (doublets["simhit_r_lower"] + doublets["simhit_r_upper"]) / 2
-    doublets["doublet_z"] = (doublets["simhit_z_lower"] + doublets["simhit_z_upper"]) / 2
-    doublets["doublet_x"] = (doublets["simhit_x_lower"] + doublets["simhit_x_upper"]) / 2
-    doublets["doublet_y"] = (doublets["simhit_y_lower"] + doublets["simhit_y_upper"]) / 2
-    doublets["doublet_phi"] = np.arctan2(doublets["doublet_y"], doublets["doublet_x"])
-    doublets["doublet_theta"] = np.arctan2(doublets["doublet_r"], doublets["doublet_z"])
-    doublets["doublet_eta"] = -np.log(np.tan(doublets["doublet_theta"] / 2))
+    doublets["md_r"] = (doublets["simhit_r_lower"] + doublets["simhit_r_upper"]) / 2
+    doublets["md_z"] = (doublets["simhit_z_lower"] + doublets["simhit_z_upper"]) / 2
+    doublets["md_x"] = (doublets["simhit_x_lower"] + doublets["simhit_x_upper"]) / 2
+    doublets["md_y"] = (doublets["simhit_y_lower"] + doublets["simhit_y_upper"]) / 2
+    doublets["md_phi"] = np.arctan2(doublets["md_y"], doublets["md_x"])
+    doublets["md_theta"] = np.arctan2(doublets["md_r"], doublets["md_z"])
+    doublets["md_eta"] = -np.log(np.tan(doublets["md_theta"] / 2))
 
     # divide the eta/phi space into slices, to be used in T2 seeding
-    n_phi_slices = N_T2_PHI_SLICES[doublets["doublet_system"]]
-    n_eta_slices = N_T2_ETA_SLICES[doublets["doublet_system"]]
-    doublets["doublet_phi_slice"] = np.floor((doublets["doublet_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * n_phi_slices).astype(np.int16)
-    doublets["doublet_eta_slice"] = np.floor((doublets["doublet_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * n_eta_slices).astype(np.int16)
+    n_phi_slices = N_T2_PHI_SLICES[doublets["md_system"]]
+    n_eta_slices = N_T2_ETA_SLICES[doublets["md_system"]]
+    doublets["md_phi_slice"] = np.floor((doublets["md_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * n_phi_slices).astype(np.int16)
+    doublets["md_eta_slice"] = np.floor((doublets["md_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * n_eta_slices).astype(np.int16)
 
     # guess charge from dphi:
     # positively charged particles have negative dphi, and vice versa
-    doublets["doublet_q"] = (-1*np.sign(doublets["doublet_dphi"])).astype(np.int8)
+    doublets["md_q"] = (-1*np.sign(doublets["md_dphi"])).astype(np.int8)
 
     # pass-through the simhit positions
     for coord in ["x", "y", "r", "z"]:
-        doublets[f"doublet_{coord}_0"] = doublets[f"simhit_{coord}_lower"]
-        doublets[f"doublet_{coord}_1"] = doublets[f"simhit_{coord}_upper"]
+        doublets[f"md_{coord}_0"] = doublets[f"simhit_{coord}_lower"]
+        doublets[f"md_{coord}_1"] = doublets[f"simhit_{coord}_upper"]
 
     # doublet feature: radius of circle composed of the two hits and the origin. R = abc/4K
     # then get pt from R
@@ -176,9 +176,9 @@ def make_doublets_from_group(
                         (doublets["simhit_y_upper"] - doublets["simhit_y_lower"])**2)
     circle_K = 0.5 * np.abs(doublets["simhit_x_lower"] * doublets["simhit_y_upper"] -
                             doublets["simhit_x_upper"] * doublets["simhit_y_lower"])
-    doublets["doublet_circle_radius"] = np.divide(circle_a * circle_b * circle_c, 4.0 * circle_K)
-    doublets["doublet_pt"] = SPEED_OF_LIGHT * MAGNETIC_FIELD * doublets["doublet_circle_radius"] * 1e-6
-    doublets["doublet_qoverpt"] = doublets["doublet_q"] / doublets["doublet_pt"]
+    doublets["md_circle_radius"] = np.divide(circle_a * circle_b * circle_c, 4.0 * circle_K)
+    doublets["md_pt"] = SPEED_OF_LIGHT * MAGNETIC_FIELD * doublets["md_circle_radius"] * 1e-6
+    doublets["md_qoverpt"] = doublets["md_q"] / doublets["md_pt"]
 
     # doublet feature: truth info
     mcp_ok = doublets["i_mcp_lower"] == doublets["i_mcp_upper"]
@@ -196,20 +196,20 @@ def make_doublets_from_group(
 
 def merge_binned(lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     """
-    Binned-merge equivalent of pd.merge(lower, upper, on=doublet_cols,
+    Binned-merge equivalent of pd.merge(lower, upper, on=md_cols,
     how="inner", suffixes=("_lower","_upper")), restricted to upper hits whose
     z bin is within +/-1 of the lower hit's predicted z bin. Returns
     (merge_equivalent_frame, n_full_crossproduct).
 
     Assumes a single cell (system / doublelayer / module / sensor constant).
 
-    Bin width: within this cell the dz cut |doublet_dz| < DZ is exactly
+    Bin width: within this cell the dz cut |md_dz| < DZ is exactly
     |z_lo*r_up - z_up*r_lo| < DZ*(r_up-r_lo), which confines z_up to an interval
     around the radial projection of the lower hit. The bin width is the widest
     such half-interval the cut allows in the cell, so the predicted bin plus its
     two neighbours are guaranteed to contain every dz survivor.
     """
-    doublet_cols = [
+    md_cols = [
         "file",
         "i_event", # the event
         "simhit_system", # the system (IT, OT)
@@ -238,7 +238,7 @@ def merge_binned(lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame
     # lower one. If radii overlap, fall back to the exact full merge.
     if r_up_min <= r_lo.max():
         print("f"*30)
-        doublets = pd.merge(lower, upper, on=doublet_cols, how="inner",
+        doublets = pd.merge(lower, upper, on=md_cols, how="inner",
                             suffixes=("_lower", "_upper"))
         return doublets, n_full
 
@@ -257,7 +257,7 @@ def merge_binned(lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame
 
     # degenerate (e.g. dz_cut == 0): nothing can pass, fall back is safe
     if not (bin_width > 0.0):
-        doublets = pd.merge(lower, upper, on=doublet_cols, how="inner",
+        doublets = pd.merge(lower, upper, on=md_cols, how="inner",
                             suffixes=("_lower", "_upper"))
         return doublets, n_full
 
@@ -284,7 +284,7 @@ def merge_binned(lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame
     matched = lower_keys.merge(upper_keys, on="_zbin", how="inner")
 
     if len(matched) == 0:
-        doublets = pd.merge(lower.iloc[:0], upper.iloc[:0], on=doublet_cols,
+        doublets = pd.merge(lower.iloc[:0], upper.iloc[:0], on=md_cols,
                             how="inner", suffixes=("_lower", "_upper"))
         return doublets, n_full
 
@@ -294,9 +294,9 @@ def merge_binned(lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame
     # assemble the merge-equivalent frame (keys once, everything else suffixed)
     L = lower.iloc[lower_pos].reset_index(drop=True)
     U = upper.iloc[upper_pos].reset_index(drop=True)
-    keys = L[doublet_cols]
-    L_other = L.drop(columns=doublet_cols).add_suffix("_lower")
-    U_other = U.drop(columns=doublet_cols).add_suffix("_upper")
+    keys = L[md_cols]
+    L_other = L.drop(columns=md_cols).add_suffix("_lower")
+    U_other = U.drop(columns=md_cols).add_suffix("_upper")
     doublets = pd.concat([keys, L_other, U_other], axis=1)
 
     return doublets, n_full

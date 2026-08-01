@@ -184,11 +184,11 @@ class HitsScatter2d:
             logger.warning(f"No mds found in input files: {self.input_files_mds}")
             return pd.DataFrame()
         df = pd.concat([
-            tmp[[f"doublet_x_{it}",
-                 f"doublet_y_{it}",
-                 f"doublet_z_{it}",]].rename(columns={f"doublet_x_{it}": "x",
-                                                      f"doublet_y_{it}": "y",
-                                                      f"doublet_z_{it}": "z"})
+            tmp[[f"md_x_{it}",
+                 f"md_y_{it}",
+                 f"md_z_{it}",]].rename(columns={f"md_x_{it}": "x",
+                                                 f"md_y_{it}": "y",
+                                                 f"md_z_{it}": "z"})
             for it in range(N_LAYERS_IN_MDS)
         ])
         df = self.sample_random(df)

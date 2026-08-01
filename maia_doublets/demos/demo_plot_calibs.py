@@ -8,7 +8,7 @@ And overlay the plots for comparison.
 The data looks like:
 > cat calibs/v01_digi_10um.json  | head -n 20
 {
-    "doublet_dz": {
+    "md_dz": {
         "3": {
             "0": 3.0,
             "1": 4.0,
@@ -22,7 +22,7 @@ The data looks like:
             "3": 145.0
         }
     },
-    "doublet_dr": {
+    "md_dr": {
         "3": {
             "0": 9.0,
             "1": 14.0,
@@ -43,8 +43,8 @@ FNAMES = {
     ("v05", "10um"): "calibs/v05_digi_10um.json",
 }
 KEYS = [
-    "doublet_dz",
-    "doublet_dr",
+    "md_dz",
+    "md_dr",
     "t2_dz",
     "t2_dr",
     "t2_chi2_xy",
@@ -131,7 +131,6 @@ def write_calibs(pdf):
 
             calib = data[fname][key]
             global_doublelayers, calib_values = interpret_calib_data(calib, lo, hi, row_len)
-            key = key.replace("doublet_", "md_")
             for (gdl, value) in zip(global_doublelayers, calib_values):
                 gdl = int(gdl)
                 text += f"{key:15s} {bin_name(gdl):15s} {value:12.6f}\n"
@@ -159,7 +158,6 @@ def name(detector: str, smear: str) -> str:
 
 def semilogy(feature: str) -> bool:
     return (
-        feature.startswith("doublet_") or
         feature.startswith("md_") or
         feature.startswith("t2_")
     ) and (
@@ -168,9 +166,9 @@ def semilogy(feature: str) -> bool:
     )
 
 def nickname(feature: str) -> str:
-    if feature == "doublet_dz":
+    if feature == "md_dz":
         return r"Doublet $\Delta z$"
-    elif feature == "doublet_dr":
+    elif feature == "md_dr":
         return r"Doublet $\Delta r$"
     elif feature == "t2_dz":
         return r"T2 $\Delta z$"
@@ -202,8 +200,8 @@ def nickname(feature: str) -> str:
 
 def unit(feature: str) -> str:
     if feature in [
-        "doublet_dz",
-        "doublet_dr",
+        "md_dz",
+        "md_dr",
         "t2_dz",
         "t2_dr",
         "t4_dz",
@@ -226,7 +224,7 @@ def unit(feature: str) -> str:
 
 
 def marker_lo_hi(feature: str) -> tuple[float, float]:
-    if feature.startswith("doublet_") or feature.startswith("md_"):
+    if feature.startswith("md_"):
         return 0.5 - 0.1, 0.5 - 0.1
     elif feature.startswith("t2_"):
         return 0.5 - 0.1, 1.5 - 0.1

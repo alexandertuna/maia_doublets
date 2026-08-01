@@ -13,8 +13,8 @@ class T2Maker:
 
     #
     # To make doublets, we do 2 groupbys:
-    #  Layers 01, 23, ... grouped by doublet_doublelayer_mod_2
-    #  Layers 12, 34, ... grouped by doublet_doublelayer_plus_1_mod_2
+    #  Layers 01, 23, ... grouped by md_doublelayer_mod_2
+    #  Layers 12, 34, ... grouped by md_doublelayer_plus_1_mod_2
     #
 
     def __init__(
@@ -42,8 +42,8 @@ class T2Maker:
         self.merge_keys = [
             "file",
             "i_event",
-            "doublet_phi_slice",
-            "doublet_eta_slice",
+            "md_phi_slice",
+            "md_eta_slice",
         ]
 
         self.mds = mds.copy()
@@ -55,7 +55,7 @@ class T2Maker:
     def filter_mds(self):
         # only consider "good" mds
         logger.info("Filtering MDs for T2s ...")
-        self.mds = self.mds[ self.mds["doublet_ok"] ]
+        self.mds = self.mds[ self.mds["md_ok"] ]
         memory = self.mds.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"Memory usage after filtering MDs: {memory:.1f} MB")
 
@@ -66,10 +66,10 @@ class T2Maker:
         cols = [
             "file",
             "i_event",
-            "doublet_system",
-            "doublet_doublelayer",
-            "doublet_sensor",
-            "doublet_module",
+            "md_system",
+            "md_doublelayer",
+            "md_sensor",
+            "md_module",
         ]
         self.mds = self.mds.sort_values(by=cols).reset_index(drop=True)
 
@@ -81,7 +81,7 @@ class T2Maker:
         mds = {
             gdl: group.reset_index(drop=True)
             for gdl, group
-            in self.mds.groupby("doublet_gdoublelayer", sort=True)
+            in self.mds.groupby("md_gdoublelayer", sort=True)
         }
 
         # make T2s from neighboring doublelayers
@@ -126,7 +126,7 @@ class T2Maker:
             and upper df could be MDs which span OT layers 2-3 (global doublelayer 5).
         """
 
-        n_t2_phi_slices = N_T2_PHI_SLICES[upper["doublet_system"]]
+        n_t2_phi_slices = N_T2_PHI_SLICES[upper["md_system"]]
 
         # get combinations of lower and upper
         # within neighboring phi/eta slices
@@ -134,8 +134,8 @@ class T2Maker:
         for phi_shift in (-1, 0, 1):
             for eta_shift in (-1, 0, 1):
                 shifted = upper.assign(
-                    doublet_phi_slice=(upper["doublet_phi_slice"] + phi_shift) % n_t2_phi_slices,
-                    doublet_eta_slice=(upper["doublet_eta_slice"] + eta_shift),
+                    md_phi_slice=(upper["md_phi_slice"] + phi_shift) % n_t2_phi_slices,
+                    md_eta_slice=(upper["md_eta_slice"] + eta_shift),
                 )
                 logger.info(f"Merging phi_shift={phi_shift}, eta_shift={eta_shift} ...")
                 t2s = lower.merge(shifted, on=self.merge_keys, suffixes=("_lower", "_upper"))
@@ -167,22 +167,22 @@ class T2Maker:
 
     def rename_t2_columns_after_merge(self, t2s: pd.DataFrame) -> pd.DataFrame:
         rename = {
-            "doublet_doublelayer_lower": "t2_doublelayer_lower",
-            "doublet_doublelayer_upper": "t2_doublelayer_upper",
-            "doublet_glayer_lower": "t2_glayer_lower",
-            "doublet_glayer_upper": "t2_glayer_upper",
-            "doublet_module_lower": "t2_module_lower",
-            "doublet_module_upper": "t2_module_upper",
-            "doublet_sensor_lower": "t2_sensor_lower",
-            "doublet_sensor_upper": "t2_sensor_upper",
-            "doublet_system_lower": "t2_system_lower",
-            "doublet_system_upper": "t2_system_upper",
-            "doublet_dr_lower": "t2_dr_lower",
-            "doublet_dr_upper": "t2_dr_upper",
-            "doublet_dz_lower": "t2_dz_lower",
-            "doublet_dz_upper": "t2_dz_upper",
-            "doublet_ok_lower": "t2_md_ok_lower",
-            "doublet_ok_upper": "t2_md_ok_upper",
+            "md_doublelayer_lower": "t2_doublelayer_lower",
+            "md_doublelayer_upper": "t2_doublelayer_upper",
+            "md_glayer_lower": "t2_glayer_lower",
+            "md_glayer_upper": "t2_glayer_upper",
+            "md_module_lower": "t2_module_lower",
+            "md_module_upper": "t2_module_upper",
+            "md_sensor_lower": "t2_sensor_lower",
+            "md_sensor_upper": "t2_sensor_upper",
+            "md_system_lower": "t2_system_lower",
+            "md_system_upper": "t2_system_upper",
+            "md_dr_lower": "t2_dr_lower",
+            "md_dr_upper": "t2_dr_upper",
+            "md_dz_lower": "t2_dz_lower",
+            "md_dz_upper": "t2_dz_upper",
+            "md_ok_lower": "t2_md_ok_lower",
+            "md_ok_upper": "t2_md_ok_upper",
         }
         return t2s.rename(columns=rename, copy=False)
 
@@ -194,15 +194,15 @@ class T2Maker:
         t2s["t2_doublelayer"] = t2s["t2_doublelayer_lower"].astype(np.uint8)
 
         # rz projection
-        slope_rz = np.divide(t2s["doublet_z_upper"] - t2s["doublet_z_lower"],
-                             t2s["doublet_r_upper"] - t2s["doublet_r_lower"])
-        t2s["t2_dz"] = t2s["doublet_z_lower"] - t2s["doublet_r_lower"] * slope_rz
+        slope_rz = np.divide(t2s["md_z_upper"] - t2s["md_z_lower"],
+                             t2s["md_r_upper"] - t2s["md_r_lower"])
+        t2s["t2_dz"] = t2s["md_z_lower"] - t2s["md_r_lower"] * slope_rz
         t2s["t2_theta_rz"] = np.arctan(slope_rz)
 
         # xy projection
-        slope_xy = np.divide(t2s["doublet_y_upper"] - t2s["doublet_y_lower"],
-                             t2s["doublet_x_upper"] - t2s["doublet_x_lower"])
-        intercept_xy = t2s["doublet_y_lower"] - t2s["doublet_x_lower"] * slope_xy
+        slope_xy = np.divide(t2s["md_y_upper"] - t2s["md_y_lower"],
+                             t2s["md_x_upper"] - t2s["md_x_lower"])
+        intercept_xy = t2s["md_y_lower"] - t2s["md_x_lower"] * slope_xy
         t2s["t2_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
 
         return t2s
@@ -216,9 +216,9 @@ class T2Maker:
         mcp_ok = t2s["i_mcp_lower"] == t2s["i_mcp_upper"]
         t2s["i_mcp"] = t2s["i_mcp_lower"].where(mcp_ok, NO_MCP)
         if self.signal:
-            t2s["t2_first_exit"] = t2s["doublet_first_exit_lower"] & t2s["doublet_first_exit_upper"]
-            t2s["t2_from_fiducial_mcp"] = t2s["doublet_from_fiducial_mcp_lower"] & t2s["doublet_from_fiducial_mcp_upper"]
-            t2s["t2_detectable"] = mcp_ok & t2s["doublet_detectable_lower"] & t2s["doublet_detectable_upper"]
+            t2s["t2_first_exit"] = t2s["md_first_exit_lower"] & t2s["md_first_exit_upper"]
+            t2s["t2_from_fiducial_mcp"] = t2s["md_from_fiducial_mcp_lower"] & t2s["md_from_fiducial_mcp_upper"]
+            t2s["t2_detectable"] = mcp_ok & t2s["md_detectable_lower"] & t2s["md_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",
@@ -235,10 +235,10 @@ class T2Maker:
         new = {}
 
         # features: position
-        new["t2_r"] = (t2s["doublet_r_lower"] + t2s["doublet_r_upper"]) / 2
-        new["t2_z"] = (t2s["doublet_z_lower"] + t2s["doublet_z_upper"]) / 2
-        new["t2_x"] = (t2s["doublet_x_lower"] + t2s["doublet_x_upper"]) / 2
-        new["t2_y"] = (t2s["doublet_y_lower"] + t2s["doublet_y_upper"]) / 2
+        new["t2_r"] = (t2s["md_r_lower"] + t2s["md_r_upper"]) / 2
+        new["t2_z"] = (t2s["md_z_lower"] + t2s["md_z_upper"]) / 2
+        new["t2_x"] = (t2s["md_x_lower"] + t2s["md_x_upper"]) / 2
+        new["t2_y"] = (t2s["md_y_lower"] + t2s["md_y_upper"]) / 2
         new["t2_phi"] = np.arctan2(new["t2_y"], new["t2_x"])
         new["t2_theta"] = np.arctan2(new["t2_r"], new["t2_z"])
         new["t2_eta"] = -np.log(np.tan(new["t2_theta"] / 2))
@@ -248,21 +248,21 @@ class T2Maker:
         # assign more features
         new["t2_ddr"] = t2s["t2_dr_upper"] - t2s["t2_dr_lower"]
         new["t2_ddz"] = t2s["t2_dz_upper"] - t2s["t2_dz_lower"]
-        new["t2_deta"] = t2s["doublet_eta_upper"] - t2s["doublet_eta_lower"]
-        new["t2_dphi"] = t2s["doublet_phi_upper"] - t2s["doublet_phi_lower"]
+        new["t2_deta"] = t2s["md_eta_upper"] - t2s["md_eta_lower"]
+        new["t2_dphi"] = t2s["md_phi_upper"] - t2s["md_phi_lower"]
         new["t2_dphi"] = (new["t2_dphi"] + np.pi) % (2 * np.pi) - np.pi
-        new["t2_dqoverpt"] = t2s["doublet_qoverpt_upper"] - t2s["doublet_qoverpt_lower"]
+        new["t2_dqoverpt"] = t2s["md_qoverpt_upper"] - t2s["md_qoverpt_lower"]
 
         # pass-through the simhit positions as float64 for now
         for coord in ["x", "y", "r", "z"]:
-            new[f"t2_{coord}_0"] = t2s[f"doublet_{coord}_0_lower"].astype(np.float64)
-            new[f"t2_{coord}_1"] = t2s[f"doublet_{coord}_1_lower"].astype(np.float64)
-            new[f"t2_{coord}_2"] = t2s[f"doublet_{coord}_0_upper"].astype(np.float64)
-            new[f"t2_{coord}_3"] = t2s[f"doublet_{coord}_1_upper"].astype(np.float64)
+            new[f"t2_{coord}_0"] = t2s[f"md_{coord}_0_lower"].astype(np.float64)
+            new[f"t2_{coord}_1"] = t2s[f"md_{coord}_1_lower"].astype(np.float64)
+            new[f"t2_{coord}_2"] = t2s[f"md_{coord}_0_upper"].astype(np.float64)
+            new[f"t2_{coord}_3"] = t2s[f"md_{coord}_1_upper"].astype(np.float64)
 
         # angle differences (handle wraparound)
-        new["t2_dtheta_rz"] = t2s["doublet_theta_rz_upper"] - t2s["doublet_theta_rz_lower"]
-        new["t2_dtheta_xy"] = t2s["doublet_theta_xy_upper"] - t2s["doublet_theta_xy_lower"]
+        new["t2_dtheta_rz"] = t2s["md_theta_rz_upper"] - t2s["md_theta_rz_lower"]
+        new["t2_dtheta_xy"] = t2s["md_theta_xy_upper"] - t2s["md_theta_xy_lower"]
         new["t2_dtheta_rz"] = (new["t2_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
         new["t2_dtheta_xy"] = (new["t2_dtheta_xy"] + np.pi) % (2 * np.pi) - np.pi
 
@@ -330,7 +330,7 @@ class T2Maker:
         # and drop other cols
         dropcols = ["i_mcp_lower", "i_mcp_upper"]
         dropcols.extend([col for col in t2s.columns if col.startswith("simhit_")])
-        dropcols.extend([col for col in t2s.columns if col.startswith("doublet_")])
+        dropcols.extend([col for col in t2s.columns if col.startswith("md_")])
         dropcols.extend([col for col in t2s.columns if col.startswith("mcp_") and col.endswith("_lower")])
         dropcols.extend([col for col in t2s.columns if col.startswith("mcp_") and col.endswith("_upper")])
         t2s.drop(columns=dropcols, errors="ignore", inplace=True)

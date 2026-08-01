@@ -27,7 +27,7 @@ class CalibConstants:
 
     def convert_dict_to_arrays_mds(self) -> None:
         for feature, calib in self.calib_dict.items():
-            if not feature.startswith("doublet_"):
+            if not feature.startswith("md_"):
                 continue
             n_systems = max(int(system) for system in calib.keys()) + 1
             n_doublelayers = max(int(dl) for dl_dict in calib.values() for dl in dl_dict.keys()) + 1
@@ -80,13 +80,13 @@ class MDCalibrator:
         self.calib_json = calib_json
         self.percentile = 99.7
         self.features = [
-            "doublet_dz",
-            "doublet_dr",
+            "md_dz",
+            "md_dr",
         ]
         self.sequential = sequential
-        self.system = "doublet_system"
-        self.doublelayer = "doublet_doublelayer"
-        self.detectable = "doublet_detectable"
+        self.system = "md_system"
+        self.doublelayer = "md_doublelayer"
+        self.detectable = "md_detectable"
         self.groupby = [
             self.system,
             self.doublelayer,
@@ -269,7 +269,7 @@ class T8Calibrator:
 
 def format_interval(interval: float, feature: str = "") -> float:
     # return interval
-    if feature.startswith("doublet_") or feature.startswith("md_"):
+    if feature.startswith("md_"):
         return np.round(interval)
     return float(np.format_float_positional(interval, precision=INTERVAL_PRECISION, fractional=False))
 
@@ -288,7 +288,7 @@ def update_calibration(old_calib: dict, new_calib: dict) -> dict:
         if feature not in old_calib:
             old_calib[feature] = {}
         # mds and t2s are calibrated per system and doublelayer
-        if feature.startswith("doublet_") or feature.startswith("t2_"):
+        if feature.startswith("md_") or feature.startswith("t2_"):
             for system, doublelayer_dict in new_calib[feature].items():
                 if system not in old_calib[feature]:
                     old_calib[feature][system] = {}
