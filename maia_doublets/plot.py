@@ -61,7 +61,7 @@ class Plotter:
         self.mcps = mcps
         self.simhits = simhits
         self.doublets = mds
-        self.linesegments = t2s
+        self.t2s = t2s
         self.t4s = t4s
         self.t8s = t8s
         self.calibs = calibs
@@ -288,17 +288,17 @@ class Plotter:
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
 
         # part 3: line segments
-        if self.linesegments is None:
+        if self.t2s is None:
             logger.info("No line segments, skipping ...")
         else:
-            mask = np.ones(len(self.linesegments), dtype=bool)
+            mask = np.ones(len(self.t2s), dtype=bool)
             for [req, label] in [
-                [self.linesegments["ls_system"] == sy, "LS in OTB"],
-                [self.linesegments["ls_doublelayer"] == dl, f"LS starting on layer {dl}"],
-                [np.abs(self.linesegments["ls_dz"]) < self.T2_DZ_CUT[sy, dl], f"LS with |dz| < {self.T2_DZ_CUT[sy, dl]}mm"],
-                [np.abs(self.linesegments["ls_dr"]) < self.T2_DR_CUT[sy, dl], f"LS with |dr| < {self.T2_DR_CUT[sy, dl]}mm"],
-                [np.abs(self.linesegments["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[sy, dl]}"],
-                [np.abs(self.linesegments["ls_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
+                [self.t2s["ls_system"] == sy, "LS in OTB"],
+                [self.t2s["ls_doublelayer"] == dl, f"LS starting on layer {dl}"],
+                [np.abs(self.t2s["ls_dz"]) < self.T2_DZ_CUT[sy, dl], f"LS with |dz| < {self.T2_DZ_CUT[sy, dl]}mm"],
+                [np.abs(self.t2s["ls_dr"]) < self.T2_DR_CUT[sy, dl], f"LS with |dr| < {self.T2_DR_CUT[sy, dl]}mm"],
+                [np.abs(self.t2s["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[sy, dl]}"],
+                [np.abs(self.t2s["ls_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
             ]:
                 mask &= req
                 logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -376,7 +376,7 @@ class Plotter:
 
             mask_hits = self.simhits["simhit_system"].isin(dets) # == system
             mask_mds = self.doublets["doublet_system"].isin(dets) # == system
-            mask_t2s = self.linesegments["ls_system"].isin(dets) # == system
+            mask_t2s = self.t2s["ls_system"].isin(dets) # == system
             mask_t4s = (self.t4s["t4_system_lower"].isin(dets)) & (self.t4s["t4_system_upper"].isin(dets))
             mask_t8s = np.ones(len(self.t8s), dtype=bool)
 
@@ -1046,11 +1046,11 @@ class Plotter:
 
 
     def plot_t2_features(self, pdf: PdfPages):
-        if self.linesegments is None or len(self.linesegments) == 0:
+        if self.t2s is None or len(self.t2s) == 0:
             logger.info("No T2s to plot")
             return
         logger.info("Plotting linesegment features ...")
-        baseline = self.linesegments["ls_detectable"] if self.signal else np.ones(len(self.linesegments), dtype=bool)
+        baseline = self.t2s["ls_detectable"] if self.signal else np.ones(len(self.t2s), dtype=bool)
 
         bins = {
             "ls_deta": np.linspace(-3.2, 3.2, 641) if not self.signal else np.linspace(-0.012, 0.012, 241),
@@ -1112,9 +1112,9 @@ class Plotter:
                 # True,
             ]:
 
-                for ((system, doublelayer), group) in self.linesegments[baseline].groupby(["ls_system",
-                                                                                           "ls_doublelayer",
-                                                                                           ]):
+                for ((system, doublelayer), group) in self.t2s[baseline].groupby(["ls_system",
+                                                                                  "ls_doublelayer",
+                                                                                  ]):
 
                         # logger.info(f"Plotting signal linesegment feature {feature}, system {system}, doublelayer {doublelayer} ...")
 
@@ -1152,13 +1152,13 @@ class Plotter:
             # ("ls_dphi", "ls_dr"),
         ]:
 
-            for ((system, doublelayer), group) in self.linesegments[baseline].groupby(["ls_system",
-                                                                                       "ls_doublelayer",
-                                                                                       ]):
+            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["ls_system",
+                                                                              "ls_doublelayer",
+                                                                              ]):
 
                 logger.info(f"Plotting signal linesegment features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
                 if len(group) == 0:
-                    logger.info(f"No linesegments in {NICKNAMES[system]} doublelayer {doublelayer} passing baseline, skipping feature plot")
+                    logger.info(f"No t2s in {NICKNAMES[system]} doublelayer {doublelayer} passing baseline, skipping feature plot")
                     continue
 
                 fig, ax = plt.subplots()
@@ -1196,8 +1196,8 @@ class Plotter:
         ]
 
         # filter doublets to only those with same parent mcp
-        same_parent = self.linesegments["i_mcp"] != NO_MCP
-        segments = self.linesegments[same_parent][segment_cols].drop_duplicates()
+        same_parent = self.t2s["i_mcp"] != NO_MCP
+        segments = self.t2s[same_parent][segment_cols].drop_duplicates()
 
         # check if segments's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
@@ -1234,8 +1234,8 @@ class Plotter:
     def plot_segment_quality_efficiency(self, pdf: PdfPages):
 
         # only consider truth-match doublets
-        baseline = self.linesegments["ls_detectable"]
-        logger.info(f"Segment efficiency: total segments: {len(self.linesegments)}")
+        baseline = self.t2s["ls_detectable"]
+        logger.info(f"Segment efficiency: total segments: {len(self.t2s)}")
         logger.info(f"Segment efficiency: total segments in baseline: {baseline.sum()}")
 
         # consider efficiency vs kinematics
@@ -1245,8 +1245,8 @@ class Plotter:
             "mcp_phi"
         ]):
 
-            for ((system, doublelayer), group) in self.linesegments[baseline].groupby(["ls_system",
-                                                                                       "ls_doublelayer",
+            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["ls_system",
+                                                                              "ls_doublelayer",
             ]):
 
                 logger.info(f"Plotting segment quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
