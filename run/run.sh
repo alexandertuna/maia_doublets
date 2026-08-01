@@ -1,29 +1,36 @@
+#
+# Run like:
+# > source run.sh
+#
+OUTPUT_DIR=$(dirname "${BASH_SOURCE[0]}")/../output
+mkdir -p ${OUTPUT_DIR}
+
 # How to calibrate cut thresholds (3sigma intervals)
 # maia_doublets --geo v01 --signal --digi --smear 10um --calibrate
 
 # How to make plots
-# GEO="v01"
-# SMEAR="10um"
-# OUTDIR=${GEO}_signal_digi_${SMEAR}
-# maia_doublets \
-#     --geo ${GEO} \
-#     --signal \
-#     --digi \
-#     --smear ${SMEAR} \
-#     --write-simhits ${OUTDIR}/hits.pkl \
-#     --write-mcps ${OUTDIR}/mcps.pkl \
-#     --write-mds ${OUTDIR}/mds.pkl \
-#     --write-t2s ${OUTDIR}/t2s.pkl \
-#     --write-t4s ${OUTDIR}/t4s.pkl \
-#     --write-t8s ${OUTDIR}/t8s.pkl \
-#     --cut-mds \
-#     --cut-t2s \
-#     --cut-t4s \
-#     --cut-t8s
+GEO="v01"
+SMEAR="10um"
+PKL_DIR=${OUTPUT_DIR}/${GEO}_signal_digi_${SMEAR}
+maia_doublets \
+    --geo ${GEO} \
+    --signal \
+    --digi \
+    --smear ${SMEAR} \
+    --write-simhits ${PKL_DIR}/hits.pkl \
+    --write-mcps ${PKL_DIR}/mcps.pkl \
+    --write-mds ${PKL_DIR}/mds.pkl \
+    --write-t2s ${PKL_DIR}/t2s.pkl \
+    --write-t4s ${PKL_DIR}/t4s.pkl \
+    --write-t8s ${PKL_DIR}/t8s.pkl \
+    --cut-mds \
+    --cut-t2s \
+    --cut-t4s \
+    --cut-t8s
 #     # --plot
 
 # How to find the overall efficiency
-maia_doublets --geo v01 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+# maia_doublets --geo v01 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
 
 # How to plot the 0-10 GeV pionGun sample
 # maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/pionGun_pT_0_10/10um/pionGun_pT_0_10_digi_3*" --digi --smear 10um --plot
