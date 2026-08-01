@@ -204,11 +204,11 @@ class HitsScatter2d:
             logger.warning(f"No t2s found in input files: {self.input_files_t2s}")
             return pd.DataFrame()
         df = pd.concat([
-            tmp[[f"ls_x_{it}",
-                 f"ls_y_{it}",
-                 f"ls_z_{it}",]].rename(columns={f"ls_x_{it}": "x",
-                                                 f"ls_y_{it}": "y",
-                                                 f"ls_z_{it}": "z"})
+            tmp[[f"t2_x_{it}",
+                 f"t2_y_{it}",
+                 f"t2_z_{it}",]].rename(columns={f"t2_x_{it}": "x",
+                                                 f"t2_y_{it}": "y",
+                                                 f"t2_z_{it}": "z"})
             for it in range(N_LAYERS_IN_T2S)
         ])
         df = self.sample_random(df)

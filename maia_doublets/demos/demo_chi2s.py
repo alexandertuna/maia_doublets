@@ -46,7 +46,7 @@ def plot_chi2_xy(pdf: PdfPages) -> None:
     fig, ax = plt.subplots()
     for smear, series in data.items():
         ax.hist(
-            series["ls_chi2_xy"],
+            series["t2_chi2_xy"],
             bins=bins,
             histtype="stepfilled",
             label=f"Smear={smear}",
@@ -67,7 +67,7 @@ def plot_chi2_xy(pdf: PdfPages) -> None:
 def get_data(smear: str) -> pd.Series:
     df = pd.read_pickle(f"v01_signal_digi_{smear}/t2s.pkl")
     mask = df["i_mcp"] != 0xffff_ffff
-    series = df[mask][["ls_chi2_xy"]]
+    series = df[mask][["t2_chi2_xy"]]
     return series
 
 

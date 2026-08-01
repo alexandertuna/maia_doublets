@@ -44,8 +44,8 @@ class T4Maker:
         self.merge_keys = [
             "file",
             "i_event",
-            "ls_phi_slice",
-            "ls_eta_slice",
+            "t2_phi_slice",
+            "t2_eta_slice",
         ]
 
         self.filter_t2s()
@@ -56,7 +56,7 @@ class T4Maker:
     def filter_t2s(self):
         # only consider "good" t2s
         logger.info("Filtering T2s for T4s ...")
-        self.t2s = self.t2s[ self.t2s["ls_ok"] ]
+        self.t2s = self.t2s[ self.t2s["t2_ok"] ]
         memory = self.t2s.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"Memory usage after filtering T2s: {memory:.1f} MB")
 
@@ -67,8 +67,8 @@ class T4Maker:
         cols = [
             "file",
             "i_event",
-            "ls_system",
-            "ls_doublelayer",
+            "t2_system",
+            "t2_doublelayer",
         ]
         self.t2s = self.t2s.sort_values(by=cols).reset_index(drop=True)
 
@@ -83,7 +83,7 @@ class T4Maker:
         t2s = {
             gdl: group.reset_index(drop=True)
             for gdl, group
-            in self.t2s.groupby("ls_gdoublelayer", sort=True)
+            in self.t2s.groupby("t2_gdoublelayer", sort=True)
         }
 
         # make T4s from neighboring doublelayers
@@ -134,8 +134,8 @@ class T4Maker:
         for phi_shift in (-1, 0, 1):
             for eta_shift in (-1, 0, 1):
                 shifted = upper.assign(
-                    ls_phi_slice=(upper["ls_phi_slice"] + phi_shift) % N_T4_PHI_SLICES,
-                    ls_eta_slice=(upper["ls_eta_slice"] + eta_shift),
+                    t2_phi_slice=(upper["t2_phi_slice"] + phi_shift) % N_T4_PHI_SLICES,
+                    t2_eta_slice=(upper["t2_eta_slice"] + eta_shift),
                 )
                 cands.append(lower.merge(shifted, on=self.merge_keys, suffixes=("_lower", "_upper")))
 
@@ -150,27 +150,27 @@ class T4Maker:
     def consolidate_t4_features(self, t4s: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
 
         # the doublelayer
-        t4s["t4_doublelayer"] = t4s["ls_doublelayer_lower"]
-        t4s["t4_gdoublelayer"] = t4s["ls_gdoublelayer_lower"]
+        t4s["t4_doublelayer"] = t4s["t2_doublelayer_lower"]
+        t4s["t4_gdoublelayer"] = t4s["t2_gdoublelayer_lower"]
 
         # rz projection
-        slope_rz = np.divide(t4s["ls_z_upper"] - t4s["ls_z_lower"],
-                             t4s["ls_r_upper"] - t4s["ls_r_lower"])
-        t4s["t4_dz"] = t4s["ls_z_lower"] - t4s["ls_r_lower"] * slope_rz
+        slope_rz = np.divide(t4s["t2_z_upper"] - t4s["t2_z_lower"],
+                             t4s["t2_r_upper"] - t4s["t2_r_lower"])
+        t4s["t4_dz"] = t4s["t2_z_lower"] - t4s["t2_r_lower"] * slope_rz
 
         # xy projection
-        slope_xy = np.divide(t4s["ls_y_upper"] - t4s["ls_y_lower"],
-                             t4s["ls_x_upper"] - t4s["ls_x_lower"])
-        intercept_xy = t4s["ls_y_lower"] - t4s["ls_x_lower"] * slope_xy
+        slope_xy = np.divide(t4s["t2_y_upper"] - t4s["t2_y_lower"],
+                             t4s["t2_x_upper"] - t4s["t2_x_lower"])
+        intercept_xy = t4s["t2_y_lower"] - t4s["t2_x_lower"] * slope_xy
         t4s["t4_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
 
         # assign truth info
         mcp_ok = t4s["i_mcp_lower"] == t4s["i_mcp_upper"]
         t4s["i_mcp"] = t4s["i_mcp_lower"].where(mcp_ok, NO_MCP)
         if self.signal:
-            t4s["t4_first_exit"] = t4s["ls_first_exit_lower"] & t4s["ls_first_exit_upper"]
-            t4s["t4_from_fiducial_mcp"] = t4s["ls_from_fiducial_mcp_lower"] & t4s["ls_from_fiducial_mcp_upper"]
-            t4s["t4_detectable"] = mcp_ok & t4s["ls_detectable_lower"] & t4s["ls_detectable_upper"]
+            t4s["t4_first_exit"] = t4s["t2_first_exit_lower"] & t4s["t2_first_exit_upper"]
+            t4s["t4_from_fiducial_mcp"] = t4s["t2_from_fiducial_mcp_lower"] & t4s["t2_from_fiducial_mcp_upper"]
+            t4s["t4_detectable"] = mcp_ok & t4s["t2_detectable_lower"] & t4s["t2_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",
@@ -188,30 +188,30 @@ class T4Maker:
 
         # pass-through the simhit positions as float64 for now
         for coord in ["x", "y", "r", "z"]:
-            new[f"t4_{coord}_0"] = t4s[f"ls_{coord}_0_lower"].astype(np.float64)
-            new[f"t4_{coord}_1"] = t4s[f"ls_{coord}_1_lower"].astype(np.float64)
-            new[f"t4_{coord}_2"] = t4s[f"ls_{coord}_2_lower"].astype(np.float64)
-            new[f"t4_{coord}_3"] = t4s[f"ls_{coord}_3_lower"].astype(np.float64)
-            new[f"t4_{coord}_4"] = t4s[f"ls_{coord}_0_upper"].astype(np.float64)
-            new[f"t4_{coord}_5"] = t4s[f"ls_{coord}_1_upper"].astype(np.float64)
-            new[f"t4_{coord}_6"] = t4s[f"ls_{coord}_2_upper"].astype(np.float64)
-            new[f"t4_{coord}_7"] = t4s[f"ls_{coord}_3_upper"].astype(np.float64)
+            new[f"t4_{coord}_0"] = t4s[f"t2_{coord}_0_lower"].astype(np.float64)
+            new[f"t4_{coord}_1"] = t4s[f"t2_{coord}_1_lower"].astype(np.float64)
+            new[f"t4_{coord}_2"] = t4s[f"t2_{coord}_2_lower"].astype(np.float64)
+            new[f"t4_{coord}_3"] = t4s[f"t2_{coord}_3_lower"].astype(np.float64)
+            new[f"t4_{coord}_4"] = t4s[f"t2_{coord}_0_upper"].astype(np.float64)
+            new[f"t4_{coord}_5"] = t4s[f"t2_{coord}_1_upper"].astype(np.float64)
+            new[f"t4_{coord}_6"] = t4s[f"t2_{coord}_2_upper"].astype(np.float64)
+            new[f"t4_{coord}_7"] = t4s[f"t2_{coord}_3_upper"].astype(np.float64)
 
         # more features
-        new["t4_deta"] = t4s["ls_eta_upper"] - t4s["ls_eta_lower"]
-        new["t4_dphi"] = t4s["ls_phi_upper"] - t4s["ls_phi_lower"]
+        new["t4_deta"] = t4s["t2_eta_upper"] - t4s["t2_eta_lower"]
+        new["t4_dphi"] = t4s["t2_phi_upper"] - t4s["t2_phi_lower"]
         new["t4_dphi"] = (new["t4_dphi"] + np.pi) % (2 * np.pi) - np.pi
-        new["t4_eta"] = 0.5 * (t4s["ls_eta_upper"] + t4s["ls_eta_lower"])
-        new["t4_x"] = 0.5 * (t4s["ls_x_upper"] + t4s["ls_x_lower"])
-        new["t4_y"] = 0.5 * (t4s["ls_y_upper"] + t4s["ls_y_lower"])
-        new["t4_z"] = 0.5 * (t4s["ls_z_upper"] + t4s["ls_z_lower"])
-        new["t4_r"] = 0.5 * (t4s["ls_r_upper"] + t4s["ls_r_lower"])
+        new["t4_eta"] = 0.5 * (t4s["t2_eta_upper"] + t4s["t2_eta_lower"])
+        new["t4_x"] = 0.5 * (t4s["t2_x_upper"] + t4s["t2_x_lower"])
+        new["t4_y"] = 0.5 * (t4s["t2_y_upper"] + t4s["t2_y_lower"])
+        new["t4_z"] = 0.5 * (t4s["t2_z_upper"] + t4s["t2_z_lower"])
+        new["t4_r"] = 0.5 * (t4s["t2_r_upper"] + t4s["t2_r_lower"])
         new["t4_phi"] = np.arctan2(new["t4_y"], new["t4_x"])
         new["t4_phi_slice"] = np.floor((new["t4_phi"] + np.pi) / (2 * np.pi) * N_T8_PHI_SLICES).astype(np.int16)
         new["t4_eta_slice"] = np.floor((new["t4_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T8_ETA_SLICES).astype(np.int16)
 
         # angle differences (handle wraparound)
-        new["t4_dtheta_rz"] = t4s["ls_theta_rz_upper"] - t4s["ls_theta_rz_lower"]
+        new["t4_dtheta_rz"] = t4s["t2_theta_rz_upper"] - t4s["t2_theta_rz_lower"]
         new["t4_dtheta_rz"] = (new["t4_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
 
         # find the circle (radius, x_center, y_center) formed from three hits of interest
@@ -285,23 +285,23 @@ class T4Maker:
 
         # rename some things
         rename = {
-            "ls_system": "t4_system",
-            "ls_system_lower": "t4_system_lower",
-            "ls_system_upper": "t4_system_upper",
-            "ls_doublelayer_lower": "t4_doublelayer_lower",
-            "ls_doublelayer_upper": "t4_doublelayer_upper",
-            "ls_gdoublelayer_lower": "t4_gdoublelayer_lower",
-            "ls_gdoublelayer_upper": "t4_gdoublelayer_upper",
-            "ls_module_lower": "t4_module_lower",
-            "ls_module_upper": "t4_module_upper",
-            "ls_sensor_lower": "t4_sensor_lower",
-            "ls_sensor_upper": "t4_sensor_upper",
-            "ls_dr_lower": "t4_dr_lower",
-            "ls_dr_upper": "t4_dr_upper",
-            "ls_dz_lower": "t4_dz_lower",
-            "ls_dz_upper": "t4_dz_upper",
-            "ls_ok_lower": "t4_ls_ok_lower",
-            "ls_ok_upper": "t4_ls_ok_upper",
+            "t2_system": "t4_system",
+            "t2_system_lower": "t4_system_lower",
+            "t2_system_upper": "t4_system_upper",
+            "t2_doublelayer_lower": "t4_doublelayer_lower",
+            "t2_doublelayer_upper": "t4_doublelayer_upper",
+            "t2_gdoublelayer_lower": "t4_gdoublelayer_lower",
+            "t2_gdoublelayer_upper": "t4_gdoublelayer_upper",
+            "t2_module_lower": "t4_module_lower",
+            "t2_module_upper": "t4_module_upper",
+            "t2_sensor_lower": "t4_sensor_lower",
+            "t2_sensor_upper": "t4_sensor_upper",
+            "t2_dr_lower": "t4_dr_lower",
+            "t2_dr_upper": "t4_dr_upper",
+            "t2_dz_lower": "t4_dz_lower",
+            "t2_dz_upper": "t4_dz_upper",
+            "t2_ok_lower": "t4_t2_ok_lower",
+            "t2_ok_upper": "t4_t2_ok_upper",
         }
         t4s = t4s.rename(columns=rename)
 
@@ -309,7 +309,6 @@ class T4Maker:
         dropcols = ["i_mcp_lower", "i_mcp_upper"]
         dropcols.extend([col for col in t4s.columns if col.startswith("simhit_")])
         dropcols.extend([col for col in t4s.columns if col.startswith("doublet_")])
-        dropcols.extend([col for col in t4s.columns if col.startswith("ls_")])
         dropcols.extend([col for col in t4s.columns if col.startswith("t2_")])
         dropcols.extend([col for col in t4s.columns if col.startswith("mcp_") and col.endswith("_lower")])
         dropcols.extend([col for col in t4s.columns if col.startswith("mcp_") and col.endswith("_upper")])

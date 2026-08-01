@@ -40,7 +40,7 @@ class CalibConstants:
 
     def convert_dict_to_arrays_t2s(self) -> None:
         for feature, calib in self.calib_dict.items():
-            if not feature.startswith("ls_"):
+            if not feature.startswith("t2_"):
                 continue
             n_systems = max(int(system) for system in calib.keys()) + 1
             n_doublelayers = max(int(dl) for dl_dict in calib.values() for dl in dl_dict.keys()) + 1
@@ -126,16 +126,16 @@ class T2Calibrator:
         self.calib_json = calib_json
         self.percentile = 99.7
         self.features = [
-            "ls_dz",
-            "ls_dr",
-            # "ls_dtheta_rz",
-            "ls_chi2_xy",
-            "ls_chi2_sz",
+            "t2_dz",
+            "t2_dr",
+            # "t2_dtheta_rz",
+            "t2_chi2_xy",
+            "t2_chi2_sz",
         ]
         self.sequential = sequential
-        self.system = "ls_system"
-        self.doublelayer = "ls_doublelayer"
-        self.detectable = "ls_detectable"
+        self.system = "t2_system"
+        self.doublelayer = "t2_doublelayer"
+        self.detectable = "t2_detectable"
         self.groupby = [
             self.system,
             self.doublelayer,
@@ -288,7 +288,7 @@ def update_calibration(old_calib: dict, new_calib: dict) -> dict:
         if feature not in old_calib:
             old_calib[feature] = {}
         # mds and t2s are calibrated per system and doublelayer
-        if feature.startswith("doublet_") or feature.startswith("ls_"):
+        if feature.startswith("doublet_") or feature.startswith("t2_"):
             for system, doublelayer_dict in new_calib[feature].items():
                 if system not in old_calib[feature]:
                     old_calib[feature][system] = {}

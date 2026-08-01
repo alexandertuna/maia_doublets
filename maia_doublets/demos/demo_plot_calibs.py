@@ -45,10 +45,10 @@ FNAMES = {
 KEYS = [
     "doublet_dz",
     "doublet_dr",
-    "ls_dz",
-    "ls_dr",
-    "ls_chi2_xy",
-    "ls_chi2_sz",
+    "t2_dz",
+    "t2_dr",
+    "t2_chi2_xy",
+    "t2_chi2_sz",
     "t4_dz",
     "t4_dr",
     "t4_chi2_xy",
@@ -131,7 +131,7 @@ def write_calibs(pdf):
 
             calib = data[fname][key]
             global_doublelayers, calib_values = interpret_calib_data(calib, lo, hi, row_len)
-            key = key.replace("doublet_", "md_").replace("ls_", "t2_")
+            key = key.replace("doublet_", "md_")
             for (gdl, value) in zip(global_doublelayers, calib_values):
                 gdl = int(gdl)
                 text += f"{key:15s} {bin_name(gdl):15s} {value:12.6f}\n"
@@ -161,7 +161,6 @@ def semilogy(feature: str) -> bool:
     return (
         feature.startswith("doublet_") or
         feature.startswith("md_") or
-        feature.startswith("ls_") or
         feature.startswith("t2_")
     ) and (
         "dz" in feature or
@@ -173,13 +172,13 @@ def nickname(feature: str) -> str:
         return r"Doublet $\Delta z$"
     elif feature == "doublet_dr":
         return r"Doublet $\Delta r$"
-    elif feature == "ls_dz":
+    elif feature == "t2_dz":
         return r"T2 $\Delta z$"
-    elif feature == "ls_dr":
+    elif feature == "t2_dr":
         return r"T2 $\Delta r$"
-    elif feature == "ls_chi2_xy":
+    elif feature == "t2_chi2_xy":
         return r"T2 $\chi^2_{xy}$"
-    elif feature == "ls_chi2_sz":
+    elif feature == "t2_chi2_sz":
         return r"T2 $\chi^2_{sz}$"
     elif feature == "t4_dz":
         return r"T4 $\Delta z$"
@@ -205,8 +204,8 @@ def unit(feature: str) -> str:
     if feature in [
         "doublet_dz",
         "doublet_dr",
-        "ls_dz",
-        "ls_dr",
+        "t2_dz",
+        "t2_dr",
         "t4_dz",
         "t4_dr",
         "t8_dz",
@@ -214,8 +213,8 @@ def unit(feature: str) -> str:
     ]:
         return "[mm]"
     elif feature in [
-        "ls_chi2_xy",
-        "ls_chi2_sz",
+        "t2_chi2_xy",
+        "t2_chi2_sz",
         "t4_chi2_xy",
         "t4_chi2_sz",
         "t8_chi2_xy",
@@ -229,7 +228,7 @@ def unit(feature: str) -> str:
 def marker_lo_hi(feature: str) -> tuple[float, float]:
     if feature.startswith("doublet_") or feature.startswith("md_"):
         return 0.5 - 0.1, 0.5 - 0.1
-    elif feature.startswith("ls_"):
+    elif feature.startswith("t2_"):
         return 0.5 - 0.1, 1.5 - 0.1
     elif feature.startswith("t4_"):
         return 0.5 - 0.1, 3.5 - 0.1

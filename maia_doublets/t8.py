@@ -306,7 +306,6 @@ class T8Maker:
         dropcols = ["i_mcp_lower", "i_mcp_upper"]
         dropcols.extend([col for col in t8s.columns if col.startswith("simhit_")])
         dropcols.extend([col for col in t8s.columns if col.startswith("doublet_")])
-        dropcols.extend([col for col in t8s.columns if col.startswith("ls_")])
         dropcols.extend([col for col in t8s.columns if col.startswith("t2_")])
         dropcols.extend([col for col in t8s.columns if col.startswith("t4_")])
         dropcols.extend([col for col in t8s.columns if col.startswith("mcp_") and col.endswith("_lower")])

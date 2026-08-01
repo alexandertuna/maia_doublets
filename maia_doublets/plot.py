@@ -97,11 +97,11 @@ class Plotter:
         # shorthands for cuts
         self.MD_DZ_CUT = calibs.get("doublet_dz", CUT_MISSING)
         self.MD_DR_CUT = calibs.get("doublet_dr", CUT_MISSING)
-        self.T2_DZ_CUT = calibs.get("ls_dz", CUT_MISSING)
-        self.T2_DR_CUT = calibs.get("ls_dr", CUT_MISSING)
-        self.T2_DTHETA_RZ_CUT = calibs.get("ls_dtheta_rz", CUT_MISSING)
-        self.T2_CHI2_XY_CUT = calibs.get("ls_chi2_xy", CUT_MISSING)
-        self.T2_CHI2_SZ_CUT = calibs.get("ls_chi2_sz", CUT_MISSING)
+        self.T2_DZ_CUT = calibs.get("t2_dz", CUT_MISSING)
+        self.T2_DR_CUT = calibs.get("t2_dr", CUT_MISSING)
+        self.T2_DTHETA_RZ_CUT = calibs.get("t2_dtheta_rz", CUT_MISSING)
+        self.T2_CHI2_XY_CUT = calibs.get("t2_chi2_xy", CUT_MISSING)
+        self.T2_CHI2_SZ_CUT = calibs.get("t2_chi2_sz", CUT_MISSING)
         self.T4_DR_CUT = calibs.get("t4_dr", CUT_MISSING)
         self.T4_DZ_CUT = calibs.get("t4_dz", CUT_MISSING)
         self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", CUT_MISSING)
@@ -293,12 +293,12 @@ class Plotter:
         else:
             mask = np.ones(len(self.t2s), dtype=bool)
             for [req, label] in [
-                [self.t2s["ls_system"] == sy, "LS in OTB"],
-                [self.t2s["ls_doublelayer"] == dl, f"LS starting on layer {dl}"],
-                [np.abs(self.t2s["ls_dz"]) < self.T2_DZ_CUT[sy, dl], f"LS with |dz| < {self.T2_DZ_CUT[sy, dl]}mm"],
-                [np.abs(self.t2s["ls_dr"]) < self.T2_DR_CUT[sy, dl], f"LS with |dr| < {self.T2_DR_CUT[sy, dl]}mm"],
-                [np.abs(self.t2s["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[sy, dl]}"],
-                [np.abs(self.t2s["ls_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
+                [self.t2s["t2_system"] == sy, "LS in OTB"],
+                [self.t2s["t2_doublelayer"] == dl, f"LS starting on layer {dl}"],
+                [np.abs(self.t2s["t2_dz"]) < self.T2_DZ_CUT[sy, dl], f"LS with |dz| < {self.T2_DZ_CUT[sy, dl]}mm"],
+                [np.abs(self.t2s["t2_dr"]) < self.T2_DR_CUT[sy, dl], f"LS with |dr| < {self.T2_DR_CUT[sy, dl]}mm"],
+                [np.abs(self.t2s["t2_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[sy, dl]}"],
+                [np.abs(self.t2s["t2_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
             ]:
                 mask &= req
                 logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -376,7 +376,7 @@ class Plotter:
 
             mask_hits = self.simhits["simhit_system"].isin(dets) # == system
             mask_mds = self.doublets["doublet_system"].isin(dets) # == system
-            mask_t2s = self.t2s["ls_system"].isin(dets) # == system
+            mask_t2s = self.t2s["t2_system"].isin(dets) # == system
             mask_t4s = (self.t4s["t4_system_lower"].isin(dets)) & (self.t4s["t4_system_upper"].isin(dets))
             mask_t8s = np.ones(len(self.t8s), dtype=bool)
 
@@ -1050,61 +1050,61 @@ class Plotter:
             logger.info("No T2s to plot")
             return
         logger.info("Plotting t2 features ...")
-        baseline = self.t2s["ls_detectable"] if self.signal else np.ones(len(self.t2s), dtype=bool)
+        baseline = self.t2s["t2_detectable"] if self.signal else np.ones(len(self.t2s), dtype=bool)
 
         bins = {
-            "ls_deta": np.linspace(-3.2, 3.2, 641) if not self.signal else np.linspace(-0.012, 0.012, 241),
-            "ls_dphi": np.linspace(-3.2, 3.2, 321) if not self.signal else np.linspace(-0.12, 0.12, 241),
-            "ls_dr": np.linspace(0, 1500, 501) if not self.signal else np.linspace(0, 1000, 401),
-            "ls_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
-            "ls_ddr": np.linspace(-300, 300, 601),
-            "ls_ddz": np.linspace(-60, 60, 601),
-            "ls_dqoverpt": np.linspace(-0.2, 0.2, 201),
-            "ls_dtheta_rz": np.linspace(-0.024, 0.024, 241),
-            "ls_dtheta_xy": np.linspace(-0.12, 0.12, 241),
-            "ls_chi2_xy": np.logspace(-5.5, 0, 201),
-            "ls_chi2_sz": np.logspace(-5.5, 0, 201),
+            "t2_deta": np.linspace(-3.2, 3.2, 641) if not self.signal else np.linspace(-0.012, 0.012, 241),
+            "t2_dphi": np.linspace(-3.2, 3.2, 321) if not self.signal else np.linspace(-0.12, 0.12, 241),
+            "t2_dr": np.linspace(0, 1500, 501) if not self.signal else np.linspace(0, 1000, 401),
+            "t2_dz": np.linspace(-30000, 30000, 201) if not self.signal else np.linspace(-200, 200, 201),
+            "t2_ddr": np.linspace(-300, 300, 601),
+            "t2_ddz": np.linspace(-60, 60, 601),
+            "t2_dqoverpt": np.linspace(-0.2, 0.2, 201),
+            "t2_dtheta_rz": np.linspace(-0.024, 0.024, 241),
+            "t2_dtheta_xy": np.linspace(-0.12, 0.12, 241),
+            "t2_chi2_xy": np.logspace(-5.5, 0, 201),
+            "t2_chi2_sz": np.logspace(-5.5, 0, 201),
         }
         xlabel = {
-            "ls_deta": r"upper doublet eta - lower doublet eta",
-            "ls_dphi": r"upper doublet phi - lower doublet phi [rad]",
-            "ls_dr": "line segment dr [mm]",
-            "ls_dz": "line segment dz [mm]",
-            "ls_ddr": "upper doublet dr - lower doublet dr",
-            "ls_ddz": "upper doublet dz - lower doublet dz",
-            "ls_dqoverpt": "upper doublet q/pt - lower doublet q/pt",
-            "ls_dtheta_rz": "upper doublet theta_rz - lower doublet theta_rz",
-            "ls_dtheta_xy": "upper doublet theta_xy - lower doublet theta_xy",
-            "ls_chi2_xy": "Diff^2 between circle(xy, 012) and 3 [mm^2]",
-            "ls_chi2_sz": "Diff^2 between line(z, s) [mm^2]",
+            "t2_deta": r"upper doublet eta - lower doublet eta",
+            "t2_dphi": r"upper doublet phi - lower doublet phi [rad]",
+            "t2_dr": "line segment dr [mm]",
+            "t2_dz": "line segment dz [mm]",
+            "t2_ddr": "upper doublet dr - lower doublet dr",
+            "t2_ddz": "upper doublet dz - lower doublet dz",
+            "t2_dqoverpt": "upper doublet q/pt - lower doublet q/pt",
+            "t2_dtheta_rz": "upper doublet theta_rz - lower doublet theta_rz",
+            "t2_dtheta_xy": "upper doublet theta_xy - lower doublet theta_xy",
+            "t2_chi2_xy": "Diff^2 between circle(xy, 012) and 3 [mm^2]",
+            "t2_chi2_sz": "Diff^2 between line(z, s) [mm^2]",
         }
         formatting = {
-            "ls_deta": ".5f",
-            "ls_dphi": ".5f",
-            "ls_dr": ".1f",
-            "ls_dz": ".1f",
-            "ls_ddr": ".3f",
-            "ls_ddz": ".3f",
-            "ls_dqoverpt": ".3f",
-            "ls_dtheta_rz": ".5f",
-            "ls_dtheta_xy": ".4f",
-            "ls_chi2_xy": ".5f",
-            "ls_chi2_sz": ".5f",
+            "t2_deta": ".5f",
+            "t2_dphi": ".5f",
+            "t2_dr": ".1f",
+            "t2_dz": ".1f",
+            "t2_ddr": ".3f",
+            "t2_ddz": ".3f",
+            "t2_dqoverpt": ".3f",
+            "t2_dtheta_rz": ".5f",
+            "t2_dtheta_xy": ".4f",
+            "t2_chi2_xy": ".5f",
+            "t2_chi2_sz": ".5f",
         }
 
         # 1d histograms
         for feature in [
-            "ls_deta",
-            "ls_dphi",
-            "ls_ddr",
-            "ls_ddz",
-            "ls_dqoverpt",
-            "ls_dr",
-            "ls_dz",
-            "ls_dtheta_rz",
-            "ls_dtheta_xy",
-            "ls_chi2_xy",
-            "ls_chi2_sz",
+            "t2_deta",
+            "t2_dphi",
+            "t2_ddr",
+            "t2_ddz",
+            "t2_dqoverpt",
+            "t2_dr",
+            "t2_dz",
+            "t2_dtheta_rz",
+            "t2_dtheta_xy",
+            "t2_chi2_xy",
+            "t2_chi2_sz",
         ]:
 
             for semilogy in [
@@ -1112,8 +1112,8 @@ class Plotter:
                 # True,
             ]:
 
-                for ((system, doublelayer), group) in self.t2s[baseline].groupby(["ls_system",
-                                                                                  "ls_doublelayer",
+                for ((system, doublelayer), group) in self.t2s[baseline].groupby(["t2_system",
+                                                                                  "t2_doublelayer",
                                                                                   ]):
 
                         # logger.info(f"Plotting signal t2 feature {feature}, system {system}, doublelayer {doublelayer} ...")
@@ -1129,9 +1129,9 @@ class Plotter:
                             linewidth=1.0,
                             alpha=0.9,
                         )
-                        if semilogy or feature in ["ls_chi2_xy", "ls_chi2_sz"]:
+                        if semilogy or feature in ["t2_chi2_xy", "t2_chi2_sz"]:
                             ax.semilogy()
-                        if feature in ["ls_chi2_xy", "ls_chi2_sz"]:
+                        if feature in ["t2_chi2_xy", "t2_chi2_sz"]:
                             ax.semilogx()
                         num = len(group)
                         mean = np.mean(group[feature])
@@ -1149,11 +1149,11 @@ class Plotter:
 
         # 2d histograms
         for feature_x, feature_y in [
-            # ("ls_dphi", "ls_dr"),
+            # ("t2_dphi", "t2_dr"),
         ]:
 
-            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["ls_system",
-                                                                              "ls_doublelayer",
+            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["t2_system",
+                                                                              "t2_doublelayer",
                                                                               ]):
 
                 logger.info(f"Plotting signal t2 features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
@@ -1191,8 +1191,8 @@ class Plotter:
             "file", # the file
             "i_event", # the event
             "i_mcp", # the parent mc particle
-            "ls_system", # the system (IT, OT)
-            "ls_doublelayer", # the first double layer
+            "t2_system", # the system (IT, OT)
+            "t2_doublelayer", # the first double layer
         ]
 
         # filter doublets to only those with same parent mcp
@@ -1201,8 +1201,8 @@ class Plotter:
 
         # check if segments's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in segments.groupby(["ls_system",
-                                                                    "ls_doublelayer",
+            for ((system, doublelayer), group) in segments.groupby(["t2_system",
+                                                                    "t2_doublelayer",
                                                                     ]):
                 layer = doublelayer * 2
                 layers = range(layer, layer + 4)
@@ -1234,7 +1234,7 @@ class Plotter:
     def plot_segment_quality_efficiency(self, pdf: PdfPages):
 
         # only consider truth-match doublets
-        baseline = self.t2s["ls_detectable"]
+        baseline = self.t2s["t2_detectable"]
         logger.info(f"Segment efficiency: total segments: {len(self.t2s)}")
         logger.info(f"Segment efficiency: total segments in baseline: {baseline.sum()}")
 
@@ -1245,8 +1245,8 @@ class Plotter:
             "mcp_phi"
         ]):
 
-            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["ls_system",
-                                                                              "ls_doublelayer",
+            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["t2_system",
+                                                                              "t2_doublelayer",
             ]):
 
                 logger.info(f"Plotting segment quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
@@ -1285,8 +1285,8 @@ class Plotter:
 
     def segment_requirements(self, df: pd.DataFrame, req: str) -> tuple[str, pd.DataFrame]:
         # return description and mask
-        sy = df["ls_system"]
-        dl = df["ls_doublelayer"]
+        sy = df["t2_system"]
+        dl = df["t2_doublelayer"]
         if len(sy.unique()) != 1:
             raise ValueError(f"Multiple systems found: {sy.unique()}")
         if len(dl.unique()) != 1:
@@ -1298,19 +1298,19 @@ class Plotter:
             mask = np.ones(len(df), dtype=bool)
         elif req == T2_REQ_DR_POS:
             text = f"|dr| < {self.T2_DR_CUT[sy, dl]}mm"
-            mask = np.abs(df["ls_dr"]) < self.T2_DR_CUT[sy, dl]
+            mask = np.abs(df["t2_dr"]) < self.T2_DR_CUT[sy, dl]
         elif req == T2_REQ_DZ_POS:
             text = f"|dz| < {self.T2_DZ_CUT[sy, dl]}mm"
-            mask = np.abs(df["ls_dz"]) < self.T2_DZ_CUT[sy, dl]
+            mask = np.abs(df["t2_dz"]) < self.T2_DZ_CUT[sy, dl]
         elif req == T2_REQ_RZ_ANG:
             text = f"|dtheta(rz)| < {self.T2_DTHETA_RZ_CUT[sy, dl]}rad"
-            mask = np.abs(df["ls_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
+            mask = np.abs(df["t2_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
         elif req == T2_REQ_XY_CHI2:
             text = f"Chi2(xy,012) < {self.T2_CHI2_XY_CUT[sy, dl]}"
-            mask = np.abs(df["ls_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl]
+            mask = np.abs(df["t2_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl]
         elif req == T2_REQ_ALL:
             text = f"All LS requirements"
-            mask = df["ls_ok"]
+            mask = df["t2_ok"]
         else:
             raise ValueError(f"Unknown segment requirement: {req}")
         return text, mask
