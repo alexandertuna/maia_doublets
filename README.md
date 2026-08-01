@@ -29,6 +29,14 @@ For example, a T2 which includes hits from double-layer 0 and 1 will have a "dou
 
 The implication is a T2 with double-layer 0 naturally includes double-layer 1, since it's a T2.
 
+## MCParticle index
+
+`i_mcp` refers to MCParticle index, and it describes the truth-matching of an object.
+An object with `i_mcp=X` has all hits truth-matched to MCParticle `X`.
+An object with `i_mcp=0xffffffff` does not have a common source of all truth hits.
+That can mean hits are shared among multiple truth objects, or one or more hits are
+not truth matched.
+
 ## `xx_ok`
 
 `xx_ok` is a flag which evaluates if an object has passed all the selection criteria.
