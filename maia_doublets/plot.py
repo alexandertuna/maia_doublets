@@ -1049,7 +1049,7 @@ class Plotter:
         if self.t2s is None or len(self.t2s) == 0:
             logger.info("No T2s to plot")
             return
-        logger.info("Plotting linesegment features ...")
+        logger.info("Plotting t2 features ...")
         baseline = self.t2s["ls_detectable"] if self.signal else np.ones(len(self.t2s), dtype=bool)
 
         bins = {
@@ -1116,7 +1116,7 @@ class Plotter:
                                                                                   "ls_doublelayer",
                                                                                   ]):
 
-                        # logger.info(f"Plotting signal linesegment feature {feature}, system {system}, doublelayer {doublelayer} ...")
+                        # logger.info(f"Plotting signal t2 feature {feature}, system {system}, doublelayer {doublelayer} ...")
 
                         fig, ax = plt.subplots()
                         ax.hist(
@@ -1156,7 +1156,7 @@ class Plotter:
                                                                               "ls_doublelayer",
                                                                               ]):
 
-                logger.info(f"Plotting signal linesegment features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
+                logger.info(f"Plotting signal t2 features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
                 if len(group) == 0:
                     logger.info(f"No t2s in {NICKNAMES[system]} doublelayer {doublelayer} passing baseline, skipping feature plot")
                     continue
