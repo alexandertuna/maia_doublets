@@ -49,7 +49,7 @@ class Plotter:
         self,
         signal: bool,
         mcps: pd.DataFrame,
-        simhits: pd.DataFrame,
+        hits: pd.DataFrame,
         mds: pd.DataFrame,
         t2s: pd.DataFrame,
         t4s: pd.DataFrame,
@@ -59,8 +59,8 @@ class Plotter:
     ):
         self.signal = signal
         self.mcps = mcps
-        self.simhits = simhits
-        self.doublets = mds
+        self.hits = hits
+        self.mds = mds
         self.t2s = t2s
         self.t4s = t4s
         self.t8s = t8s
@@ -156,21 +156,21 @@ class Plotter:
 
     def plot_numbers_for_comparison_signal(self, pdf: PdfPages):
 
-        # part 1: simhits
-        mask = np.ones(len(self.simhits), dtype=bool)
+        # part 1: hits
+        mask = np.ones(len(self.hits), dtype=bool)
         for [req, label] in [
-            [self.simhits["simhit_layer"].isin([0, 1]), "All simhits in layers 0 and 1"],
-            [np.abs(self.simhits["mcp_pdg"]).isin(PARTICLES_OF_INTEREST), "abs(pdg).isin(PARTICLES_OF_INTEREST)"],
-            [self.simhits["mcp_q"] != 0, "q is not 0"],
-            [self.simhits["mcp_pt"] > ONE_POINT_FIVE_GEV, "pT > 1.5 GeV"],
-            [np.abs(self.simhits["mcp_eta"]) < BARREL_TRACKER_MAX_ETA, f"abs(eta) < {BARREL_TRACKER_MAX_ETA}"],
-            [self.simhits["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM, "vertex r < 0.01 mm"],
-            [np.abs(self.simhits["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM, "abs(vertex z) < 0.01 mm"],
-            [self.simhits["simhit_t_corrected"] < MAX_TIME, f"corrected t < {MAX_TIME} ns"],
-            [self.simhits["simhit_costheta"] > MIN_COSTHETA, f"costheta > {MIN_COSTHETA}"],
-            [self.simhits["simhit_p"] / self.simhits["mcp_p"] > MIN_SIMHIT_PT_FRACTION, f"simhit p / mcp p > {MIN_SIMHIT_PT_FRACTION}"],
-            # [self.simhits["simhit_sensor"] == 20, "z-sensor 20"],
-            # [self.simhits["simhit_module"] == 0, "phi-module 0"],
+            [self.hits["simhit_layer"].isin([0, 1]), "All hits in layers 0 and 1"],
+            [np.abs(self.hits["mcp_pdg"]).isin(PARTICLES_OF_INTEREST), "abs(pdg).isin(PARTICLES_OF_INTEREST)"],
+            [self.hits["mcp_q"] != 0, "q is not 0"],
+            [self.hits["mcp_pt"] > ONE_POINT_FIVE_GEV, "pT > 1.5 GeV"],
+            [np.abs(self.hits["mcp_eta"]) < BARREL_TRACKER_MAX_ETA, f"abs(eta) < {BARREL_TRACKER_MAX_ETA}"],
+            [self.hits["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM, "vertex r < 0.01 mm"],
+            [np.abs(self.hits["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM, "abs(vertex z) < 0.01 mm"],
+            [self.hits["simhit_t_corrected"] < MAX_TIME, f"corrected t < {MAX_TIME} ns"],
+            [self.hits["simhit_costheta"] > MIN_COSTHETA, f"costheta > {MIN_COSTHETA}"],
+            [self.hits["simhit_p"] / self.hits["mcp_p"] > MIN_SIMHIT_PT_FRACTION, f"simhit p / mcp p > {MIN_SIMHIT_PT_FRACTION}"],
+            # [self.hits["simhit_sensor"] == 20, "z-sensor 20"],
+            # [self.hits["simhit_module"] == 0, "phi-module 0"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -184,14 +184,14 @@ class Plotter:
             "simhit_module", # the phi-module
             "simhit_sensor", # the z-sensor
         ]
-        lower_mask = mask & (self.simhits["simhit_layer_mod_2"] == 0)
-        upper_mask = mask & (self.simhits["simhit_layer_mod_2"] == 1)
+        lower_mask = mask & (self.hits["simhit_layer_mod_2"] == 0)
+        upper_mask = mask & (self.hits["simhit_layer_mod_2"] == 1)
         logger.info(f"* {'Lower hit':<30} :: {lower_mask.sum():>10}")
         logger.info(f"* {'Upper hit':<30} :: {upper_mask.sum():>10}")
 
         # logger.info("Getting lower and upper hits ...")
-        lower = self.simhits[lower_mask].rename(columns={"i_mcp": "i_mcp_lower"})[md_cols + ["i_mcp_lower"]]
-        upper = self.simhits[upper_mask].rename(columns={"i_mcp": "i_mcp_upper"})[md_cols + ["i_mcp_upper"]]
+        lower = self.hits[lower_mask].rename(columns={"i_mcp": "i_mcp_lower"})[md_cols + ["i_mcp_lower"]]
+        upper = self.hits[upper_mask].rename(columns={"i_mcp": "i_mcp_upper"})[md_cols + ["i_mcp_upper"]]
         doublets = lower.merge(upper, on=md_cols, how="inner")
         logger.info(f"* {'Doublets':<30} :: {len(doublets):>10}")
 
@@ -199,26 +199,26 @@ class Plotter:
         logger.info(f"* {'Doublets from same MCP':<30} :: {same_mcp.sum():>10}")
 
         # part 2b: doublets with dr and dz cuts
-        doublelayer = self.doublets["md_doublelayer"]
+        doublelayer = self.mds["md_doublelayer"]
         dl_0 = doublelayer == 0
         dl_1 = doublelayer == 1
         baseline_cuts = (
-            (self.doublets["i_mcp"] >= 0) &
-            (np.abs(self.doublets["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)) &
-            (self.doublets["mcp_q"] != 0) &
-            (self.doublets["mcp_pt"] > ONE_POINT_FIVE_GEV) &
-            (np.abs(self.doublets["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &
-            (self.doublets["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
-            (np.abs(self.doublets["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM) &
-            (self.doublets["md_first_exit"])
+            (self.mds["i_mcp"] >= 0) &
+            (np.abs(self.mds["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)) &
+            (self.mds["mcp_q"] != 0) &
+            (self.mds["mcp_pt"] > ONE_POINT_FIVE_GEV) &
+            (np.abs(self.mds["mcp_eta"]) < BARREL_TRACKER_MAX_ETA) &
+            (self.mds["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
+            (np.abs(self.mds["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM) &
+            (self.mds["md_first_exit"])
         )
-        quality_cuts = baseline_cuts & self.doublets["md_ok"]
-        doublets_0 = self.doublets[baseline_cuts & dl_0]
-        doublets_1 = self.doublets[baseline_cuts & dl_1]
+        quality_cuts = baseline_cuts & self.mds["md_ok"]
+        doublets_0 = self.mds[baseline_cuts & dl_0]
+        doublets_1 = self.mds[baseline_cuts & dl_1]
         logger.info(f"* {'Doublets, baseline, L01':<30} :: {len(doublets_0):>10}")
         logger.info(f"* {'Doublets, baseline, L23':<30} :: {len(doublets_1):>10}")
-        doublets_0 = self.doublets[quality_cuts & dl_0]
-        doublets_1 = self.doublets[quality_cuts & dl_1]
+        doublets_0 = self.mds[quality_cuts & dl_0]
+        doublets_1 = self.mds[quality_cuts & dl_1]
         logger.info(f"* {'Doublets, drdz cuts, L01':<30} :: {len(doublets_0):>10}")
         logger.info(f"* {'Doublets, drdz cuts, L23':<30} :: {len(doublets_1):>10}")
 
@@ -244,12 +244,12 @@ class Plotter:
         dl = layers[0] // 2
         sy = OUTER_TRACKER_BARREL
 
-        # part 1: simhits
-        mask = np.ones(len(self.simhits), dtype=bool)
+        # part 1: hits
+        mask = np.ones(len(self.hits), dtype=bool)
         for [req, label] in [
-            [self.simhits["simhit_layer"].isin(layers), f"All simhits in layers {layers}"],
-            # [self.simhits["simhit_sensor"] == 20, "z-sensor 20"],
-            # [self.simhits["simhit_module"] == 0, "phi-module 0"],
+            [self.hits["simhit_layer"].isin(layers), f"All hits in layers {layers}"],
+            # [self.hits["simhit_sensor"] == 20, "z-sensor 20"],
+            # [self.hits["simhit_module"] == 0, "phi-module 0"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -263,26 +263,26 @@ class Plotter:
             "simhit_module", # the phi-module
             "simhit_sensor", # the z-sensor
         ]
-        lower_mask = mask & (self.simhits["simhit_layer_mod_2"] == 0)
-        upper_mask = mask & (self.simhits["simhit_layer_mod_2"] == 1)
+        lower_mask = mask & (self.hits["simhit_layer_mod_2"] == 0)
+        upper_mask = mask & (self.hits["simhit_layer_mod_2"] == 1)
         logger.info(f"* {'Lower hit':<30} :: {lower_mask.sum():>10}")
         logger.info(f"* {'Upper hit':<30} :: {upper_mask.sum():>10}")
 
         # number of doublets by hand
-        # lower = self.simhits[lower_mask][md_cols]
-        # upper = self.simhits[upper_mask][md_cols]
+        # lower = self.hits[lower_mask][md_cols]
+        # upper = self.hits[upper_mask][md_cols]
         # doublets = lower.merge(upper, on=md_cols, how="inner")
         # logger.info(f"* {'Doublets (by hand)':<30} :: {len(doublets):>10}")
 
         # number of doublets
-        mask = np.ones(len(self.doublets), dtype=bool)
+        mask = np.ones(len(self.mds), dtype=bool)
         for [req, label] in [
-            [self.doublets["md_system"] == sy, "Doublets in OTB"],
-            [self.doublets["md_doublelayer"] == dl, f"Doublets in layers {layers}"],
-            # [self.doublets["md_sensor"] == 20, "z-sensor 20"],
-            # [self.doublets["md_module"] == 0, "phi-module 0"],
-            [np.abs(self.doublets["md_dz"]) < self.MD_DZ_CUT[sy, dl], f"Doublets with |dz| < {self.MD_DZ_CUT[sy, dl]}mm"],
-            [np.abs(self.doublets["md_dr"]) < self.MD_DR_CUT[sy, dl], f"Doublets with |dr| < {self.MD_DR_CUT[sy, dl]}mm"],
+            [self.mds["md_system"] == sy, "Doublets in OTB"],
+            [self.mds["md_doublelayer"] == dl, f"Doublets in layers {layers}"],
+            # [self.mds["md_sensor"] == 20, "z-sensor 20"],
+            # [self.mds["md_module"] == 0, "phi-module 0"],
+            [np.abs(self.mds["md_dz"]) < self.MD_DZ_CUT[sy, dl], f"Doublets with |dz| < {self.MD_DZ_CUT[sy, dl]}mm"],
+            [np.abs(self.mds["md_dr"]) < self.MD_DR_CUT[sy, dl], f"Doublets with |dr| < {self.MD_DR_CUT[sy, dl]}mm"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -374,8 +374,8 @@ class Plotter:
 
         for dets in detectors:
 
-            mask_hits = self.simhits["simhit_system"].isin(dets) # == system
-            mask_mds = self.doublets["md_system"].isin(dets) # == system
+            mask_hits = self.hits["simhit_system"].isin(dets) # == system
+            mask_mds = self.mds["md_system"].isin(dets) # == system
             mask_t2s = self.t2s["t2_system"].isin(dets) # == system
             mask_t4s = (self.t4s["t4_system_lower"].isin(dets)) & (self.t4s["t4_system_upper"].isin(dets))
             mask_t8s = np.ones(len(self.t8s), dtype=bool)
@@ -412,11 +412,11 @@ class Plotter:
     def plot_time(self, pdf: PdfPages):
         logger.info(f"Plotting time")
         xlabel = "Hit time [ns]" + r" minus $R/c$"
-        for (system, simhits) in self.simhits.groupby("simhit_system"):
+        for (system, hits) in self.hits.groupby("simhit_system"):
             bins = np.linspace(-10, 20, 301)
             fig, ax = plt.subplots()
             ax.hist(
-                simhits["simhit_t_corrected"],
+                hits["simhit_t_corrected"],
                 bins=bins,
                 histtype="stepfilled",
                 color=self.colors["hits"],
@@ -436,13 +436,13 @@ class Plotter:
 
     def plot_layer_occupancy_1d(self, pdf: PdfPages):
         logger.info(f"Plotting layer occupancy (1d)")
-        for (system, simhits) in self.simhits.groupby("simhit_system"):
-            bins = np.arange(simhits["simhit_layer"].min()-0.5,
-                             simhits["simhit_layer"].max()+1.0,
+        for (system, hits) in self.hits.groupby("simhit_system"):
+            bins = np.arange(hits["simhit_layer"].min()-0.5,
+                             hits["simhit_layer"].max()+1.0,
                              1)
             fig, ax = plt.subplots()
             ax.hist(
-                simhits["simhit_layer"],
+                hits["simhit_layer"],
                 bins=bins,
                 histtype="stepfilled",
                 color=self.colors["hits"],
@@ -461,20 +461,20 @@ class Plotter:
 
     def plot_layer_occupancy_2d(self, pdf: PdfPages):
         logger.info(f"Plotting layer occupancy (2d)")
-        for ((system, layer), simhits) in self.simhits.groupby(["simhit_system",
+        for ((system, layer), hits) in self.hits.groupby(["simhit_system",
                                                                 "simhit_layer",
                                                                 ]):
-            logger.info(f"Occupancy of {NICKNAMES[system]} layer {layer}: {len(simhits)} sim hits")
-            if len(simhits) == 0:
+            logger.info(f"Occupancy of {NICKNAMES[system]} layer {layer}: {len(hits)} sim hits")
+            if len(hits) == 0:
                 continue
             bins = [
-                np.arange(-0.5, simhits["simhit_module"].max()+1.5, 1),
-                np.arange(-0.5, simhits["simhit_sensor"].max()+1.5, 1),
+                np.arange(-0.5, hits["simhit_module"].max()+1.5, 1),
+                np.arange(-0.5, hits["simhit_sensor"].max()+1.5, 1),
             ]
             fig, ax = plt.subplots()
             _, _, _, im = ax.hist2d(
-                simhits["simhit_module"],
-                simhits["simhit_sensor"],
+                hits["simhit_module"],
+                hits["simhit_sensor"],
                 bins=bins,
                 cmap="gist_rainbow",
                 norm=colors.LogNorm(vmin=0.9),
@@ -489,18 +489,18 @@ class Plotter:
 
     def plot_radius_vs_layer(self, pdf: PdfPages):
         logger.info(f"Plotting radius vs layer")
-        for (system, simhits) in self.simhits.groupby("simhit_system"):
+        for (system, hits) in self.hits.groupby("simhit_system"):
             bins = [
-                np.arange(simhits["simhit_layer"].min() - 0.5,
-                          simhits["simhit_layer"].max() + 1.0, 1),
-                np.arange(simhits["simhit_r"].min() - 100,
-                          simhits["simhit_r"].max() + 100, 1),
+                np.arange(hits["simhit_layer"].min() - 0.5,
+                          hits["simhit_layer"].max() + 1.0, 1),
+                np.arange(hits["simhit_r"].min() - 100,
+                          hits["simhit_r"].max() + 100, 1),
                 # np.linspace(0, 1600, 1600),
             ]
             fig, ax = plt.subplots()
             _, _, _, im = ax.hist2d(
-                simhits["simhit_layer"],
-                simhits["simhit_r"],
+                hits["simhit_layer"],
+                hits["simhit_r"],
                 bins=bins,
                 cmap="gist_rainbow",
                 cmin=0.5,
@@ -541,7 +541,7 @@ class Plotter:
 
 
     def plot_md_occupancy(self, pdf: PdfPages):
-        for ((system, doublelayer), group) in self.doublets.groupby(["md_system",
+        for ((system, doublelayer), group) in self.mds.groupby(["md_system",
                                                                      "md_doublelayer",
                                                                     ]):
             zmax = None
@@ -560,7 +560,7 @@ class Plotter:
                 # if not self.signal:
                 #     continue
 
-                # doublets = self.doublets[mask]
+                # doublets = self.mds[mask]
                 bins = [
                     np.arange(-0.5, doublets["md_module"].max()+1.5, 1),
                     np.arange(-0.5, doublets["md_sensor"].max()+1.5, 1),
@@ -684,11 +684,11 @@ class Plotter:
 
         # filter doublets to only those with same parent mcp
         pass_cuts = (
-            (self.doublets["i_mcp"] != NO_MCP) &
-            self.doublets["md_ok"] &
-            self.doublets["md_first_exit"]
+            (self.mds["i_mcp"] != NO_MCP) &
+            self.mds["md_ok"] &
+            self.mds["md_first_exit"]
         )
-        doublets = self.doublets[pass_cuts][ md_cols + ["i_mcp"] ].drop_duplicates()
+        doublets = self.mds[pass_cuts][ md_cols + ["i_mcp"] ].drop_duplicates()
 
         # check if doublets's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
@@ -740,8 +740,8 @@ class Plotter:
         ]
 
         # filter doublets to only those with same parent mcp
-        same_parent = self.doublets["i_mcp"] != NO_MCP
-        doublets = self.doublets[same_parent][ md_cols + ["i_mcp"] ].drop_duplicates()
+        same_parent = self.mds["i_mcp"] != NO_MCP
+        doublets = self.mds[same_parent][ md_cols + ["i_mcp"] ].drop_duplicates()
 
         # check if doublets's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
@@ -809,12 +809,12 @@ class Plotter:
         ]
 
         logger.info("Making doublets by hand for a sec ...")
-        mask = self.simhits["simhit_first_exit"] & self.simhits["simhit_from_fiducial_mcp"]
-        lower_mask = mask & (self.simhits["simhit_glayer"] == 14)
-        upper_mask = mask & (self.simhits["simhit_glayer"] == 15)
+        mask = self.hits["simhit_first_exit"] & self.hits["simhit_from_fiducial_mcp"]
+        lower_mask = mask & (self.hits["simhit_glayer"] == 14)
+        upper_mask = mask & (self.hits["simhit_glayer"] == 15)
 
-        lower = self.simhits[lower_mask][md_cols + bonus_cols]
-        upper = self.simhits[upper_mask][md_cols + bonus_cols]
+        lower = self.hits[lower_mask][md_cols + bonus_cols]
+        upper = self.hits[upper_mask][md_cols + bonus_cols]
         mds = lower.merge(upper, on=md_cols, how="inner", suffixes=("_lower", "_upper"))
 
         slope_rz = np.divide(mds["simhit_z_upper"] - mds["simhit_z_lower"],
@@ -857,7 +857,7 @@ class Plotter:
 
     def plot_md_features(self, pdf: PdfPages):
         logger.info("Plotting doublet features ...")
-        baseline = self.doublets["md_detectable"] if self.signal else np.ones(len(self.doublets), dtype=bool)
+        baseline = self.mds["md_detectable"] if self.signal else np.ones(len(self.mds), dtype=bool)
 
         bins = {
             "md_dz": np.linspace(-150, 150, 301) if self.signal else np.linspace(-49e3, 49e3, 101),
@@ -904,7 +904,7 @@ class Plotter:
                 # True,
             ]:
 
-                for ((system, doublelayer), group) in self.doublets[baseline].groupby(["md_system",
+                for ((system, doublelayer), group) in self.mds[baseline].groupby(["md_system",
                                                                                        "md_doublelayer",
                                                                                        ]):
 
@@ -953,7 +953,7 @@ class Plotter:
             if not self.signal and any(["mcp" in feat for feat in [feature_x, feature_y]]):
                 continue
 
-            for ((system, doublelayer), group) in self.doublets[baseline].groupby(["md_system",
+            for ((system, doublelayer), group) in self.mds[baseline].groupby(["md_system",
                                                                                    "md_doublelayer",
                                                                                     ]):
 
@@ -984,8 +984,8 @@ class Plotter:
     def plot_md_quality_efficiency(self, pdf: PdfPages):
 
         # only consider truth-match doublets
-        baseline = self.doublets["md_detectable"]
-        logger.info(f"Doublet efficiency: total doublets: {len(self.doublets)}")
+        baseline = self.mds["md_detectable"]
+        logger.info(f"Doublet efficiency: total doublets: {len(self.mds)}")
         logger.info(f"Doublet efficiency: total doublets in baseline: {baseline.sum()}")
 
         # todo: add comment
@@ -995,7 +995,7 @@ class Plotter:
             "mcp_phi"
         ]):
 
-            for ((system, doublelayer), group) in self.doublets[baseline].groupby(["md_system",
+            for ((system, doublelayer), group) in self.mds[baseline].groupby(["md_system",
                                                                                    "md_doublelayer",
                                                                                    ]):
 

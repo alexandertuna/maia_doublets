@@ -125,7 +125,7 @@ def main():
             plotter = Plotter(
                 signal=signal,
                 mcps=mcps,
-                simhits=simhits,
+                hits=simhits,
                 mds=mds,
                 t2s=t2s,
                 t4s=t4s,
