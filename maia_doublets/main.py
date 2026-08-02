@@ -82,17 +82,17 @@ def main():
     # calib constants
     calibs = CalibConstants(calib_json(ops)).calibs
 
-    # simhits and mcparticles
-    simhits, mcps, hit_cutflow, hit_time = get_simhits_and_mcps(ops, fnames, geometry, signal, layers)
-    write_simhits_and_mcps(ops, simhits, mcps, hit_cutflow)
+    # hits and mcparticles
+    hits, mcps, hit_cutflow, hit_time = get_hits_and_mcps(ops, fnames, geometry, signal, layers)
+    write_hits_and_mcps(ops, hits, mcps, hit_cutflow)
 
     # mini-doublets (mds)
-    mds, md_cutflow, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
+    mds, md_cutflow, md_time = get_mds(ops, hits, signal, cut_mds, calibs)
     write_mds(ops, mds, md_cutflow)
     if ops.calibrate:
         calib_mds(ops, mds)
         calibs = CalibConstants(calib_json(ops)).calibs
-        mds, md_cutflow, md_time = get_mds(ops, simhits, signal, cut_mds, calibs)
+        mds, md_cutflow, md_time = get_mds(ops, hits, signal, cut_mds, calibs)
 
     # t2s
     t2s, t2_cutflow, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
@@ -125,7 +125,7 @@ def main():
             plotter = Plotter(
                 signal=signal,
                 mcps=mcps,
-                hits=simhits,
+                hits=hits,
                 mds=mds,
                 t2s=t2s,
                 t4s=t4s,
@@ -170,8 +170,8 @@ def check_options(ops: argparse.Namespace) -> None:
         raise ValueError("Only one of --sim or --digi can be specified, not both")
     if not ops.layers:
         raise ValueError("At least one layer must be specified")
-    if ops.write_simhits and not ops.write_simhits.endswith(".pkl"):
-        raise ValueError("Output file for --write-simhits must end with .pkl")
+    if ops.write_hits and not ops.write_hits.endswith(".pkl"):
+        raise ValueError("Output file for --write-hits must end with .pkl")
     if ops.write_mcps and not ops.write_mcps.endswith(".pkl"):
         raise ValueError("Output file for --write-mcps must end with .pkl")
     if ops.write_mds and not ops.write_mds.endswith(".pkl"):
@@ -186,7 +186,7 @@ def cutflow_path(df_path: str) -> str:
     return df_path.replace(".pkl", ".json")
 
 
-def get_simhits_and_mcps(
+def get_hits_and_mcps(
     ops: argparse.Namespace,
     fnames: list[str],
     geometry: bool,
@@ -195,16 +195,16 @@ def get_simhits_and_mcps(
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, float]:
 
     with Timer() as hit_time:
-        if ops.read_mcps and ops.read_simhits:
-            logger.info(f"Reading simhits {ops.read_simhits} and mcps {ops.read_mcps} ...")
+        if ops.read_mcps and ops.read_hits:
+            logger.info(f"Reading hits {ops.read_hits} and mcps {ops.read_mcps} ...")
             mcps = pd.read_pickle(ops.read_mcps)
-            simhits = pd.read_pickle(ops.read_simhits)
-            cutflow = pd.read_json(cutflow_path(ops.read_simhits))
+            hits = pd.read_pickle(ops.read_hits)
+            cutflow = pd.read_json(cutflow_path(ops.read_hits))
         elif any([
-            ops.read_mcps and not ops.read_simhits,
-            ops.read_simhits and not ops.read_mcps,
+            ops.read_mcps and not ops.read_hits,
+            ops.read_hits and not ops.read_mcps,
         ]):
-            raise ValueError("Both --read-mcps and --read-simhits must be specified together")
+            raise ValueError("Both --read-mcps and --read-hits must be specified together")
         else:
             # convert slcio to hits dataframe
             converter = HitMaker(slcio_file_paths=fnames,
@@ -213,23 +213,23 @@ def get_simhits_and_mcps(
                                 sim=ops.sim,
                                 layers=layers,
                                 )
-            mcps, simhits, cutflow = converter.convert()
+            mcps, hits, cutflow = converter.convert()
 
-    return simhits, mcps, cutflow, hit_time.duration
+    return hits, mcps, cutflow, hit_time.duration
 
 
-def write_simhits_and_mcps(ops: argparse.Namespace, simhits: pd.DataFrame, mcps: pd.DataFrame, cutflow: pd.DataFrame) -> None:
+def write_hits_and_mcps(ops: argparse.Namespace, hits: pd.DataFrame, mcps: pd.DataFrame, cutflow: pd.DataFrame) -> None:
     if ops.write_mcps:
         logger.info(f"Saving mcps to {ops.write_mcps} ...")
         mcps.to_pickle(ops.write_mcps)
-    if ops.write_simhits:
-        jname = cutflow_path(ops.write_simhits)
-        logger.info(f"Saving simhits to {ops.write_simhits} and cutflow to {jname} ...")
-        simhits.to_pickle(ops.write_simhits)
+    if ops.write_hits:
+        jname = cutflow_path(ops.write_hits)
+        logger.info(f"Saving hits to {ops.write_hits} and cutflow to {jname} ...")
+        hits.to_pickle(ops.write_hits)
         cutflow.to_json(jname, indent=4)
 
 
-def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_mds: bool, calibs: dict) -> tuple[pd.DataFrame,
+def get_mds(ops: argparse.Namespace, hits: pd.DataFrame, signal: bool, cut_mds: bool, calibs: dict) -> tuple[pd.DataFrame,
                                                                                                                 pd.DataFrame,
                                                                                                                 float]:
     with Timer() as md_time:
@@ -246,7 +246,7 @@ def get_mds(ops: argparse.Namespace, simhits: pd.DataFrame, signal: bool, cut_md
                 cut_mds=cut_mds,
                 fast_merge=ops.fast_mds,
                 calibs=calibs,
-                simhits=simhits,
+                hits=hits,
             )
             doublets = maker.df
             cutflow = maker.cutflow
@@ -427,8 +427,8 @@ def options():
     parser.add_argument("--cut-t8s", action="store_true", help="Cut T8s based on [[ something ]]")
     parser.add_argument("--read-mcps", type=str, help="Read mcps from pickle file")
     parser.add_argument("--write-mcps", type=str, help="Write mcps to pickle file")
-    parser.add_argument("--read-simhits", type=str, help="Read simhits from pickle file")
-    parser.add_argument("--write-simhits", type=str, help="Write simhits to pickle file")
+    parser.add_argument("--read-hits", type=str, help="Read hits from pickle file")
+    parser.add_argument("--write-hits", type=str, help="Write hits to pickle file")
     parser.add_argument("--read-mds", type=str, help="Read mini-doublets from pickle file")
     parser.add_argument("--write-mds", type=str, help="Write mini-doublets to pickle file")
     parser.add_argument("--fast-mds", action="store_true", help="Use fast binned merge for mini-doublets")

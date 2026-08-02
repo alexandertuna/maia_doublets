@@ -17,7 +17,7 @@ class MDMaker:
         cut_mds: bool,
         fast_merge: bool,
         calibs: dict,
-        simhits: pd.DataFrame,
+        hits: pd.DataFrame,
     ):
         self.signal = signal
         self.cut_mds = cut_mds
@@ -32,7 +32,7 @@ class MDMaker:
             "simhit_sensor", # the z-sensor
         ]
         self.fast_merge = fast_merge
-        self.df, self.cutflow = self.make_doublets(simhits)
+        self.df, self.cutflow = self.make_doublets(hits)
 
 
     def make_doublets(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -51,7 +51,7 @@ class MDMaker:
             ]
 
         # group loop
-        logger.info("Grouping simhits ...")
+        logger.info("Grouping hits ...")
         groups = df.groupby(groupby_cols)
         all_doublets, all_cutflows = [], []
 
