@@ -15,7 +15,7 @@ for IT in $(seq 50 99); do
     --fast-mds \
     --cutflow ${OUTDIR}/cutflow_${IT}.ndjson \
     --write-mcps ${OUTDIR}/mcps_${IT}.pkl \
-    --write-simhits ${OUTDIR}/simhits_${IT}.pkl \
+    --write-hits ${OUTDIR}/hits_${IT}.pkl \
     --write-mds ${OUTDIR}/mds_${IT}.pkl \
     --write-t2s ${OUTDIR}/t2s_${IT}.pkl \
     --write-t4s ${OUTDIR}/t4s_${IT}.pkl \
