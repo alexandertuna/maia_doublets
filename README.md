@@ -53,6 +53,7 @@ Keep this in mind when applying the `--cut-xx` flags.
 
 This is a non-exhaustive list of things which I should address:
 
+- Mixing "simhit" with "hit"
 - Mixing "doublet" with "md"
 - Mixing "linesegment and "ls" with "t2"
 - Mixing global double layer with system, layer, double-layer
