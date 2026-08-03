@@ -4,6 +4,7 @@ Layers are treated as infinitely thin.
 Modules are optimized sequentially because we only change the z-position of odd-numbered modules, and the even-numbered modules are fixed.
 This means that the optimization of one module does not affect the optimization of another module.
 """
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -11,12 +12,13 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import rcParams
 
 DO_STAGGER = True
-DO_OPTIMIZE = False
-DO_OFFSETS = True
+DO_OPTIMIZE = True
+DO_OFFSETS = False
 DO_PLOT = True
 GAP = 2.0 # mm
 MODULE_THICKNESS = 1.663 # mm
 PHI_STAGGER_DR = 4.0 # mm
+
 L_IT_0 = 30.1 # mm
 L_OT_0 = 60.2 # mm
 NZ_OT = 42 // 2
@@ -32,80 +34,16 @@ ZPOS = np.array([
     ZPOS_OT,
 ])
 
-
 if DO_STAGGER:
     Z_STAGGER_DR = 4.0 # mm
     L_IT = 31.3 # mm
     L_OT = 62.6 # mm
-    # ZPOS_OT = [0*L_OT_0, 1*L_OT_0,
-    #            2*L_OT_0, 3*L_OT_0,
-    #            4*L_OT_0, 5*L_OT_0,
-    #            6*L_OT_0, 7*L_OT_0,
-    #            8*L_OT_0, 9*L_OT_0,
-    #            10*L_OT_0, 11*L_OT_0,
-    #            12*L_OT_0, 13*L_OT_0,
-    #            14*L_OT_0, 15*L_OT_0,
-    #            16*L_OT_0, 17*L_OT_0,
-    #            18*L_OT_0, 19*L_OT_0,
-    #            20*L_OT_0]
-    # ZPOS = np.array([
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    # ])
-    # LAYER_RADII_Z_MOD_2_EQ_0 = {
-    #     "v01": np.array([
-    #         819,
-    #         819 + GAP,
-    #         899,
-    #         899 + GAP,
-    #         1366,
-    #         1366 + GAP,
-    #         1446,
-    #         1446 + GAP,
-    #     ])
-    # }
-    # LAYER_RADII_Z_MOD_2_EQ_1 = {
-    #     "v01": LAYER_RADII_Z_MOD_2_EQ_0["v01"] + Z_STAGGER_DR
-    # }
 else:
     Z_STAGGER_DR = 0.0 # mm
     L_IT = L_IT_0 # mm
     L_OT = L_OT_0 # mm
-    # ZPOS_OT = [it*L_OT for it in range(NZ_OT)]
-    # ZPOS = np.array([
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    #     ZPOS_OT,
-    # ])
-    # LAYER_RADII_Z_MOD_2_EQ_0 = {
-    #     "v01": np.array([
-    #         819,
-    #         819 + GAP,
-    #         899,
-    #         899 + GAP,
-    #         1366,
-    #         1366 + GAP,
-    #         1446,
-    #         1446 + GAP,
-    #     ])
-    # }
-    # LAYER_RADII_Z_MOD_2_EQ_1 = {
-    #     "v01": LAYER_RADII_Z_MOD_2_EQ_0["v01"] + Z_STAGGER_DR
-    # }
 
-# CHOSEN_OFFSETS_OT = np.array([0, 0.9, 0, 1.0, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.4, 0, 2.8, 0, 3.1, 0, 3.3, 0])
-CHOSEN_OFFSETS_OT = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.9, 0, 2.4, 0, 2.8, 0, 3.1, 0, 3.3, 0])
+CHOSEN_OFFSETS_OT = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
 LENGTHS = np.array([
     L_OT,
     L_OT,
@@ -372,6 +310,78 @@ class ZStaggering:
 
 def eta_to_theta(eta: float) -> float:
     return 2 * np.arctan(np.exp(-eta))
+
+
+class DetectorParameters:
+
+    def __init__(
+        self,
+        version: str,
+        tracker: str,
+        phi_mod_2: int,
+        do_z_stagger: bool,
+        do_z_offsets: bool,
+    ):
+        # check inputs
+        if not tracker in ["IT", "OT"]:
+            raise ValueError(f"Invalid tracker: {tracker}. Must be 'IT' or 'OT'")
+        if not version in ["v01"]:
+            raise ValueError(f"Invalid version: {version}. Must be 'v01'")
+
+        self.version = version
+        self.tracker = tracker
+        self.phi_mod_2 = phi_mod_2
+        self.do_z_stagger = do_z_stagger
+        self.do_z_offsets = do_z_offsets
+
+        # set the sensor length
+        if tracker == "IT":
+            raise NotImplementedError("Staggering not implemented for IT")
+        else:
+            self.original_length = 60.2
+            self.length = 62.6 if self.do_z_stagger else 60.2
+
+        # set the number of z-sensors to consider
+        if self.tracker == "IT":
+            raise NotImplementedError("nz not implemented for IT")
+        else:
+            self.nz = 42 // 2
+
+        # set the dr-staggering for z-sensors
+        self.z_stagger_dr = 4.0 if self.do_z_stagger else 0.0
+
+        # set the layer radii
+        if version == "v01":
+            self.layer_radii_z_mod_2_eq_0 = np.array([
+                819,
+                819 + GAP,
+                899,
+                899 + GAP,
+                1366,
+                1366 + GAP,
+                1446,
+                1446 + GAP,
+            ])
+            self.layer_radii_z_mod_2_eq_1 = self.layer_radii_z_mod_2_eq_0 + self.z_stagger_dr
+        else:
+            raise ValueError(f"Invalid version: {version}. Must be 'v01'")
+
+        # set the double-layers
+        self.layer_pairs = [
+            (0, 1),
+            (2, 3),
+            (4, 5),
+            (6, 7),
+        ]
+
+        # set the z-positions of the z-sensors
+        self.zpos = [it*self.original_length for it in range(self.nz)]
+
+        # set the z-offsets of the z-sensors
+        if self.do_z_offsets:
+            self.chosen_offsets = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
+        else:
+            self.chosen_offsets = np.array([0] * self.nz)
 
 
 rcParams.update({
