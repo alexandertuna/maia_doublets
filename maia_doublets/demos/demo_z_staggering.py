@@ -261,8 +261,8 @@ class DetectorParameters:
         # check inputs
         if not tracker in ["IT", "OT"]:
             raise ValueError(f"Invalid tracker: {tracker}. Must be 'IT' or 'OT'")
-        if not version in ["v01"]:
-            raise ValueError(f"Invalid version: {version}. Must be 'v01'")
+        if not version in ["v01", "v05"]:
+            raise ValueError(f"Invalid version: {version}. Must be 'v01' or 'v05'")
         if not phi_mod_2 in [0, 1]:
             raise ValueError(f"Invalid phi_mod_2: {phi_mod_2}. Must be 0 or 1")
 
@@ -313,8 +313,31 @@ class DetectorParameters:
                     1446,
                     1446 + GAP,
                 ])
+        elif version == "v05":
+            if self.tracker == "IT":
+                self.layer_radii_z_mod_2_eq_0 = np.array([
+                    127,
+                    127 + GAP,
+                    268,
+                    268 + GAP,
+                    409,
+                    409 + GAP,
+                    550,
+                    550 + GAP,
+                ])
+            else:
+                self.layer_radii_z_mod_2_eq_0 = np.array([
+                    819,
+                    819 + GAP,
+                    1028,
+                    1028 + GAP,
+                    1237,
+                    1237 + GAP,
+                    1446,
+                    1446 + GAP,
+                ])
         else:
-            raise ValueError(f"Invalid version: {version}. Must be 'v01'")
+            raise ValueError(f"Invalid version: {version}. Must be 'v01' or 'v05'")
         self.layer_radii_z_mod_2_eq_0 += (PHI_STAGGER_DR * self.phi_mod_2)
         self.layer_radii_z_mod_2_eq_1 = self.layer_radii_z_mod_2_eq_0 + self.z_stagger_dr
         self.n_layers = len(self.layer_radii_z_mod_2_eq_0)
@@ -333,18 +356,27 @@ class DetectorParameters:
         # set the z-offsets of the z-sensors
         if self.do_z_offsets:
             if self.tracker == "IT":
-                self.chosen_offsets = np.array([0, 1.5, 0, 1.8, 0, 1.8, 0, 1.8, 0, 2.3, 0, 2.8, 0, 3.2, 0, 3.4, 0, 2.0, 0, 2.0, 0, 2.0, 0])
+                if self.version == "v01":
+                    self.chosen_offsets = np.array([0, 1.5, 0, 1.8, 0, 1.8, 0, 1.8, 0, 2.3, 0, 2.8, 0, 3.2, 0, 3.4, 0, 2.0, 0, 2.0, 0, 2.0, 0])
+                elif self.version == "v05":
+                    self.chosen_offsets = np.array([0.0] * self.nz)
+                else:
+                    raise ValueError(f"Invalid version: {self.version}. Must be 'v01' or 'v05'")
             else:
-                self.chosen_offsets = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
+                if self.version == "v01":
+                    self.chosen_offsets = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
+                elif self.version == "v05":
+                    self.chosen_offsets = np.array([0.0] * self.nz)
+                else:
+                    raise ValueError(f"Invalid version: {self.version}. Must be 'v01' or 'v05'")
         else:
             self.chosen_offsets = np.array([0.0] * self.nz)
 
         # optimization settings
+        self.possible_offsets = np.arange(0, 4, 0.1)
         if self.tracker == "IT":
-            self.possible_offsets = np.arange(0, 4, 0.1)
             self.modules_under_test = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21]
         else:
-            self.possible_offsets = np.arange(0, 4, 0.1)
             self.modules_under_test = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
 
         # given all that, set the z-positions of the z-sensors
@@ -385,7 +417,7 @@ def options():
     parser.add_argument("--plot", action="store_true", help="Enable plotting for the demo")
     parser.add_argument("--phi-mod-2", type=int, default=None, choices=[0, 1], help="Specify the phi_mod_2 for the demo")
     parser.add_argument("--tracker", type=str, default=None, choices=["IT", "OT"], help="Specify the tracker for the demo")
-    parser.add_argument("--version", type=str, default=None, choices=["v01"], help="Specify the version for the demo")
+    parser.add_argument("--version", type=str, default=None, choices=["v01", "v05"], help="Specify the version for the demo")
     return parser.parse_args()
 
 
