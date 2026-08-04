@@ -295,10 +295,10 @@ class DetectorParameters:
                     127 + GAP,
                     167,
                     167 + GAP,
-                    510,
-                    510 + GAP,
-                    550,
-                    550 + GAP,
+                    502,
+                    502 + GAP,
+                    542,
+                    542 + GAP,
                 ])
             else:
                 self.layer_radii_z_mod_2_eq_0 = np.array([
@@ -306,10 +306,10 @@ class DetectorParameters:
                     819 + GAP,
                     899,
                     899 + GAP,
-                    1366,
-                    1366 + GAP,
-                    1446,
-                    1446 + GAP,
+                    1358,
+                    1358 + GAP,
+                    1438,
+                    1438 + GAP,
                 ])
         elif version == "v05":
             if self.tracker == "IT":
@@ -379,6 +379,7 @@ class DetectorParameters:
 
         # given all that, set the z-positions of the z-sensors
         self.set_z_positions()
+        self.set_max_z_and_r()
 
 
     def set_z_positions(self):
@@ -387,7 +388,14 @@ class DetectorParameters:
         self.z_maxs = self.z_mins + self.length
 
 
+    def set_max_z_and_r(self):
+        self.max_z = np.max(self.z_maxs)
+        self.max_r = np.max(np.concatenate([self.layer_radii_z_mod_2_eq_0,
+                                            self.layer_radii_z_mod_2_eq_1]))
+
+
     def describe(self):
+        self.set_max_z_and_r()
         print(f"DetectorParameters:")
         print(f"  version: {self.version}")
         print(f"  tracker: {self.tracker}")
@@ -398,6 +406,8 @@ class DetectorParameters:
         print(f"  length: {self.length}")
         print(f"  nz: {self.nz}")
         print(f"  z_stagger_dr: {self.z_stagger_dr}")
+        print(f"  max_z: {self.max_z}")
+        print(f"  max_r: {self.max_r}")
         # print(f"  layer_radii_z_mod_2_eq_0: {self.layer_radii_z_mod_2_eq_0}")
         # print(f"  layer_radii_z_mod_2_eq_1: {self.layer_radii_z_mod_2_eq_1}")
         # print(f"  layer_pairs: {self.layer_pairs}")
