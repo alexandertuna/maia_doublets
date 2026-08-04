@@ -2,7 +2,7 @@
 All units are mm!
 Layers are treated as infinitely thin.
 Modules are optimized sequentially because we only change the z-position of odd-numbered modules, and the even-numbered modules are fixed.
-This means that the optimization of one module does not affect the optimization of another module.
+This means that the optimization of one module does not (strongly?) affect the optimization of another module.
 """
 import argparse
 import numpy as np
@@ -12,71 +12,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import rcParams
 DetectorParameters = None
 
-# DO_STAGGER = True
-# DO_OPTIMIZE = True
-# DO_OFFSETS = False
-# DO_PLOT = True
 GAP = 2.0 # mm
 MODULE_THICKNESS = 1.663 # mm
-PHI_STAGGER_DR = 4.0 # mm
-
-# L_IT_0 = 30.1 # mm
-# L_OT_0 = 60.2 # mm
-# NZ_OT = 42 // 2
-# ZPOS_OT = [it*L_OT_0 for it in range(NZ_OT)]
-# ZPOS = np.array([
-#     ZPOS_OT,
-#     ZPOS_OT,
-#     ZPOS_OT,
-#     ZPOS_OT,
-#     ZPOS_OT,
-#     ZPOS_OT,
-#     ZPOS_OT,
-#     ZPOS_OT,
-# ])
-
-# if DO_STAGGER:
-#     Z_STAGGER_DR = 4.0 # mm
-#     L_IT = 31.3 # mm
-#     L_OT = 62.6 # mm
-# else:
-#     Z_STAGGER_DR = 0.0 # mm
-#     L_IT = L_IT_0 # mm
-#     L_OT = L_OT_0 # mm
-
-# CHOSEN_OFFSETS_OT = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
-# LENGTHS = np.array([
-#     L_OT,
-#     L_OT,
-#     L_OT,
-#     L_OT,
-#     L_OT,
-#     L_OT,
-#     L_OT,
-#     L_OT,
-# ])
-# LAYER_PAIRS = [
-#     (0, 1),
-#     (2, 3),
-#     (4, 5),
-#     (6, 7),
-# ]
-# LAYER_RADII_Z_MOD_2_EQ_0 = {
-#     "v01": np.array([
-#         819,
-#         819 + GAP,
-#         899,
-#         899 + GAP,
-#         1366,
-#         1366 + GAP,
-#         1446,
-#         1446 + GAP,
-#     ])
-# }
-# LAYER_RADII_Z_MOD_2_EQ_1 = {
-#     "v01": LAYER_RADII_Z_MOD_2_EQ_0["v01"] + Z_STAGGER_DR
-# }
-
+PHI_STAGGER_DR = 8.0 # mm
+Z_STAGGER_DR = 4.0 # mm
 
 def main():
     ops = options()
@@ -96,6 +35,7 @@ def main():
     zstag = ZStaggering(params=params)
     if ops.optimize:
         zstag.optimize()
+        return
     zstag.evaluate()
     zstag.announce()
     if ops.plot:
@@ -188,7 +128,10 @@ class ZStaggering:
 
             # save the best offset
             best_offset, eff = choose_best(self.params.possible_offsets, efficiencies)
-            print(f"Best offset, module {module}: {best_offset:.2f}, eff: {eff:.5f}, effs = {' '.join([f'{eff:.5f}' for eff in efficiencies])}")
+            breakdown = ""
+            for (offset, eff) in zip(self.params.possible_offsets, efficiencies):
+                breakdown += f"{offset:.2f}:{eff:.5f}, "
+            print(f"Best offset, module {module}: {best_offset:.2f}, eff: {eff:.5f}. Breakdown: {breakdown}")
             self.params.chosen_offsets[module] = float(best_offset)
 
         # finalize
@@ -241,7 +184,9 @@ class ZStaggering:
 
     def plot(self):
         with PdfPages(self.pdf) as pdf:
-            self.draw_detector(pdf, eta_lines=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
+            self.draw_detector(pdf, eta_lines=[0.64])
+            # self.draw_detector(pdf, eta_lines=[0.160, 0.165, 0.170, 0.175, 0.180, 0.185])
+            # self.draw_detector(pdf, eta_lines=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
             self.plot_passing(pdf)
 
 
@@ -253,7 +198,7 @@ class ZStaggering:
                 rect = patches.Rectangle((module.z_min, module.rad - MODULE_THICKNESS / 2),
                                           module.z_max - module.z_min,
                                           MODULE_THICKNESS,
-                                          linewidth=1,
+                                          linewidth=0.1,
                                           edgecolor=module.color,
                                           facecolor=module.color,
                                           alpha=0.5,
@@ -266,6 +211,10 @@ class ZStaggering:
         r_min, r_max = ax.get_ylim()
         ax.set_xlim(z_min - 10, z_max + 10)
         ax.set_ylim(r_min - 10, r_max + 10)
+        # ax.set_xlim(0, 60)
+        # ax.set_ylim(0, 200)
+        # ax.set_xlim(70, 120)
+        # ax.set_ylim(500, 580)
         for i_eta, eta in enumerate(eta_lines):
             x0 = y0 = 0
             y1 = r_max + 1 + i_eta
@@ -321,32 +270,45 @@ class DetectorParameters:
 
         # set the sensor length
         if tracker == "IT":
-            raise NotImplementedError("Staggering not implemented for IT")
+            self.original_length = 30.1
+            self.length = 32.5 if self.do_z_stagger else 30.1
         else:
             self.original_length = 60.2
             self.length = 62.6 if self.do_z_stagger else 60.2
 
         # set the number of z-sensors to consider
         if self.tracker == "IT":
-            raise NotImplementedError("nz not implemented for IT")
+            self.nz = 46 // 2
         else:
             self.nz = 42 // 2
 
         # set the dr-staggering for z-sensors
-        self.z_stagger_dr = 4.0 if self.do_z_stagger else 0.0
+        self.z_stagger_dr = Z_STAGGER_DR if self.do_z_stagger else 0.0
 
         # set the layer radii
         if version == "v01":
-            self.layer_radii_z_mod_2_eq_0 = np.array([
-                819,
-                819 + GAP,
-                899,
-                899 + GAP,
-                1366,
-                1366 + GAP,
-                1446,
-                1446 + GAP,
-            ])
+            if self.tracker == "IT":
+                self.layer_radii_z_mod_2_eq_0 = np.array([
+                    127,
+                    127 + GAP,
+                    167,
+                    167 + GAP,
+                    510,
+                    510 + GAP,
+                    550,
+                    550 + GAP,
+                ])
+            else:
+                self.layer_radii_z_mod_2_eq_0 = np.array([
+                    819,
+                    819 + GAP,
+                    899,
+                    899 + GAP,
+                    1366,
+                    1366 + GAP,
+                    1446,
+                    1446 + GAP,
+                ])
         else:
             raise ValueError(f"Invalid version: {version}. Must be 'v01'")
         self.layer_radii_z_mod_2_eq_0 += (PHI_STAGGER_DR * self.phi_mod_2)
@@ -366,21 +328,22 @@ class DetectorParameters:
 
         # set the z-offsets of the z-sensors
         if self.do_z_offsets:
-            self.chosen_offsets = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
+            if self.tracker == "IT":
+                self.chosen_offsets = np.array([0, 1.5, 0, 1.8, 0, 1.8, 0, 1.8, 0, 2.3, 0, 2.8, 0, 3.2, 0, 3.4, 0, 2.0, 0, 2.0, 0, 2.0, 0])
+            else:
+                self.chosen_offsets = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
         else:
             self.chosen_offsets = np.array([0.0] * self.nz)
 
-        # zmins and zmaxs of the z-sensors [n_layers, n_z_sensors]
-        # self.z_mins = np.array([self.zpos + self.chosen_offsets for _ in range(self.n_layers)])
-        # self.z_maxs = self.z_mins + self.length
-
         # optimization settings
         if self.tracker == "IT":
-            raise NotImplementedError("Optimization not implemented for IT")
+            self.possible_offsets = np.arange(0, 4, 0.1)
+            self.modules_under_test = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21]
         else:
             self.possible_offsets = np.arange(0, 4, 0.1)
             self.modules_under_test = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
 
+        # given all that, set the z-positions of the z-sensors
         self.set_z_positions()
 
 
@@ -416,9 +379,9 @@ def options():
     parser.add_argument("--optimize", action="store_true", help="Enable optimization for the demo")
     parser.add_argument("--offsets", action="store_true", help="Enable offsets for the demo")
     parser.add_argument("--plot", action="store_true", help="Enable plotting for the demo")
-    parser.add_argument("--phi-mod-2", type=int, default=0, choices=[0, 1], help="Specify the phi_mod_2 for the demo")
-    parser.add_argument("--tracker", type=str, default="OT", choices=["IT", "OT"], help="Specify the tracker for the demo")
-    parser.add_argument("--version", type=str, default="v01", choices=["v01"], help="Specify the version for the demo")
+    parser.add_argument("--phi-mod-2", type=int, default=None, choices=[0, 1], help="Specify the phi_mod_2 for the demo")
+    parser.add_argument("--tracker", type=str, default=None, choices=["IT", "OT"], help="Specify the tracker for the demo")
+    parser.add_argument("--version", type=str, default=None, choices=["v01"], help="Specify the version for the demo")
     return parser.parse_args()
 
 
