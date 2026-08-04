@@ -188,9 +188,7 @@ class ZStaggering:
 
     def plot(self):
         with PdfPages(self.pdf) as pdf:
-            self.draw_detector(pdf, eta_lines=[0.64])
-            # self.draw_detector(pdf, eta_lines=[0.160, 0.165, 0.170, 0.175, 0.180, 0.185])
-            # self.draw_detector(pdf, eta_lines=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
+            self.draw_detector(pdf, eta_lines=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
             self.plot_passing(pdf)
 
 
@@ -359,14 +357,14 @@ class DetectorParameters:
                 if self.version == "v01":
                     self.chosen_offsets = np.array([0, 1.5, 0, 1.8, 0, 1.8, 0, 1.8, 0, 2.3, 0, 2.8, 0, 3.2, 0, 3.4, 0, 2.0, 0, 2.0, 0, 2.0, 0])
                 elif self.version == "v05":
-                    self.chosen_offsets = np.array([0.0] * self.nz)
+                    self.chosen_offsets = np.array([0, 1.5, 0, 1.5, 0, 2.3, 0, 2.2, 0, 2.7, 0, 3.2, 0, 3.2, 0, 3.4, 0, 2.0, 0, 2.0, 0, 2.0, 0])
                 else:
                     raise ValueError(f"Invalid version: {self.version}. Must be 'v01' or 'v05'")
             else:
                 if self.version == "v01":
                     self.chosen_offsets = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.8, 0, 2.8, 0, 2.8, 0, 3.1, 0, 3.3, 0])
                 elif self.version == "v05":
-                    self.chosen_offsets = np.array([0.0] * self.nz)
+                    self.chosen_offsets = np.array([0, 1.2, 0, 1.3, 0, 1.6, 0, 2.1, 0, 2.6, 0, 2.6, 0, 3.0, 0, 3.0, 0, 3.0, 0, 3.3, 0])
                 else:
                     raise ValueError(f"Invalid version: {self.version}. Must be 'v01' or 'v05'")
         else:
