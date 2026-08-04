@@ -3,6 +3,10 @@ All units are mm!
 Layers are treated as infinitely thin.
 Modules are optimized sequentially because we only change the z-position of odd-numbered modules, and the even-numbered modules are fixed.
 This means that the optimization of one module does not (strongly?) affect the optimization of another module.
+
+NB: Its a little complicated to choose z-offsets for each module *considering consistency between other modules*.
+This matters because the optimal z-offset for each module usually has a few equal choices, i.e. a broad maximum in the efficiency vs. z-offset curve.
+Right now, I just take the middle of the plateau. Then I eyeball small adjustments afterward for consistency.
 """
 import argparse
 import numpy as np
