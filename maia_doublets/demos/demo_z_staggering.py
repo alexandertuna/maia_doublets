@@ -45,6 +45,7 @@ def main():
     zstag.announce()
     if ops.plot:
         zstag.plot()
+    zstag.write_xml("tmp.xml")
 
 
 class Module:
@@ -243,8 +244,42 @@ class ZStaggering:
             plt.close()
 
 
-def eta_to_theta(eta: float) -> float:
-    return 2 * np.arctan(np.exp(-eta))
+    def set_xml_params(self):
+        """
+        <layer module="{layer_module}" id="{layer_id}" vis="{layer_vis}" type="{layer_type}">
+            <rphi_layout phi_tilt="0*deg" nphi="{nphi}" phi0="0" rc="{radius}" dr="{dr}*mm"/>
+            <z_layout dr="0" z0="{tracker_half_length} - {length_div_2}*mm" nz="{nz}"/>
+        </layer>
+        """
+        layer_module = "InnerTrackerBarrelModule_01" if self.params.tracker == "IT" else "OuterTrackerBarrelModule_In"
+        layer_id = "xxx"
+        layer_vis = "xxx"
+        layer_type = "xxx"
+        nphi = ""
+        radius = ""  # mm
+        dr = ""  # mm
+        tracker_half_length = ""
+        length_div_2 = ""
+        nz = ""
+        self.xml_dict = dict(
+            layer_module=layer_module,
+            layer_id=layer_id,
+            layer_vis=layer_vis,
+            layer_type=layer_type,
+            nphi=nphi,
+            radius=radius,
+            dr=dr,
+            tracker_half_length=tracker_half_length,
+            length_div_2=length_div_2,
+            nz=nz,
+        )
+
+
+    def write_xml(self, filename: str):
+        self.set_xml_params()
+        with open(filename, "w") as fi:
+            xml_str = xml_template()
+            fi.write(xml_str.format(**self.xml_dict))
 
 
 class DetectorParameters:
@@ -473,6 +508,20 @@ class DetectorParameters:
         # print(f"  chosen_offsets: {self.chosen_offsets}")
         # print(f"  z_mins: {self.z_mins}")
         # print(f"  z_maxs: {self.z_maxs}")
+
+
+def xml_template():
+    return (
+"""
+<layer module="{layer_module}" id="{layer_id}" vis="{layer_vis}" type="{layer_type}">
+    <rphi_layout phi_tilt="0*deg" nphi="{nphi}" phi0="0" rc="{radius}" dr="{dr}*mm"/>
+    <z_layout dr="0" z0="{tracker_half_length} - {length_div_2}*mm" nz="{nz}"/>
+</layer>
+""")
+
+
+def eta_to_theta(eta: float) -> float:
+    return 2 * np.arctan(np.exp(-eta))
 
 
 def options():
