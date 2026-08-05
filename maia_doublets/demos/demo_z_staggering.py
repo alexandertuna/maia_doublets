@@ -18,7 +18,8 @@ DetectorParameters = None
 
 GAP = 2.0 # mm
 MODULE_THICKNESS = 1.663 # mm
-PHI_STAGGER_DR = 8.0 # mm
+PHI_STAGGER_DR_WITH_Z_STAGGER = 8.0 # mm
+PHI_STAGGER_DR_WITHOUT_Z_STAGGER = 4.0 # mm
 Z_STAGGER_DR = 4.0 # mm
 
 def main():
@@ -288,56 +289,112 @@ class DetectorParameters:
         self.z_stagger_dr = Z_STAGGER_DR if self.do_z_stagger else 0.0
 
         # set the layer radii
-        if version == "v01":
-            if self.tracker == "IT":
-                self.layer_radii_z_mod_2_eq_0 = np.array([
-                    127,
-                    127 + GAP,
-                    167,
-                    167 + GAP,
-                    502,
-                    502 + GAP,
-                    542,
-                    542 + GAP,
-                ])
+        if self.do_z_stagger:
+            if version == "v01":
+                if self.tracker == "IT":
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        127,
+                        127 + GAP,
+                        167,
+                        167 + GAP,
+                        502,
+                        502 + GAP,
+                        542,
+                        542 + GAP,
+                    ])
+                else:
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        819,
+                        819 + GAP,
+                        899,
+                        899 + GAP,
+                        1358,
+                        1358 + GAP,
+                        1438,
+                        1438 + GAP,
+                    ])
+            elif version == "v05":
+                if self.tracker == "IT":
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        127,
+                        127 + GAP,
+                        265.333,
+                        265.333 + GAP,
+                        403.666,
+                        403.666 + GAP,
+                        542,
+                        542 + GAP,
+                    ])
+                else:
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        819,
+                        819 + GAP,
+                        1025.333,
+                        1025.333 + GAP,
+                        1231.666,
+                        1231.666 + GAP,
+                        1438,
+                        1438 + GAP,
+                    ])
             else:
-                self.layer_radii_z_mod_2_eq_0 = np.array([
-                    819,
-                    819 + GAP,
-                    899,
-                    899 + GAP,
-                    1358,
-                    1358 + GAP,
-                    1438,
-                    1438 + GAP,
-                ])
-        elif version == "v05":
-            if self.tracker == "IT":
-                self.layer_radii_z_mod_2_eq_0 = np.array([
-                    127,
-                    127 + GAP,
-                    265.333,
-                    265.333 + GAP,
-                    403.666,
-                    403.666 + GAP,
-                    542,
-                    542 + GAP,
-                ])
-            else:
-                self.layer_radii_z_mod_2_eq_0 = np.array([
-                    819,
-                    819 + GAP,
-                    1025.333,
-                    1025.333 + GAP,
-                    1231.666,
-                    1231.666 + GAP,
-                    1438,
-                    1438 + GAP,
-                ])
+                raise ValueError(f"Invalid version: {version}. Must be 'v01' or 'v05'")
         else:
-            raise ValueError(f"Invalid version: {version}. Must be 'v01' or 'v05'")
-        self.layer_radii_z_mod_2_eq_0 += (PHI_STAGGER_DR * self.phi_mod_2)
+            # no z-stagger
+            if version == "v01":
+                if self.tracker == "IT":
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        127,
+                        127 + GAP,
+                        167,
+                        167 + GAP,
+                        510,
+                        510 + GAP,
+                        550,
+                        550 + GAP,
+                    ])
+                else:
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        819,
+                        819 + GAP,
+                        899,
+                        899 + GAP,
+                        1366,
+                        1366 + GAP,
+                        1446,
+                        1446 + GAP,
+                    ])
+            elif version == "v05":
+                if self.tracker == "IT":
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        127,
+                        127 + GAP,
+                        268,
+                        268 + GAP,
+                        409,
+                        409 + GAP,
+                        550,
+                        550 + GAP,
+                    ])
+                else:
+                    self.layer_radii_z_mod_2_eq_0 = np.array([
+                        819,
+                        819 + GAP,
+                        1028,
+                        1028 + GAP,
+                        1237,
+                        1237 + GAP,
+                        1446,
+                        1446 + GAP,
+                    ])
+            else:
+                raise ValueError(f"Invalid version: {version}. Must be 'v01' or 'v05'")
+
+        # set the layer radii which depends on phi_mod_2 and z_mod_2
+        self.phi_stagger_dr = PHI_STAGGER_DR_WITH_Z_STAGGER if self.do_z_stagger else PHI_STAGGER_DR_WITHOUT_Z_STAGGER
+        self.layer_radii_z_mod_2_eq_0 += (self.phi_stagger_dr * self.phi_mod_2)
         self.layer_radii_z_mod_2_eq_1 = self.layer_radii_z_mod_2_eq_0 + self.z_stagger_dr
+
+        # set the number of layers
         self.n_layers = len(self.layer_radii_z_mod_2_eq_0)
 
         # set the double-layers
@@ -406,6 +463,7 @@ class DetectorParameters:
         print(f"  length: {self.length}")
         print(f"  nz: {self.nz}")
         print(f"  z_stagger_dr: {self.z_stagger_dr}")
+        print(f"  phi_stagger_dr: {self.phi_stagger_dr}")
         print(f"  max_z: {self.max_z}")
         print(f"  max_r: {self.max_r}")
         # print(f"  layer_radii_z_mod_2_eq_0: {self.layer_radii_z_mod_2_eq_0}")
