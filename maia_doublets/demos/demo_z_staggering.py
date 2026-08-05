@@ -316,23 +316,23 @@ class DetectorParameters:
                 self.layer_radii_z_mod_2_eq_0 = np.array([
                     127,
                     127 + GAP,
-                    268,
-                    268 + GAP,
-                    409,
-                    409 + GAP,
-                    550,
-                    550 + GAP,
+                    265.333,
+                    265.333 + GAP,
+                    403.666,
+                    403.666 + GAP,
+                    542,
+                    542 + GAP,
                 ])
             else:
                 self.layer_radii_z_mod_2_eq_0 = np.array([
                     819,
                     819 + GAP,
-                    1028,
-                    1028 + GAP,
-                    1237,
-                    1237 + GAP,
-                    1446,
-                    1446 + GAP,
+                    1025.333,
+                    1025.333 + GAP,
+                    1231.666,
+                    1231.666 + GAP,
+                    1438,
+                    1438 + GAP,
                 ])
         else:
             raise ValueError(f"Invalid version: {version}. Must be 'v01' or 'v05'")
