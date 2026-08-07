@@ -244,42 +244,11 @@ class ZStaggering:
             plt.close()
 
 
-    def set_xml_params(self):
-        """
-        <layer module="{layer_module}" id="{layer_id}" vis="{layer_vis}" type="{layer_type}">
-            <rphi_layout phi_tilt="0*deg" nphi="{nphi}" phi0="0" rc="{radius}" dr="{dr}*mm"/>
-            <z_layout dr="0" z0="{tracker_half_length} - {length_div_2}*mm" nz="{nz}"/>
-        </layer>
-        """
-        layer_module = "InnerTrackerBarrelModule_01" if self.params.tracker == "IT" else "OuterTrackerBarrelModule_In"
-        layer_id = "xxx"
-        layer_vis = "xxx"
-        layer_type = "xxx"
-        nphi = ""
-        radius = ""  # mm
-        dr = ""  # mm
-        tracker_half_length = ""
-        length_div_2 = ""
-        nz = ""
-        self.xml_dict = dict(
-            layer_module=layer_module,
-            layer_id=layer_id,
-            layer_vis=layer_vis,
-            layer_type=layer_type,
-            nphi=nphi,
-            radius=radius,
-            dr=dr,
-            tracker_half_length=tracker_half_length,
-            length_div_2=length_div_2,
-            nz=nz,
-        )
-
-
     def write_xml(self, filename: str):
-        self.set_xml_params()
+        self.params.make_xml_blurbs()
         with open(filename, "w") as fi:
-            xml_str = xml_template()
-            fi.write(xml_str.format(**self.xml_dict))
+            for blurb in self.params.xml_blurbs:
+                fi.write(blurb)
 
 
 class DetectorParameters:
@@ -440,6 +409,16 @@ class DetectorParameters:
             (6, 7),
         ]
 
+        # # set the number of z-sensors to consider for xml
+        # if self.tracker == "IT":
+        #     if self.version == "v01":
+        #         self.nz_per_layer = [32, 32, 32, 32, 46, 46, 46, 46]
+        #     elif self.version == "v05":
+        #         self.nz_per_layer = [32, 32, 32, 32, 32, 32, 46, 46]
+        # else:
+        #     self.nz_per_layer = [42] * self.n_layers
+        # self.nz_per_layer = [nz // 2 for nz in self.nz_per_layer]
+
         # set the z-positions of the z-sensors [n_z_sensors]
         self.zpos = np.array([it*self.original_length for it in range(self.nz)])
 
@@ -510,10 +489,67 @@ class DetectorParameters:
         # print(f"  z_maxs: {self.z_maxs}")
 
 
-def xml_template():
+    def make_xml_blurbs(self):
+        self.xml_blurbs = []
+        self.set_xml_params()
+        self.make_xml_constants_blurbs()
+        self.make_xml_layers_blurbs()
+
+
+    def set_xml_params(self):
+        self.xml = {}
+        if self.version == "v01":
+            if self.tracker == "IT":
+                self.xml["nzs"] = [32, 32, 32, 32, 46, 46, 46, 46]
+                self.xml["nphis"] = [15*2, 15*2, 20*2, 20*2, 58*2, 58*2, 62*2, 62*2]
+            elif self.tracker == "OT":
+                self.xml["nzs"] = [42] * self.n_layers
+                self.xml["nphis"] = [48*2, 48*2, 52*2, 52*2, 80*2, 80*2, 84*2, 84*2]
+        elif self.version == "v05":
+            if self.tracker == "IT":
+                self.xml["nzs"] = [32, 32, 32, 32, 32, 32, 46, 46]
+                self.xml["nphis"] = [15*2, 15*2, 30*2, 30*2, 46*2, 46*2, 62*2, 62*2]
+            elif self.tracker == "OT":
+                self.xml["nzs"] = [42] * self.n_layers
+                self.xml["nphis"] = [48*2, 48*2, 0, 0, 0, 0, 84*2, 84*2]
+
+
+    def make_xml_constants_blurbs(self):
+        pass
+
+
+    def make_xml_layers_blurbs(self):
+        for layer in range(self.n_layers):
+            for iz in range(self.xml["nzs"][layer]):
+                z_mod_2 = iz % 2
+                layer_module = ("InnerTrackerBarrelModule_01"
+                                if self.tracker == "IT" else
+                                "OuterTrackerBarrelModule_In")
+                layer_id = "xxx"
+                nphi = self.xml["nphis"][layer]
+                radius = ""  # mm
+                dr = self.phi_stagger_dr # mm
+                tracker_half_length = ""
+                length_div_2 = ""
+                nz = self.xml["nzs"][layer]
+                dic = dict(
+                    layer_module=layer_module,
+                    layer_id=layer_id,
+                    nphi=nphi,
+                    radius=radius,
+                    dr=dr,
+                    tracker_half_length=tracker_half_length,
+                    length_div_2=length_div_2,
+                    nz=nz,
+                )
+                self.xml_blurbs.append(xml_layer_template().format(**dic))
+
+
+
+def xml_layer_template():
     return (
 """
-<layer module="{layer_module}" id="{layer_id}" vis="{layer_vis}" type="{layer_type}">
+<layer module="{layer_module}" id="{layer_id}">
     <rphi_layout phi_tilt="0*deg" nphi="{nphi}" phi0="0" rc="{radius}" dr="{dr}*mm"/>
     <z_layout dr="0" z0="{tracker_half_length} - {length_div_2}*mm" nz="{nz}"/>
 </layer>
