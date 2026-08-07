@@ -502,48 +502,110 @@ class DetectorParameters:
             if self.tracker == "IT":
                 self.xml["nzs"] = [32, 32, 32, 32, 46, 46, 46, 46]
                 self.xml["nphis"] = [15*2, 15*2, 20*2, 20*2, 58*2, 58*2, 62*2, 62*2]
+                self.xml["half_length"] = [481.6, 481.6, 481.6, 481.6, 692.3, 692.3, 692.3, 692.3]
             elif self.tracker == "OT":
                 self.xml["nzs"] = [42] * self.n_layers
                 self.xml["nphis"] = [48*2, 48*2, 52*2, 52*2, 80*2, 80*2, 84*2, 84*2]
+                self.xml["half_length"] = [1264.2] * self.n_layers
         elif self.version == "v05":
             if self.tracker == "IT":
                 self.xml["nzs"] = [32, 32, 32, 32, 32, 32, 46, 46]
                 self.xml["nphis"] = [15*2, 15*2, 30*2, 30*2, 46*2, 46*2, 62*2, 62*2]
+                self.xml["half_length"] = [481.6, 481.6, 481.6, 481.6, 481.6, 481.6, 692.3, 692.3]
             elif self.tracker == "OT":
                 self.xml["nzs"] = [42] * self.n_layers
-                self.xml["nphis"] = [48*2, 48*2, 0, 0, 0, 0, 84*2, 84*2]
+                self.xml["nphis"] = [48*2, 48*2, 60*2, 60*2, 72*2, 72*2, 84*2, 84*2]
+                self.xml["half_length"] = [1264.2] * self.n_layers
+
+        # +z sensors are mirrored to -z, so we only need to consider half of them
+        self.xml["nzs"] = [nz // 2 for nz in self.xml["nzs"]]
 
 
     def make_xml_constants_blurbs(self):
+        """
+        <constant name="InnerTracker_Barrel_radius_0" value="127*mm"/>
+        <constant name="InnerTracker_Barrel_radius_1" value="167*mm"/>
+        <constant name="InnerTracker_Barrel_radius_2" value="510*mm"/>
+        <constant name="InnerTracker_Barrel_radius_3" value="550*mm"/>
+        """
+        # layer radius (without z-stagger dr)
+        # layer radius (with z-stagger dr)
+        # original sensor length
+        # sensor length
         pass
 
 
     def make_xml_layers_blurbs(self):
+
+        bits_zsensor = 8
+        bits_layer = 5
+        bits_total = bits_zsensor + bits_layer
+        id_max = 2**bits_total - 1
+
+        original_sensor = ("InnerTracker" if self.tracker == "IT" else "OuterTracker") + "_Barrel_OriginalSensorLength"
+        layer_module = ("InnerTrackerBarrelModule_01"
+                        if self.tracker == "IT" else
+                        "OuterTrackerBarrelModule_In")
+
         for layer in range(self.n_layers):
+
+            layer_dicts = []
+
+            # step 1: make a dict for each barrel ring
             for iz in range(self.xml["nzs"][layer]):
                 z_mod_2 = iz % 2
-                layer_module = ("InnerTrackerBarrelModule_01"
-                                if self.tracker == "IT" else
-                                "OuterTrackerBarrelModule_In")
-                layer_id = "xxx"
+                offset = self.chosen_offsets[iz]
+                layer_id = layer
                 nphi = self.xml["nphis"][layer]
                 radius = ""  # mm
                 dr = self.phi_stagger_dr # mm
-                tracker_half_length = ""
-                length_div_2 = ""
-                nz = self.xml["nzs"][layer]
+                z0 = f"{iz}*{original_sensor} + {offset}"
+                nz = 1
                 dic = dict(
                     layer_module=layer_module,
                     layer_id=layer_id,
                     nphi=nphi,
                     radius=radius,
                     dr=dr,
-                    tracker_half_length=tracker_half_length,
-                    length_div_2=length_div_2,
+                    z0=z0,
                     nz=nz,
                 )
+
+                # positive z
+                layer_dicts.append(dic)
+
+                # negative z
+                ndic = dic.copy()
+                ndic["z0"] = f"{-iz-1}*{original_sensor} - {offset}"
+                layer_dicts.append(ndic)
+
+            # step 2: sort dicts by z0 and re-label them by increasing z0
+            # z0_str looks like "0*InnerTracker_Barrel_OriginalSensorLength + 0.0"
+            def z0_to_int(z0_str: str) -> int:
+                return int(z0_str.split("*")[0])
+            layer_dicts.sort(key=lambda dic: z0_to_int(dic["z0"]))
+            for it in range(len(layer_dicts)):
+                layer_id = (layer << bits_zsensor) + it
+                if layer_id > id_max:
+                    raise ValueError(f"Layer ID {layer_id} exceeds maximum {id_max}")
+                layer_dicts[it]["layer_id"] = layer_id
+
+            # step 3: fin
+            for dic in layer_dicts:
                 self.xml_blurbs.append(xml_layer_template().format(**dic))
 
+
+def xml_constant_mm_template():
+    """
+    <constant name="InnerTracker_Barrel_radius_0" value="127*mm"/>
+    <constant name="InnerTracker_Barrel_radius_1" value="167*mm"/>
+    <constant name="InnerTracker_Barrel_radius_2" value="510*mm"/>
+    <constant name="InnerTracker_Barrel_radius_3" value="550*mm"/>
+    """
+    return (
+"""
+<constant name="{name}" value="{value}*mm"/>
+""")
 
 
 def xml_layer_template():
@@ -551,7 +613,7 @@ def xml_layer_template():
 """
 <layer module="{layer_module}" id="{layer_id}">
     <rphi_layout phi_tilt="0*deg" nphi="{nphi}" phi0="0" rc="{radius}" dr="{dr}*mm"/>
-    <z_layout dr="0" z0="{tracker_half_length} - {length_div_2}*mm" nz="{nz}"/>
+    <z_layout dr="0" z0="{z0}*mm" nz="{nz}"/>
 </layer>
 """)
 
