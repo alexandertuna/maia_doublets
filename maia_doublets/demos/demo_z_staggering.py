@@ -409,16 +409,6 @@ class DetectorParameters:
             (6, 7),
         ]
 
-        # # set the number of z-sensors to consider for xml
-        # if self.tracker == "IT":
-        #     if self.version == "v01":
-        #         self.nz_per_layer = [32, 32, 32, 32, 46, 46, 46, 46]
-        #     elif self.version == "v05":
-        #         self.nz_per_layer = [32, 32, 32, 32, 32, 32, 46, 46]
-        # else:
-        #     self.nz_per_layer = [42] * self.n_layers
-        # self.nz_per_layer = [nz // 2 for nz in self.nz_per_layer]
-
         # set the z-positions of the z-sensors [n_z_sensors]
         self.zpos = np.array([it*self.original_length for it in range(self.nz)])
 
@@ -528,11 +518,29 @@ class DetectorParameters:
         <constant name="InnerTracker_Barrel_radius_2" value="510*mm"/>
         <constant name="InnerTracker_Barrel_radius_3" value="550*mm"/>
         """
+        tracker = "InnerTracker" if self.tracker == "IT" else "OuterTracker"
+        self.xml_names = {}
+        self.xml_names["gap"] = tracker + "_Barrel_DoubleLayer_Gap"
+
         # layer radius (without z-stagger dr)
         # layer radius (with z-stagger dr)
+        for lower, upper in self.layer_pairs:
+            doubler_layer = lower // 2
+            self.xml_names[f"layer_radii_z_mod_2_eq_0_{doubler_layer}"] = f"{tracker}_Barrel_radius_{doubler_layer}"
+            self.xml_names[f"layer_radii_z_mod_2_eq_1_{doubler_layer}"] = f"{tracker}_Barrel_radius_{doubler_layer}_z_staggered"
+            self.xml_blurbs.append(xml_constant_mm_template().format(name=self.xml_names[f"layer_radii_z_mod_2_eq_0_{doubler_layer}"],
+                                                                     value=self.layer_radii_z_mod_2_eq_0[lower]))
+            self.xml_blurbs.append(xml_constant_mm_template().format(name=self.xml_names[f"layer_radii_z_mod_2_eq_1_{doubler_layer}"],
+                                                                     value=self.layer_radii_z_mod_2_eq_1[lower]))
+
         # original sensor length
         # sensor length
-        pass
+        self.xml_names["sensor_length_original"] = tracker + "_Barrel_OriginalSensorLength"
+        self.xml_names["sensor_length"] = tracker + "_Barrel_SensorLength"
+        self.xml_blurbs.append(xml_constant_mm_template().format(name=self.xml_names["sensor_length_original"],
+                                                                 value=self.original_length))
+        self.xml_blurbs.append(xml_constant_mm_template().format(name=self.xml_names["sensor_length"],
+                                                                 value=self.length))
 
 
     def make_xml_layers_blurbs(self):
@@ -542,8 +550,8 @@ class DetectorParameters:
         bits_total = bits_zsensor + bits_layer
         id_max = 2**bits_total - 1
 
-        sensor_length_original = ("InnerTracker" if self.tracker == "IT" else "OuterTracker") + "_Barrel_OriginalSensorLength"
-        sensor_length = ("InnerTracker" if self.tracker == "IT" else "OuterTracker") + "_Barrel_SensorLength"
+        sensor_length_original = self.xml_names["sensor_length_original"]
+        sensor_length = self.xml_names["sensor_length"]
         layer_module = ("InnerTrackerBarrelModule_01"
                         if self.tracker == "IT" else
                         "OuterTrackerBarrelModule_In")
@@ -554,12 +562,14 @@ class DetectorParameters:
 
             # step 1: make a dict for each barrel ring
             for iz in range(self.xml["nzs"][layer]):
-                z_mod_2 = iz % 2
+                z_mod_2 = int(iz % 2)
                 offset = self.chosen_offsets[iz]
                 layer_id = layer
                 nphi = self.xml["nphis"][layer]
-                radius = ""  # mm
-                dr = self.phi_stagger_dr # mm
+                radius = self.xml_names[f"layer_radii_z_mod_2_eq_{z_mod_2}_{int(layer // 2)}"]
+                if layer % 2 == 1:
+                    radius += f" + {self.xml_names['gap']}"
+                dr = self.phi_stagger_dr
                 z0 = f"{iz}*{sensor_length_original} + {offset} + {sensor_length}/2"
                 nz = 1
                 dic = dict(
@@ -603,10 +613,7 @@ def xml_constant_mm_template():
     <constant name="InnerTracker_Barrel_radius_2" value="510*mm"/>
     <constant name="InnerTracker_Barrel_radius_3" value="550*mm"/>
     """
-    return (
-"""
-<constant name="{name}" value="{value}*mm"/>
-""")
+    return '<constant name="{name}" value="{value}*mm"/>\n'
 
 
 def xml_layer_template():
