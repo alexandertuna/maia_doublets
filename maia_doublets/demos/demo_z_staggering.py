@@ -542,7 +542,8 @@ class DetectorParameters:
         bits_total = bits_zsensor + bits_layer
         id_max = 2**bits_total - 1
 
-        original_sensor = ("InnerTracker" if self.tracker == "IT" else "OuterTracker") + "_Barrel_OriginalSensorLength"
+        sensor_length_original = ("InnerTracker" if self.tracker == "IT" else "OuterTracker") + "_Barrel_OriginalSensorLength"
+        sensor_length = ("InnerTracker" if self.tracker == "IT" else "OuterTracker") + "_Barrel_SensorLength"
         layer_module = ("InnerTrackerBarrelModule_01"
                         if self.tracker == "IT" else
                         "OuterTrackerBarrelModule_In")
@@ -559,7 +560,7 @@ class DetectorParameters:
                 nphi = self.xml["nphis"][layer]
                 radius = ""  # mm
                 dr = self.phi_stagger_dr # mm
-                z0 = f"{iz}*{original_sensor} + {offset}"
+                z0 = f"{iz}*{sensor_length_original} + {offset} + {sensor_length}/2"
                 nz = 1
                 dic = dict(
                     layer_module=layer_module,
@@ -576,7 +577,7 @@ class DetectorParameters:
 
                 # negative z
                 ndic = dic.copy()
-                ndic["z0"] = f"{-iz-1}*{original_sensor} - {offset}"
+                ndic["z0"] = f"{-iz-1}*{sensor_length_original} - {offset} - {sensor_length}/2"
                 layer_dicts.append(ndic)
 
             # step 2: sort dicts by z0 and re-label them by increasing z0
