@@ -550,8 +550,6 @@ class DetectorParameters:
         bits_total = bits_zsensor + bits_layer
         id_max = 2**bits_total - 1
 
-        sensor_length_original = self.xml_names["sensor_length_original"]
-        sensor_length = self.xml_names["sensor_length"]
         layer_module = ("InnerTrackerBarrelModule_01"
                         if self.tracker == "IT" else
                         "OuterTrackerBarrelModule_In")
@@ -570,7 +568,7 @@ class DetectorParameters:
                 if layer % 2 == 1:
                     radius += f" + {self.xml_names['gap']}"
                 dr = self.phi_stagger_dr
-                z0 = f"{iz}*{sensor_length_original} + {offset} + {sensor_length}/2"
+                z0 = iz * self.original_length + offset + self.length / 2
                 nz = 1
                 dic = dict(
                     layer_module=layer_module,
@@ -587,14 +585,11 @@ class DetectorParameters:
 
                 # negative z
                 ndic = dic.copy()
-                ndic["z0"] = f"{-iz-1}*{sensor_length_original} - {offset} - {sensor_length}/2"
+                ndic["z0"] = -1.0 * dic["z0"]
                 layer_dicts.append(ndic)
 
-            # step 2: sort dicts by z0 and re-label them by increasing z0
-            # z0_str looks like "0*InnerTracker_Barrel_OriginalSensorLength + 0.0"
-            def z0_to_int(z0_str: str) -> int:
-                return int(z0_str.split("*")[0])
-            layer_dicts.sort(key=lambda dic: z0_to_int(dic["z0"]))
+            # step 2: sort dicts by z0 and label them by increasing z0
+            layer_dicts.sort(key=lambda dic: dic["z0"], reverse=True)
             for it in range(len(layer_dicts)):
                 layer_id = (layer << bits_zsensor) + it
                 if layer_id > id_max:
@@ -621,7 +616,7 @@ def xml_layer_template():
 """
 <layer module="{layer_module}" id="{layer_id}">
     <rphi_layout phi_tilt="0*deg" nphi="{nphi}" phi0="0" rc="{radius}" dr="{dr}*mm"/>
-    <z_layout dr="0" z0="{z0}*mm" nz="{nz}"/>
+    <z_layout dr="0" z0="{z0:.3f}*mm" nz="{nz}"/>
 </layer>
 """)
 
