@@ -416,9 +416,9 @@ class DetectorParameters:
         if self.do_z_offsets:
             if self.tracker == "IT":
                 if self.version == "v01":
-                    self.chosen_offsets = np.array([0, 1.5, 0, 1.8, 0, 1.8, 0, 1.8, 0, 2.3, 0, 2.8, 0, 3.2, 0, 3.4, 0, 2.0, 0, 2.0, 0, 2.0, 0])
+                    self.chosen_offsets = np.array([0, 1.5, 0, 1.8, 0, 1.8, 0, 1.8, 0, 2.3, 0, 2.8, 0, 3.2, 0, 3.4, 0, 3.4, 0, 3.4, 0, 3.4, 0])
                 elif self.version == "v05":
-                    self.chosen_offsets = np.array([0, 1.5, 0, 1.5, 0, 2.3, 0, 2.2, 0, 2.7, 0, 3.2, 0, 3.2, 0, 3.4, 0, 2.0, 0, 2.0, 0, 2.0, 0])
+                    self.chosen_offsets = np.array([0, 1.5, 0, 1.5, 0, 2.2, 0, 2.2, 0, 2.7, 0, 3.2, 0, 3.2, 0, 3.4, 0, 3.4, 0, 3.4, 0, 3.4, 0])
                 else:
                     raise ValueError(f"Invalid version: {self.version}. Must be 'v01' or 'v05'")
             else:
