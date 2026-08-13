@@ -252,7 +252,7 @@ class T2Maker:
         new["t2_dphi"] = (new["t2_dphi"] + np.pi) % (2 * np.pi) - np.pi
         new["t2_dqoverpt"] = t2s["md_qoverpt_upper"] - t2s["md_qoverpt_lower"]
 
-        # pass-through the simhit positions as float64 for now
+        # pass-through the hit positions as float64 for now
         for coord in ["x", "y", "r", "z"]:
             new[f"t2_{coord}_0"] = t2s[f"md_{coord}_0_lower"].astype(np.float64)
             new[f"t2_{coord}_1"] = t2s[f"md_{coord}_1_lower"].astype(np.float64)
@@ -313,7 +313,7 @@ class T2Maker:
         new[f"t2_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
 
-        # downscope the simhit positions to float32
+        # downscope the hit positions to float32
         for coord in ["x", "y", "r", "z"]:
             new[f"t2_{coord}_0"] = new[f"t2_{coord}_0"].astype(np.float32)
             new[f"t2_{coord}_1"] = new[f"t2_{coord}_1"].astype(np.float32)

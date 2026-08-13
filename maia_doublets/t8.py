@@ -198,7 +198,7 @@ class T8Maker:
         # collect new columns
         new = {}
 
-        # pass-through the simhit positions as float64 for now
+        # pass-through the hit positions as float64 for now
         for coord in ["x", "y", "r", "z"]:
             new[f"t8_{coord}_0"] = t8s[f"t4_{coord}_0_lower"].astype(np.float64)
             new[f"t8_{coord}_1"] = t8s[f"t4_{coord}_1_lower"].astype(np.float64)
@@ -271,7 +271,7 @@ class T8Maker:
         new[f"t8_chi2_sz"] = np.where(circle_ok, resid2, BAD_CHI2)
         # -------------------------- </Claude derivation> --------------------------
 
-        # downscope the simhit positions to float32
+        # downscope the hit positions to float32
         for coord in ["x", "y", "r", "z"]:
             for it in range(N_LAYERS_IN_T8):
                 new[f"t8_{coord}_{it}"] = new[f"t8_{coord}_{it}"].astype(np.float32)
