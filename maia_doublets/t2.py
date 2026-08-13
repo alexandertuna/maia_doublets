@@ -35,7 +35,6 @@ class T2Maker:
 
         self.T2_DZ_CUT = calibs.get("t2_dz", np.zeros((10, 10)))
         self.T2_DR_CUT = calibs.get("t2_dr", np.zeros((10, 10)))
-        self.T2_DTHETA_RZ_CUT = calibs.get("t2_dtheta_rz", np.zeros((10, 10)))
         self.T2_CHI2_XY_CUT = calibs.get("t2_chi2_xy", np.zeros((10, 10)))
         self.T2_CHI2_SZ_CUT = calibs.get("t2_chi2_sz", np.zeros((10, 10)))
 
@@ -343,12 +342,9 @@ class T2Maker:
         dl = t2s["t2_doublelayer"]
         t2s["t2_ok_dz"] = np.abs(t2s["t2_dz"]) < self.T2_DZ_CUT[sy, dl] # NB: these two cuts are special
         t2s["t2_ok_dr"] = np.abs(t2s["t2_dr"]) < self.T2_DR_CUT[sy, dl] # because theyre already defined above
-        new["t2_ok_dtheta_rz"] = np.abs(new["t2_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
         new["t2_ok_dphi"] = np.abs(new["t2_dphi"]) < np.pi / 2.0
         new["t2_ok_chi2_xy"] = np.abs(new["t2_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl]
         new["t2_ok_chi2_sz"] = np.abs(new["t2_chi2_sz"]) < self.T2_CHI2_SZ_CUT[sy, dl]
-        new["t2_ok_drdz"] = t2s["t2_ok_dz"] & t2s["t2_ok_dr"] & new["t2_ok_dphi"]
-        new["t2_ok_drdzdthetarz"] = t2s["t2_ok_dz"] & t2s["t2_ok_dr"] & new["t2_ok_dphi"] & new["t2_ok_dtheta_rz"]
         new["t2_ok"] = (
             t2s["t2_ok_dz"] &
             t2s["t2_ok_dr"] &

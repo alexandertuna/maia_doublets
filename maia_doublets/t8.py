@@ -195,10 +195,6 @@ class T8Maker:
         t8s["t8_y"] = 0.5 * (t8s["t4_y_upper"] + t8s["t4_y_lower"])
         t8s["t8_phi"] = np.arctan2(t8s["t8_y"], t8s["t8_x"])
 
-        # angle differences (handle wraparound)
-        # t8s["t8_dtheta_rz"] = t8s["t4_theta_rz_upper"] - t8s["t4_theta_rz_lower"]
-        # t8s["t8_dtheta_rz"] = (t8s["t8_dtheta_rz"] + np.pi) % (2 * np.pi) - np.pi
-
         # collect new columns
         new = {}
 

@@ -36,7 +36,6 @@ class T4Maker:
 
         self.T4_DZ_CUT = calibs.get("t4_dz", np.zeros((10, 10)))
         self.T4_DR_CUT = calibs.get("t4_dr", np.zeros((10, 10)))
-        self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", np.zeros((10, 10)))
         self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy", np.zeros((10, 10)))
         self.T4_CHI2_SZ_CUT = calibs.get("t4_chi2_sz", np.zeros((10, 10)))
 
@@ -323,14 +322,12 @@ class T4Maker:
         t4s["t4_ok_dz"] = np.abs(t4s["t4_dz"]) < self.T4_DZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dr"] = np.abs(t4s["t4_dr"]) < self.T4_DR_CUT[gdl_l, gdl_u]
         t4s["t4_ok_dphi"] = np.abs(new["t4_dphi"]) < np.pi / 2.0
-        t4s["t4_ok_dthetarz"] = np.abs(new["t4_dtheta_rz"]) < self.T4_DTHETA_RZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok_chi2_xy"] = np.abs(new[f"t4_chi2_xy"]) < self.T4_CHI2_XY_CUT[gdl_l, gdl_u]
         t4s["t4_ok_chi2_sz"] = np.abs(new[f"t4_chi2_sz"]) < self.T4_CHI2_SZ_CUT[gdl_l, gdl_u]
         t4s["t4_ok"] = (
             t4s["t4_ok_dphi"] &
             t4s["t4_ok_dz"] &
             t4s["t4_ok_dr"] &
-            # t4s["t4_ok_dthetarz"] &
             t4s["t4_ok_chi2_xy"] &
             t4s["t4_ok_chi2_sz"] &
             np.ones(len(t4s), dtype=bool)
@@ -339,17 +336,6 @@ class T4Maker:
             t4s["t4_ok_mcp"] = t4s["i_mcp"] != NO_MCP
             t4s["t4_ok_first_exit"] = t4s["t4_first_exit"] == True
             t4s["t4_ok_from_fiducial_mcp"] = t4s["t4_from_fiducial_mcp"] == True
-            t4s["t4_ok_yanxi"] = (
-                t4s["t4_ok_dphi"] &
-                t4s["t4_ok_dz"] &
-                t4s["t4_ok_dr"] &
-                t4s["t4_ok_dthetarz"] &
-                t4s["t4_ok_chi2_xy"] &
-                t4s["t4_ok_first_exit"] &
-                t4s["t4_ok_from_fiducial_mcp"] &
-                t4s["t4_ok_mcp"] &
-                np.ones(len(t4s), dtype=bool)
-            )
 
         # merge new columns into the df
         t4s = pd.concat([t4s, pd.DataFrame(new, index=t4s.index)], axis=1)

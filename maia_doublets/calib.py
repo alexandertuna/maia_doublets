@@ -128,7 +128,6 @@ class T2Calibrator:
         self.features = [
             "t2_dz",
             "t2_dr",
-            # "t2_dtheta_rz",
             "t2_chi2_xy",
             "t2_chi2_sz",
         ]
@@ -181,7 +180,6 @@ class T4Calibrator:
         self.features = [
             "t4_dz",
             "t4_dr",
-            # "t4_dtheta_rz",
             "t4_chi2_xy",
             "t4_chi2_sz",
         ]
