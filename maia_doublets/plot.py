@@ -136,8 +136,8 @@ class Plotter:
                 # self.plot_md_efficiency_vs_kinematics(pdf)
                 # self.write_md_denominator_info(pdf)
                 # self.plot_md_quality_efficiency(pdf)
-                self.plot_segment_efficiency_vs_kinematics(pdf)
-                self.plot_segment_quality_efficiency(pdf)
+                self.plot_t2_efficiency_vs_kinematics(pdf)
+                self.plot_t2_quality_efficiency(pdf)
                 self.plot_t4_efficiency_vs_kinematics(pdf)
                 self.plot_t4_quality_efficiency(pdf)
                 self.plot_t4_efficiency_vs_kinematics_overall(pdf)
@@ -222,20 +222,20 @@ class Plotter:
         logger.info(f"* {'Doublets, drdz cuts, L01':<30} :: {len(doublets_0):>10}")
         logger.info(f"* {'Doublets, drdz cuts, L23':<30} :: {len(doublets_1):>10}")
 
-        # part 3: line segments
+        # part 3: T2s
         keys = [
             "file",
             "i_event",
             "i_mcp",
         ]
-        segments = doublets_0.merge(
+        t2s = doublets_0.merge(
             doublets_1,
             on=keys,
             how="inner",
             validate="many_to_many",
             suffixes=("_lower", "_upper"),
         )
-        logger.info(f"* {'Line segments from doublets':<30} :: {len(segments):>10}")
+        logger.info(f"* {'T2s from doublets':<30} :: {len(t2s):>10}")
 
 
     def plot_numbers_for_comparison_background(self, pdf: PdfPages):
@@ -287,9 +287,9 @@ class Plotter:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
 
-        # part 3: line segments
+        # part 3: T2s
         if self.t2s is None:
-            logger.info("No line segments, skipping ...")
+            logger.info("No T2s, skipping ...")
         else:
             mask = np.ones(len(self.t2s), dtype=bool)
             for [req, label] in [
@@ -1068,8 +1068,8 @@ class Plotter:
         xlabel = {
             "t2_deta": r"upper doublet eta - lower doublet eta",
             "t2_dphi": r"upper doublet phi - lower doublet phi [rad]",
-            "t2_dr": "line segment dr [mm]",
-            "t2_dz": "line segment dz [mm]",
+            "t2_dr": "T2 dr [mm]",
+            "t2_dz": "T2 dz [mm]",
             "t2_ddr": "upper doublet dr - lower doublet dr",
             "t2_ddz": "upper doublet dz - lower doublet dz",
             "t2_dqoverpt": "upper doublet q/pt - lower doublet q/pt",
@@ -1140,7 +1140,7 @@ class Plotter:
                         fmt = formatting[feature]
                         ax.set_ylim(0.8 if ax.get_yscale() == "log" else 0, None)
                         ax.set_xlabel(xlabel[feature])
-                        ax.set_ylabel("Line Segments")
+                        ax.set_ylabel("T2s")
                         ax.set_title(f"{NICKNAMES[system]}. DL={doublelayer}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
                         ax.text(0.66, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
                         logger.info(f"{NICKNAMES[system]} doublelayer {doublelayer} {feature}: 99.7% in {p997:{fmt}}")
@@ -1169,7 +1169,7 @@ class Plotter:
                     cmap="gist_rainbow",
                     cmin=0.5,
                 )
-                fig.colorbar(im, ax=ax, label="Line Segments", pad=0.01)
+                fig.colorbar(im, ax=ax, label="T2s", pad=0.01)
                 num = len(group)
                 ax.set_xlabel(xlabel[feature_x])
                 ax.set_ylabel(xlabel[feature_y])
@@ -1178,7 +1178,7 @@ class Plotter:
                 plt.close()
 
 
-    def plot_segment_efficiency_vs_kinematics(self, pdf: PdfPages):
+    def plot_t2_efficiency_vs_kinematics(self, pdf: PdfPages):
 
         # denominator
         dmask = self.get_denominator_mask()
@@ -1187,7 +1187,7 @@ class Plotter:
             raise ValueError("Denominator has duplicated rows!")
 
         # numerator
-        segment_cols = [
+        t2_cols = [
             "file", # the file
             "i_event", # the event
             "i_mcp", # the parent mc particle
@@ -1197,18 +1197,18 @@ class Plotter:
 
         # filter doublets to only those with same parent mcp
         same_parent = self.t2s["i_mcp"] != NO_MCP
-        segments = self.t2s[same_parent][segment_cols].drop_duplicates()
+        t2s = self.t2s[same_parent][t2_cols].drop_duplicates()
 
-        # check if segments's [file, i_event, i_mcp] is in denominator
+        # check if t2s's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in segments.groupby(["t2_system",
+            for ((system, doublelayer), group) in t2s.groupby(["t2_system",
                                                                     "t2_doublelayer",
                                                                     ]):
                 layer = doublelayer * 2
                 layers = range(layer, layer + 4)
 
-                segment_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
-                merged = denom.merge(segment_keys, on=["file", "i_event", "i_mcp"], how="inner")
+                t2_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
+                merged = denom.merge(t2_keys, on=["file", "i_event", "i_mcp"], how="inner")
 
                 n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
                 n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
@@ -1231,12 +1231,12 @@ class Plotter:
                 plt.close()
 
 
-    def plot_segment_quality_efficiency(self, pdf: PdfPages):
+    def plot_t2_quality_efficiency(self, pdf: PdfPages):
 
         # only consider truth-match doublets
         baseline = self.t2s["t2_detectable"]
-        logger.info(f"Segment efficiency: total segments: {len(self.t2s)}")
-        logger.info(f"Segment efficiency: total segments in baseline: {baseline.sum()}")
+        logger.info(f"T2 efficiency: total t2s: {len(self.t2s)}")
+        logger.info(f"T2 efficiency: total t2s in baseline: {baseline.sum()}")
 
         # consider efficiency vs kinematics
         for i_kin, kin in enumerate([
@@ -1249,12 +1249,12 @@ class Plotter:
                                                                               "t2_doublelayer",
             ]):
 
-                logger.info(f"Plotting segment quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
+                logger.info(f"Plotting t2 quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
                 layer = doublelayer * 2
                 layers = range(layer, layer + 4)
 
                 for req in T2_REQS:
-                    req_text, req_mask = self.segment_requirements(group, req)
+                    req_text, req_mask = self.t2_requirements(group, req)
                     denom = group
                     numer = group[req_mask]
                     if i_kin == 0:
@@ -1276,14 +1276,14 @@ class Plotter:
                         color="dodgerblue",
                     )
                     ax.set_xlabel(self.xlabel[kin])
-                    ax.set_ylabel("Segment quality efficiency")
+                    ax.set_ylabel("T2 quality efficiency")
                     ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req_text}")
                     ax.set_ylim(0.965, 1.004)
                     pdf.savefig()
                     plt.close()
 
 
-    def segment_requirements(self, df: pd.DataFrame, req: str) -> tuple[str, pd.DataFrame]:
+    def t2_requirements(self, df: pd.DataFrame, req: str) -> tuple[str, pd.DataFrame]:
         # return description and mask
         sy = df["t2_system"]
         dl = df["t2_doublelayer"]
@@ -1312,7 +1312,7 @@ class Plotter:
             text = f"All LS requirements"
             mask = df["t2_ok"]
         else:
-            raise ValueError(f"Unknown segment requirement: {req}")
+            raise ValueError(f"Unknown t2 requirement: {req}")
         return text, mask
 
 

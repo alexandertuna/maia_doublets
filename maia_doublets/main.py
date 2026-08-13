@@ -283,7 +283,7 @@ def get_t2s(ops: argparse.Namespace, mds: pd.DataFrame, signal: bool, cut_t2s: b
             logger.info(f"Reading T2s from {ops.read_t2s} and cutflow from {cpath} ...")
             t2s = pd.read_pickle(ops.read_t2s)
         else:
-            # make T2s (line segments) from mini-doublets
+            # make T2s from mini-doublets
             t2s = None
             maker = T2Maker(
                 signal=signal,
@@ -322,7 +322,7 @@ def get_t4s(ops: argparse.Namespace, t2s: pd.DataFrame, signal: bool, cut_t4s: b
             logger.info(f"Reading T4s from {ops.read_t4s} ...")
             t4s = pd.read_pickle(ops.read_t4s)
         else:
-            # make T4s from T2s (line segments)
+            # make T4s from T2s
             t4s = None
             maker = T4Maker(
                 signal=signal,
@@ -425,7 +425,7 @@ def options():
     parser.add_argument("--digi", action="store_true", help="Use digi hits in the analysis")
     parser.add_argument("--plot", action="store_true", help="Include plots in the analysis")
     parser.add_argument("--cut-mds", action="store_true", help="Cut MDs based on MD_DZ_CUT and MD_DR_CUT")
-    parser.add_argument("--cut-t2s", action="store_true", help="Cut T2s (line segments) based on [[ something ]]")
+    parser.add_argument("--cut-t2s", action="store_true", help="Cut T2s based on [[ something ]]")
     parser.add_argument("--cut-t4s", action="store_true", help="Cut T4s based on [[ something ]]")
     parser.add_argument("--cut-t8s", action="store_true", help="Cut T8s based on [[ something ]]")
     parser.add_argument("--read-mcps", type=str, help="Read mcps from pickle file")
@@ -435,8 +435,8 @@ def options():
     parser.add_argument("--read-mds", type=str, help="Read mini-doublets from pickle file")
     parser.add_argument("--write-mds", type=str, help="Write mini-doublets to pickle file")
     parser.add_argument("--fast-mds", action="store_true", help="Use fast binned merge for mini-doublets")
-    parser.add_argument("--read-t2s", type=str, help="Read T2s (line segments) from pickle file")
-    parser.add_argument("--write-t2s", type=str, help="Write T2s (line segments) to pickle file")
+    parser.add_argument("--read-t2s", type=str, help="Read T2s from pickle file")
+    parser.add_argument("--write-t2s", type=str, help="Write T2s to pickle file")
     parser.add_argument("--read-t4s", type=str, help="Read T4s from pickle file")
     parser.add_argument("--write-t4s", type=str, help="Write T4s to pickle file")
     parser.add_argument("--read-t8s", type=str, help="Read T8s from pickle file")
