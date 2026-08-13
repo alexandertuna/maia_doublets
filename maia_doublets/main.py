@@ -52,6 +52,7 @@ def main():
               any(SIGNAL in os.path.basename(fname) for fname in fnames) or
               any(PIONGUN in os.path.basename(fname) for fname in fnames))
     pdf = ops.pdf or f"{calib_key(ops)}_{'signal' if signal else 'background'}.pdf"
+    geo_version = ops.geo
     cut_mds = ops.cut_mds or not signal
     cut_t2s = ops.cut_t2s or not signal
     cut_t4s = ops.cut_t4s or not signal
@@ -83,7 +84,7 @@ def main():
     calibs = CalibConstants(calib_json(ops)).calibs
 
     # hits and mcparticles
-    hits, mcps, hit_cutflow, hit_time = get_hits_and_mcps(ops, fnames, geometry, signal, layers)
+    hits, mcps, hit_cutflow, hit_time = get_hits_and_mcps(ops, fnames, geo_version, geometry, signal, layers)
     write_hits_and_mcps(ops, hits, mcps, hit_cutflow)
 
     # mini-doublets (mds)
@@ -158,7 +159,7 @@ def main():
 
 
 def check_options(ops: argparse.Namespace) -> None:
-    valid_geos = ["v01", "v04", "v05"]
+    valid_geos = ["v01", "v04", "v05", "v06"]
     valid_smears = ["00um", "05um", "10um", "20um"]
     if ops.geo not in valid_geos:
         raise ValueError(f"Invalid geometry version specified, must be one of {valid_geos}")
@@ -189,6 +190,7 @@ def cutflow_path(df_path: str) -> str:
 def get_hits_and_mcps(
     ops: argparse.Namespace,
     fnames: list[str],
+    geo_version: str,
     geometry: bool,
     signal: bool,
     layers: dict[int, set[int]]
@@ -208,6 +210,7 @@ def get_hits_and_mcps(
         else:
             # convert slcio to hits dataframe
             converter = HitMaker(slcio_file_paths=fnames,
+                                geo_version=geo_version,
                                 load_geometry=geometry,
                                 signal=signal,
                                 sim=ops.sim,

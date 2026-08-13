@@ -30,12 +30,14 @@ class HitMaker:
     def __init__(
             self,
             slcio_file_paths: list[str],
+            geo_version: str,
             load_geometry: bool,
             signal: bool,
             sim: bool,
             layers: dict[int, set[int]],
         ):
         self.slcio_file_paths = slcio_file_paths
+        self.geo_version = geo_version
         self.load_geometry = load_geometry
         self.signal = signal
         self.sim = sim
@@ -164,6 +166,7 @@ class HitMaker:
         with mp.Pool(processes=processes, initializer=initializer) as pool:
             n_map = len(self.slcio_file_paths)
             file_numbers = list(range(n_map))
+            geo_version = [self.geo_version]*n_map
             load_geometry = [self.load_geometry]*n_map
             signal = [self.signal]*n_map
             sim = [self.sim]*n_map
@@ -172,6 +175,7 @@ class HitMaker:
                 convert_func,
                 zip(self.slcio_file_paths,
                     file_numbers,
+                    geo_version,
                     load_geometry,
                     signal,
                     sim,
@@ -209,6 +213,7 @@ def init_worker():
 def convert_one_root_file(
         root_file_path: str,
         file_number: int,
+        geo_version: str,
         load_geometry: bool,
         signal: bool,
         use_sim: bool,
@@ -225,7 +230,7 @@ def convert_one_root_file(
     mcps = convert_one_root_file_to_mcps(evs, file_number)
 
     logger.info(f"Converting ROOT file {root_file_path} to hits ...")
-    hits = convert_one_root_file_to_hits(evs, file_number, signal, use_sim, layers)
+    hits = convert_one_root_file_to_hits(evs, file_number, geo_version, signal, use_sim, layers)
 
     # connect hits and mcps
     if signal:
@@ -253,6 +258,7 @@ def convert_one_root_file(
 
 def convert_one_root_file_to_hits(evs: uproot.TTree,
                                   file_number: int,
+                                  geo_version: str,
                                   signal: bool,
                                   use_sim: bool,
                                   layers: dict[int, set[int]],
@@ -275,6 +281,7 @@ def convert_one_root_file_to_hits(evs: uproot.TTree,
     for (sim_col, digi_col, rel_col) in zip(sim_cols, digi_cols, rel_cols):
         datas.append(convert_one_root_file_to_hits_per_system(evs=evs,
                                                               file_number=file_number,
+                                                              geo_version=geo_version,
                                                               signal=signal,
                                                               use_sim=use_sim,
                                                               layers=layers,
@@ -290,6 +297,7 @@ def convert_one_root_file_to_hits(evs: uproot.TTree,
 def convert_one_root_file_to_hits_per_system(
         evs: uproot.TTree,
         file_number: int,
+        geo_version: str,
         signal: bool,
         use_sim: bool,
         layers: dict[int, set[int]],
@@ -419,8 +427,10 @@ def convert_one_root_file_to_hits_per_system(
         if "i_mcp" in hits[col].columns:
             hits[col]["i_mcp"] = hits[col]["i_mcp"].replace(PODIO_NO_MCP, NO_MCP)
 
+        # decode the cellid
+        hit_system, _, hit_layer, _, _ = decode_cellid(hits[col]["simhit_cellid0"], geo_version=geo_version)
+
         # sanity check
-        hit_system = np.right_shift(hits[col]["simhit_cellid0"], 0) & 0b1_1111
         if hit_system.nunique() != 1:
             msg = f"Expected one system, found {hit_system.unique()}"
             logger.error(msg)
@@ -428,7 +438,6 @@ def convert_one_root_file_to_hits_per_system(
 
         # filter by layer
         hit_system = hit_system.iloc[0]
-        hit_layer = np.right_shift(hits[col]["simhit_cellid0"], 7) & 0b11_1111
         mask = hit_layer.isin(layers[hit_system])
         hits[col] = hits[col][mask]
 
@@ -536,6 +545,7 @@ def merge_mcp_info_into_hits(
 def convert_one_lcio_file(
         slcio_file_path: str,
         file_number: int,
+        geo_version: str,
         load_geometry: bool,
         signal: bool,
         use_sim: bool,
@@ -658,17 +668,11 @@ def convert_one_lcio_file(
 
                 # consider a particular set of layers
                 cellid0 = simhit.getCellID0() if use_sim else hit.getCellID0()
-                system = np.right_shift(cellid0, 0) & 0b1_1111
-                layer = np.right_shift(cellid0, 7) & 0b11_1111
+                system, _, layer, _, _ = decode_cellid(cellid0, geo_version=geo_version)
                 if system not in layers:
                     continue
                 if layer not in layers[system]:
                     continue
-                # module 0 only, sensor 20 only?
-                # if (np.right_shift(hit.getCellID0(), 13) & 0b111_1111_1111) != 0:
-                #     continue
-                # if (np.right_shift(hit.getCellID0(), 24) & 0b1111_1111) != 20:
-                #     continue
 
                 # associated MCParticle
                 if signal or use_sim:
@@ -759,7 +763,7 @@ def convert_one_lcio_file(
     mcps = postprocess_mcps(mcps)
     if signal:
         simhits = postprocess_mcps(simhits)
-    simhits = postprocess_simhits(simhits, signal)
+    simhits = postprocess_simhits(simhits, geo_version, signal)
 
     # Bonus features: define if a mcp is "detectable" or not
     if signal:
@@ -800,14 +804,10 @@ def postprocess_mcps(df: pd.DataFrame) -> pd.DataFrame:
     return df[sorted(df.columns)]
 
 
-def postprocess_simhits(df: pd.DataFrame, signal: bool) -> pd.DataFrame:
-    logger.info(f"Postprocessing DataFrame, signal={signal} ...")
+def postprocess_simhits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.DataFrame:
+    logger.info(f"Postprocessing DataFrame, geo_version={geo_version}, signal={signal} ...")
     df["simhit_r"] = np.sqrt(df["simhit_x"]**2 + df["simhit_y"]**2)
-    df["simhit_system"] = np.right_shift(df["simhit_cellid0"], 0) & 0b1_1111
-    df["simhit_side"] = np.right_shift(df["simhit_cellid0"], 5) & 0b11
-    df["simhit_layer"] = np.right_shift(df["simhit_cellid0"], 7) & 0b11_1111
-    df["simhit_module"] = np.right_shift(df["simhit_cellid0"], 13) & 0b111_1111_1111
-    df["simhit_sensor"] = np.right_shift(df["simhit_cellid0"], 24) & 0b1111_1111
+    df["simhit_system"], df["simhit_side"], df["simhit_layer"], df["simhit_module"], df["simhit_sensor"] = decode_cellid(df["simhit_cellid0"], geo_version=geo_version)
     df["simhit_layer_div_2"] = df["simhit_layer"] // 2
     df["simhit_layer_mod_2"] = df["simhit_layer"] % 2
     df["simhit_glayer"] = df["simhit_layer"] + LAYER_OFFSET[df["simhit_system"]]
@@ -952,6 +952,33 @@ def announce_inside_bounds(df: pd.DataFrame):
     for bounds in [OUTSIDE_BOUNDS, INSIDE_BOUNDS, UNDEFINED_BOUNDS]:
         n_bounds = len(df[df["simhit_inside_bounds"] == bounds])
         logger.info(f"N(simhits) with bounds == {BOUNDS[bounds]}: {n_bounds}")
+
+
+def decode_cellid(cellid0: int, geo_version: str) -> tuple:
+    """
+    Decode a cellid0 integer into its components: system, side, layer, module, sensor.
+    """
+    if geo_version in ["v01", "v05"]:
+        # GlobalTrackerReadoutID: system:5,side:-2,layer:6,module:11,sensor:8"
+        system = np.right_shift(cellid0, 0) & 0b1_1111
+        side = np.right_shift(cellid0, 5) & 0b11
+        layer = np.right_shift(cellid0, 7) & 0b11_1111
+        module = np.right_shift(cellid0, 13) & 0b111_1111_1111
+        sensor = np.right_shift(cellid0, 24) & 0b1111_1111
+    elif geo_version in ["v06", "v07"]:
+        #### Actual StaggeredTrackerReadoutID: system:5,side:-2,layer:13,module:11,sensor:1
+        # Effective StaggeredTrackerReadoutID: system:5,side:-2,sensor:8,layer:5,module:11,ignore:1
+        system = np.right_shift(cellid0, 0) & 0b1_1111
+        side = np.right_shift(cellid0, 5) & 0b11
+        sensor = np.right_shift(cellid0, 7) & 0b1111_1111
+        layer = np.right_shift(cellid0, 15) & 0b1_1111
+        module = np.right_shift(cellid0, 20) & 0b111_1111_1111
+        ignore = np.right_shift(cellid0, 31) & 0b1
+    else:
+        msg = f"Unknown geo_version {geo_version}"
+        logger.error(msg)
+        raise ValueError(msg)
+    return system, side, layer, module, sensor
 
 
 @contextlib.contextmanager
