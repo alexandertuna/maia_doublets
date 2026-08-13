@@ -142,18 +142,18 @@ class Plotter:
         # part 1: hits
         mask = np.ones(len(self.hits), dtype=bool)
         for [req, label] in [
-            [self.hits["simhit_layer"].isin([0, 1]), "All hits in layers 0 and 1"],
+            [self.hits["hit_layer"].isin([0, 1]), "All hits in layers 0 and 1"],
             [np.abs(self.hits["mcp_pdg"]).isin(PARTICLES_OF_INTEREST), "abs(pdg).isin(PARTICLES_OF_INTEREST)"],
             [self.hits["mcp_q"] != 0, "q is not 0"],
             [self.hits["mcp_pt"] > ONE_POINT_FIVE_GEV, "pT > 1.5 GeV"],
             [np.abs(self.hits["mcp_eta"]) < BARREL_TRACKER_MAX_ETA, f"abs(eta) < {BARREL_TRACKER_MAX_ETA}"],
             [self.hits["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM, "vertex r < 0.01 mm"],
             [np.abs(self.hits["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM, "abs(vertex z) < 0.01 mm"],
-            [self.hits["simhit_t_corrected"] < MAX_TIME, f"corrected t < {MAX_TIME} ns"],
-            [self.hits["simhit_costheta"] > MIN_COSTHETA, f"costheta > {MIN_COSTHETA}"],
-            [self.hits["simhit_p"] / self.hits["mcp_p"] > MIN_PT_FRACTION, f"simhit p / mcp p > {MIN_PT_FRACTION}"],
-            # [self.hits["simhit_sensor"] == 20, "z-sensor 20"],
-            # [self.hits["simhit_module"] == 0, "phi-module 0"],
+            [self.hits["hit_t_corrected"] < MAX_TIME, f"corrected t < {MAX_TIME} ns"],
+            [self.hits["hit_costheta"] > MIN_COSTHETA, f"costheta > {MIN_COSTHETA}"],
+            [self.hits["hit_p"] / self.hits["mcp_p"] > MIN_PT_FRACTION, f"simhit p / mcp p > {MIN_PT_FRACTION}"],
+            # [self.hits["hit_sensor"] == 20, "z-sensor 20"],
+            # [self.hits["hit_module"] == 0, "phi-module 0"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -162,13 +162,13 @@ class Plotter:
         md_cols = [
             "file",
             "i_event", # the event
-            "simhit_system", # the system (IT, OT)
-            "simhit_layer_div_2", # the double layer
-            "simhit_module", # the phi-module
-            "simhit_sensor", # the z-sensor
+            "hit_system", # the system (IT, OT)
+            "hit_layer_div_2", # the double layer
+            "hit_module", # the phi-module
+            "hit_sensor", # the z-sensor
         ]
-        lower_mask = mask & (self.hits["simhit_layer_mod_2"] == 0)
-        upper_mask = mask & (self.hits["simhit_layer_mod_2"] == 1)
+        lower_mask = mask & (self.hits["hit_layer_mod_2"] == 0)
+        upper_mask = mask & (self.hits["hit_layer_mod_2"] == 1)
         logger.info(f"* {'Lower hit':<30} :: {lower_mask.sum():>10}")
         logger.info(f"* {'Upper hit':<30} :: {upper_mask.sum():>10}")
 
@@ -230,9 +230,9 @@ class Plotter:
         # part 1: hits
         mask = np.ones(len(self.hits), dtype=bool)
         for [req, label] in [
-            [self.hits["simhit_layer"].isin(layers), f"All hits in layers {layers}"],
-            # [self.hits["simhit_sensor"] == 20, "z-sensor 20"],
-            # [self.hits["simhit_module"] == 0, "phi-module 0"],
+            [self.hits["hit_layer"].isin(layers), f"All hits in layers {layers}"],
+            # [self.hits["hit_sensor"] == 20, "z-sensor 20"],
+            # [self.hits["hit_module"] == 0, "phi-module 0"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -241,13 +241,13 @@ class Plotter:
         md_cols = [
             "file",
             "i_event", # the event
-            "simhit_system", # the system (IT, OT)
-            "simhit_layer_div_2", # the double layer
-            "simhit_module", # the phi-module
-            "simhit_sensor", # the z-sensor
+            "hit_system", # the system (IT, OT)
+            "hit_layer_div_2", # the double layer
+            "hit_module", # the phi-module
+            "hit_sensor", # the z-sensor
         ]
-        lower_mask = mask & (self.hits["simhit_layer_mod_2"] == 0)
-        upper_mask = mask & (self.hits["simhit_layer_mod_2"] == 1)
+        lower_mask = mask & (self.hits["hit_layer_mod_2"] == 0)
+        upper_mask = mask & (self.hits["hit_layer_mod_2"] == 1)
         logger.info(f"* {'Lower hit':<30} :: {lower_mask.sum():>10}")
         logger.info(f"* {'Upper hit':<30} :: {upper_mask.sum():>10}")
 
@@ -316,7 +316,7 @@ class Plotter:
 
         for dets in detectors:
 
-            mask_hits = self.hits["simhit_system"].isin(dets) # == system
+            mask_hits = self.hits["hit_system"].isin(dets) # == system
             mask_mds = self.mds["md_system"].isin(dets) # == system
             mask_t2s = self.t2s["t2_system"].isin(dets) # == system
             mask_t4s = (self.t4s["t4_system_lower"].isin(dets)) & (self.t4s["t4_system_upper"].isin(dets))
@@ -354,11 +354,11 @@ class Plotter:
     def plot_time(self, pdf: PdfPages):
         logger.info(f"Plotting time")
         xlabel = "Hit time [ns]" + r" minus $R/c$"
-        for (system, hits) in self.hits.groupby("simhit_system"):
+        for (system, hits) in self.hits.groupby("hit_system"):
             bins = np.linspace(-10, 20, 301)
             fig, ax = plt.subplots()
             ax.hist(
-                hits["simhit_t_corrected"],
+                hits["hit_t_corrected"],
                 bins=bins,
                 histtype="stepfilled",
                 color=self.colors["hits"],
@@ -378,13 +378,13 @@ class Plotter:
 
     def plot_layer_occupancy_1d(self, pdf: PdfPages):
         logger.info(f"Plotting layer occupancy (1d)")
-        for (system, hits) in self.hits.groupby("simhit_system"):
-            bins = np.arange(hits["simhit_layer"].min()-0.5,
-                             hits["simhit_layer"].max()+1.0,
+        for (system, hits) in self.hits.groupby("hit_system"):
+            bins = np.arange(hits["hit_layer"].min()-0.5,
+                             hits["hit_layer"].max()+1.0,
                              1)
             fig, ax = plt.subplots()
             ax.hist(
-                hits["simhit_layer"],
+                hits["hit_layer"],
                 bins=bins,
                 histtype="stepfilled",
                 color=self.colors["hits"],
@@ -403,20 +403,20 @@ class Plotter:
 
     def plot_layer_occupancy_2d(self, pdf: PdfPages):
         logger.info(f"Plotting layer occupancy (2d)")
-        for ((system, layer), hits) in self.hits.groupby(["simhit_system",
-                                                                "simhit_layer",
+        for ((system, layer), hits) in self.hits.groupby(["hit_system",
+                                                                "hit_layer",
                                                                 ]):
             logger.info(f"Occupancy of {NICKNAMES[system]} layer {layer}: {len(hits)} sim hits")
             if len(hits) == 0:
                 continue
             bins = [
-                np.arange(-0.5, hits["simhit_module"].max()+1.5, 1),
-                np.arange(-0.5, hits["simhit_sensor"].max()+1.5, 1),
+                np.arange(-0.5, hits["hit_module"].max()+1.5, 1),
+                np.arange(-0.5, hits["hit_sensor"].max()+1.5, 1),
             ]
             fig, ax = plt.subplots()
             _, _, _, im = ax.hist2d(
-                hits["simhit_module"],
-                hits["simhit_sensor"],
+                hits["hit_module"],
+                hits["hit_sensor"],
                 bins=bins,
                 cmap="gist_rainbow",
                 norm=colors.LogNorm(vmin=0.9),
@@ -431,18 +431,18 @@ class Plotter:
 
     def plot_radius_vs_layer(self, pdf: PdfPages):
         logger.info(f"Plotting radius vs layer")
-        for (system, hits) in self.hits.groupby("simhit_system"):
+        for (system, hits) in self.hits.groupby("hit_system"):
             bins = [
-                np.arange(hits["simhit_layer"].min() - 0.5,
-                          hits["simhit_layer"].max() + 1.0, 1),
-                np.arange(hits["simhit_r"].min() - 100,
-                          hits["simhit_r"].max() + 100, 1),
+                np.arange(hits["hit_layer"].min() - 0.5,
+                          hits["hit_layer"].max() + 1.0, 1),
+                np.arange(hits["hit_r"].min() - 100,
+                          hits["hit_r"].max() + 100, 1),
                 # np.linspace(0, 1600, 1600),
             ]
             fig, ax = plt.subplots()
             _, _, _, im = ax.hist2d(
-                hits["simhit_layer"],
-                hits["simhit_r"],
+                hits["hit_layer"],
+                hits["hit_r"],
                 bins=bins,
                 cmap="gist_rainbow",
                 cmin=0.5,
@@ -730,23 +730,23 @@ class Plotter:
             "file",
             "i_event", # the event
             "i_mcp", # the MCParticle
-            "simhit_system", # the system (IT, OT)
-            # "simhit_doublelayer", # the double layer
-            "simhit_module", # the phi-module
-            "simhit_sensor", # the z-sensor
+            "hit_system", # the system (IT, OT)
+            # "hit_doublelayer", # the double layer
+            "hit_module", # the phi-module
+            "hit_sensor", # the z-sensor
         ]
         bonus_cols = [
-            "simhit_layer",
-            "simhit_x",
-            "simhit_y",
-            "simhit_z",
-            "simhit_r",
+            "hit_layer",
+            "hit_x",
+            "hit_y",
+            "hit_z",
+            "hit_r",
         ]
 
         logger.info("Making doublets by hand for a sec ...")
-        mask = self.hits["simhit_first_exit"] & self.hits["simhit_from_fiducial_mcp"]
-        lower_mask = mask & (self.hits["simhit_glayer"] == 14)
-        upper_mask = mask & (self.hits["simhit_glayer"] == 15)
+        mask = self.hits["hit_first_exit"] & self.hits["hit_from_fiducial_mcp"]
+        lower_mask = mask & (self.hits["hit_glayer"] == 14)
+        upper_mask = mask & (self.hits["hit_glayer"] == 15)
 
         lower = self.hits[lower_mask][md_cols + bonus_cols]
         upper = self.hits[upper_mask][md_cols + bonus_cols]
@@ -757,7 +757,7 @@ class Plotter:
 
         fig, ax = plt.subplots()
         ax.hist(
-            mds["simhit_z_upper"] - mds["simhit_z_lower"],
+            mds["hit_z_upper"] - mds["hit_z_lower"],
             bins=bins,
             histtype="stepfilled",
             color=self.colors["mds"],
@@ -769,7 +769,7 @@ class Plotter:
         if semilogy:
             ax.semilogy()
         ax.set_ylim(0.8 if semilogy else 0, None)
-        ax.set_xlabel("simhit_z_upper - simhit_z_lower")
+        ax.set_xlabel("hit_z_upper - hit_z_lower")
         ax.set_ylabel("Doublets")
         # ax.set_title(f"{NICKNAMES[system]} layers {layers}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
         # ax.text(0.05, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes)

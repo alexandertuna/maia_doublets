@@ -52,8 +52,8 @@ class HitMaker:
         memory_usage = hits.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"hits.memory_usage: {memory_usage:.1f} MB")
         counts = hits.groupby([
-            "simhit_system",
-            "simhit_layer",
+            "hit_system",
+            "hit_layer",
         ]).size()
         cutflow = {}
         for (system, layer), total in counts.items():
@@ -232,31 +232,31 @@ def convert_one_root_file_to_hits_per_system(
 
     # mapping branch names to human-readable names
     sim_basics = {
-        f"{sim_col}.position.x": "simhit_x",
-        f"{sim_col}.position.y": "simhit_y",
-        f"{sim_col}.position.z": "simhit_z",
-        f"{sim_col}.time": "simhit_t",
-        f"{sim_col}.cellID": "simhit_cellid0",
+        f"{sim_col}.position.x": "hit_x",
+        f"{sim_col}.position.y": "hit_y",
+        f"{sim_col}.position.z": "hit_z",
+        f"{sim_col}.time": "hit_t",
+        f"{sim_col}.cellID": "hit_cellid0",
     }
 
     digi_basics = {
-        f"{digi_col}.position.x": "simhit_x",
-        f"{digi_col}.position.y": "simhit_y",
-        f"{digi_col}.position.z": "simhit_z",
-        f"{digi_col}.time": "simhit_t",
-        f"{digi_col}.cellID": "simhit_cellid0",
+        f"{digi_col}.position.x": "hit_x",
+        f"{digi_col}.position.y": "hit_y",
+        f"{digi_col}.position.z": "hit_z",
+        f"{digi_col}.time": "hit_t",
+        f"{digi_col}.cellID": "hit_cellid0",
     }
 
     digi_extra = {
-        f"{digi_col}.eDep": "simhit_e",
+        f"{digi_col}.eDep": "hit_e",
     }
 
     sim_extra = {
-        f"{sim_col}.momentum.x": "simhit_px",
-        f"{sim_col}.momentum.y": "simhit_py",
-        f"{sim_col}.momentum.z": "simhit_pz",
-        f"{sim_col}.eDep": "simhit_e",
-        f"{sim_col}.pathLength": "simhit_pathlength",
+        f"{sim_col}.momentum.x": "hit_px",
+        f"{sim_col}.momentum.y": "hit_py",
+        f"{sim_col}.momentum.z": "hit_pz",
+        f"{sim_col}.eDep": "hit_e",
+        f"{sim_col}.pathLength": "hit_pathlength",
         f"_{sim_col}_particle.index": "i_mcp",
     }
 
@@ -316,13 +316,13 @@ def convert_one_root_file_to_hits_per_system(
         data[col]["i_event"] = np.array(i_events)
         if col == sim_col or col == digi_col:
             data[col]["i_object"] = np.array(i_object)
-            data[col]["simhit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
-            correction = (np.sqrt(data[col]["simhit_x"]**2 + \
-                                data[col]["simhit_y"]**2 + \
-                                data[col]["simhit_z"]**2) / SPEED_OF_LIGHT) if col == sim_col else 0.0
-            data[col]["simhit_t_corrected"] = data[col]["simhit_t"] - correction
+            data[col]["hit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
+            correction = (np.sqrt(data[col]["hit_x"]**2 + \
+                                data[col]["hit_y"]**2 + \
+                                data[col]["hit_z"]**2) / SPEED_OF_LIGHT) if col == sim_col else 0.0
+            data[col]["hit_t_corrected"] = data[col]["hit_t"] - correction
             if signal:
-                data[col]["simhit_distance"] = np.array([-1]*n_rows)
+                data[col]["hit_distance"] = np.array([-1]*n_rows)
             else:
                 data[col]["i_mcp"] = np.array([NO_MCP]*n_rows)
 
@@ -338,7 +338,7 @@ def convert_one_root_file_to_hits_per_system(
             hits[col]["i_mcp"] = hits[col]["i_mcp"].replace(PODIO_NO_MCP, NO_MCP)
 
         # decode the cellid
-        hit_system, _, hit_layer, _, _ = decode_cellid(hits[col]["simhit_cellid0"], geo_version=geo_version)
+        hit_system, _, hit_layer, _, _ = decode_cellid(hits[col]["hit_cellid0"], geo_version=geo_version)
 
         # sanity check
         if hit_system.nunique() != 1:
@@ -355,7 +355,7 @@ def convert_one_root_file_to_hits_per_system(
     if signal and not use_sim:
 
         event_keys = ["file", "i_event"]
-        sim_payload = ["i_mcp", "simhit_px", "simhit_py", "simhit_pz", "simhit_pathlength"]
+        sim_payload = ["i_mcp", "hit_px", "hit_py", "hit_pz", "hit_pathlength"]
 
         # 1: relation -> sim hit: attach each sim hit's mcp + kinematics to its relation
         sim_info = (
@@ -620,23 +620,23 @@ def convert_one_lcio_file(
                     'file': file_number,
                     'i_event': i_event,
                     'i_mcp': i_mcp,
-                    'simhit_x': position[0],
-                    'simhit_y': position[1],
-                    'simhit_z': position[2],
-                    'simhit_cellid0': cellid0,
-                    'simhit_inside_bounds': inside_bounds,
-                    'simhit_t_corrected': time - correction,
+                    'hit_x': position[0],
+                    'hit_y': position[1],
+                    'hit_z': position[2],
+                    'hit_cellid0': cellid0,
+                    'hit_inside_bounds': inside_bounds,
+                    'hit_t_corrected': time - correction,
                 })
                 if signal:
                     mcp_ok = i_mcp != NO_MCP
                     hits[-1].update({
-                        'simhit_px': momentum[0],
-                        'simhit_py': momentum[1],
-                        'simhit_pz': momentum[2],
-                        'simhit_pathlength': pathlength,
-                        'simhit_distance': distance,
-                        'simhit_t': time,
-                        'simhit_e': energy,
+                        'hit_px': momentum[0],
+                        'hit_py': momentum[1],
+                        'hit_pz': momentum[2],
+                        'hit_pathlength': pathlength,
+                        'hit_distance': distance,
+                        'hit_t': time,
+                        'hit_e': energy,
                         'mcp_px': mcp_px[i_mcp] if mcp_ok else 0,
                         'mcp_py': mcp_py[i_mcp] if mcp_ok else 0,
                         'mcp_pz': mcp_pz[i_mcp] if mcp_ok else 0,
@@ -716,18 +716,18 @@ def postprocess_mcps(df: pd.DataFrame) -> pd.DataFrame:
 
 def postprocess_hits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.DataFrame:
     logger.info(f"Postprocessing DataFrame, geo_version={geo_version}, signal={signal} ...")
-    df["simhit_r"] = np.sqrt(df["simhit_x"]**2 + df["simhit_y"]**2)
-    df["simhit_system"], df["simhit_side"], df["simhit_layer"], df["simhit_module"], df["simhit_sensor"] = decode_cellid(df["simhit_cellid0"], geo_version=geo_version)
-    df["simhit_layer_div_2"] = df["simhit_layer"] // 2
-    df["simhit_layer_mod_2"] = df["simhit_layer"] % 2
-    df["simhit_glayer"] = df["simhit_layer"] + LAYER_OFFSET[df["simhit_system"]]
+    df["hit_r"] = np.sqrt(df["hit_x"]**2 + df["hit_y"]**2)
+    df["hit_system"], df["hit_side"], df["hit_layer"], df["hit_module"], df["hit_sensor"] = decode_cellid(df["hit_cellid0"], geo_version=geo_version)
+    df["hit_layer_div_2"] = df["hit_layer"] // 2
+    df["hit_layer_mod_2"] = df["hit_layer"] % 2
+    df["hit_glayer"] = df["hit_layer"] + LAYER_OFFSET[df["hit_system"]]
     if signal:
-        df["simhit_R"] = np.sqrt(df["simhit_x"]**2 + df["simhit_y"]**2 + df["simhit_z"]**2)
-        df["simhit_p"] = np.sqrt(df["simhit_px"]**2 + df["simhit_py"]**2 + df["simhit_pz"]**2)
-        df["simhit_costheta"] = (df["simhit_x"] * df["simhit_px"] +
-                                 df["simhit_y"] * df["simhit_py"] +
-                                 df["simhit_z"] * df["simhit_pz"]) / (df["simhit_R"] * df["simhit_p"])
-        df["simhit_from_fiducial_mcp"] = (
+        df["hit_R"] = np.sqrt(df["hit_x"]**2 + df["hit_y"]**2 + df["hit_z"]**2)
+        df["hit_p"] = np.sqrt(df["hit_px"]**2 + df["hit_py"]**2 + df["hit_pz"]**2)
+        df["hit_costheta"] = (df["hit_x"] * df["hit_px"] +
+                                 df["hit_y"] * df["hit_py"] +
+                                 df["hit_z"] * df["hit_pz"]) / (df["hit_R"] * df["hit_p"])
+        df["hit_from_fiducial_mcp"] = (
             (df["i_mcp"] != NO_MCP) &
             (np.abs(df["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)) &
             (df["mcp_q"] != 0) &
@@ -736,25 +736,25 @@ def postprocess_hits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.Dat
             (df["mcp_vertex_r"] < ZERO_POINT_ZERO_ONE_MM) &
             (np.abs(df["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM)
         )
-        df["simhit_first_exit"] = (
-            (df["simhit_t_corrected"] < MAX_TIME) &
-            (df["simhit_costheta"] > MIN_COSTHETA) &
-            (df["simhit_p"] / df["mcp_p"] > MIN_PT_FRACTION)
+        df["hit_first_exit"] = (
+            (df["hit_t_corrected"] < MAX_TIME) &
+            (df["hit_costheta"] > MIN_COSTHETA) &
+            (df["hit_p"] / df["mcp_p"] > MIN_PT_FRACTION)
         )
-        df["simhit_detectable"] = df["simhit_first_exit"] & df["simhit_from_fiducial_mcp"]
+        df["hit_detectable"] = df["hit_first_exit"] & df["hit_from_fiducial_mcp"]
 
     # remove unused columns
     drop_cols = [
-        # "simhit_cellid0",
+        # "hit_cellid0",
     ]
-    if "simhit_t" in df.columns:
-        drop_cols.append("simhit_t")
+    if "hit_t" in df.columns:
+        drop_cols.append("hit_t")
     if signal:
         drop_cols += [
-            "simhit_px",
-            "simhit_py",
-            "simhit_pz",
-            "simhit_R",
+            "hit_px",
+            "hit_py",
+            "hit_pz",
+            "hit_R",
         ]
     df.drop(columns=drop_cols, inplace=True)
 
@@ -762,26 +762,26 @@ def postprocess_hits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.Dat
     df["file"] = df["file"].astype(np.uint32)
     df["i_event"] = df["i_event"].astype(np.uint32)
     df["i_mcp"] = df["i_mcp"].astype(np.uint32)
-    df["simhit_inside_bounds"] = df["simhit_inside_bounds"].astype(np.uint8)
-    df["simhit_side"] = df["simhit_side"].astype(np.uint8)
-    df["simhit_system"] = df["simhit_system"].astype(np.uint8)
-    df["simhit_layer"] = df["simhit_layer"].astype(np.uint8)
-    df["simhit_glayer"] = df["simhit_glayer"].astype(np.uint8)
-    df["simhit_layer_div_2"] = df["simhit_layer_div_2"].astype(np.uint8)
-    df["simhit_layer_mod_2"] = df["simhit_layer_mod_2"].astype(np.uint8)
-    df["simhit_module"] = df["simhit_module"].astype(np.uint16)
-    df["simhit_sensor"] = df["simhit_sensor"].astype(np.uint16)
-    df["simhit_x"] = df["simhit_x"].astype(np.float32)
-    df["simhit_y"] = df["simhit_y"].astype(np.float32)
-    df["simhit_z"] = df["simhit_z"].astype(np.float32)
-    df["simhit_r"] = df["simhit_r"].astype(np.float32)
-    df["simhit_t_corrected"] = df["simhit_t_corrected"].astype(np.float32)
+    df["hit_inside_bounds"] = df["hit_inside_bounds"].astype(np.uint8)
+    df["hit_side"] = df["hit_side"].astype(np.uint8)
+    df["hit_system"] = df["hit_system"].astype(np.uint8)
+    df["hit_layer"] = df["hit_layer"].astype(np.uint8)
+    df["hit_glayer"] = df["hit_glayer"].astype(np.uint8)
+    df["hit_layer_div_2"] = df["hit_layer_div_2"].astype(np.uint8)
+    df["hit_layer_mod_2"] = df["hit_layer_mod_2"].astype(np.uint8)
+    df["hit_module"] = df["hit_module"].astype(np.uint16)
+    df["hit_sensor"] = df["hit_sensor"].astype(np.uint16)
+    df["hit_x"] = df["hit_x"].astype(np.float32)
+    df["hit_y"] = df["hit_y"].astype(np.float32)
+    df["hit_z"] = df["hit_z"].astype(np.float32)
+    df["hit_r"] = df["hit_r"].astype(np.float32)
+    df["hit_t_corrected"] = df["hit_t_corrected"].astype(np.float32)
     if signal:
-        df["simhit_p"] = df["simhit_p"].astype(np.float32)
-        df["simhit_e"] = df["simhit_e"].astype(np.float32)
-        df["simhit_pathlength"] = df["simhit_pathlength"].astype(np.float32)
-        df["simhit_first_exit"] = df["simhit_first_exit"].astype(bool)
-        df["simhit_from_fiducial_mcp"] = df["simhit_from_fiducial_mcp"].astype(bool)
+        df["hit_p"] = df["hit_p"].astype(np.float32)
+        df["hit_e"] = df["hit_e"].astype(np.float32)
+        df["hit_pathlength"] = df["hit_pathlength"].astype(np.float32)
+        df["hit_first_exit"] = df["hit_first_exit"].astype(bool)
+        df["hit_from_fiducial_mcp"] = df["hit_from_fiducial_mcp"].astype(bool)
 
     # sort columns alphabetically
     return df[sorted(df.columns)]
@@ -803,11 +803,11 @@ def sort_hits(df: pd.DataFrame) -> pd.DataFrame:
         "file",
         "i_event",
         "i_mcp",
-        "simhit_system",
-        "simhit_layer",
-        "simhit_module",
-        "simhit_sensor",
-        "simhit_t_corrected",
+        "hit_system",
+        "hit_layer",
+        "hit_module",
+        "hit_sensor",
+        "hit_t_corrected",
     ]
     return df.sort_values(by=columns).reset_index(drop=True)
 
@@ -815,7 +815,7 @@ def sort_hits(df: pd.DataFrame) -> pd.DataFrame:
 def add_detectable_columns(mcps: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFrame:
 
     GROUP_COLS = ["file", "i_event", "i_mcp"]
-    MATCH_COLS = GROUP_COLS + ["simhit_module", "simhit_sensor"]
+    MATCH_COLS = GROUP_COLS + ["hit_module", "hit_sensor"]
     SYSTEMS = [INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL]
     LAYER_PAIRS = [(0, 1), (2, 3), (4, 5), (6, 7)]
 
@@ -828,14 +828,14 @@ def add_detectable_columns(mcps: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFra
         Returns a DataFrame of GROUP_COLS rows for every MCP that has at least
         one (module, sensor) pair with hits in both layer_lower and layer_upper.
         """
-        lo = hits_system[hits_system["simhit_layer"] == layer_lower][MATCH_COLS]
-        hi = hits_system[hits_system["simhit_layer"] == layer_upper][MATCH_COLS]
+        lo = hits_system[hits_system["hit_layer"] == layer_lower][MATCH_COLS]
+        hi = hits_system[hits_system["hit_layer"] == layer_upper][MATCH_COLS]
         return lo.merge(hi, on=MATCH_COLS)[GROUP_COLS].drop_duplicates()
 
     for system in SYSTEMS:
 
         nickname = NICKNAMES[system]
-        sysdf = hits[ hits["simhit_first_exit"] & (hits["simhit_system"] == system) ]
+        sysdf = hits[ hits["hit_first_exit"] & (hits["hit_system"] == system) ]
 
         for lo, hi in LAYER_PAIRS:
 
@@ -860,7 +860,7 @@ def add_detectable_columns(mcps: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFra
 
 def announce_inside_bounds(df: pd.DataFrame):
     for bounds in [OUTSIDE_BOUNDS, INSIDE_BOUNDS, UNDEFINED_BOUNDS]:
-        n_bounds = len(df[df["simhit_inside_bounds"] == bounds])
+        n_bounds = len(df[df["hit_inside_bounds"] == bounds])
         logger.info(f"N(hits) with bounds == {BOUNDS[bounds]}: {n_bounds}")
 
 

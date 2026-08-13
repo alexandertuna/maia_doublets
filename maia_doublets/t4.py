@@ -306,7 +306,7 @@ class T4Maker:
 
         # drop other cols
         dropcols = ["i_mcp_lower", "i_mcp_upper"]
-        dropcols.extend([col for col in t4s.columns if col.startswith("simhit_")])
+        dropcols.extend([col for col in t4s.columns if col.startswith("hit_")])
         dropcols.extend([col for col in t4s.columns if col.startswith("md_")])
         dropcols.extend([col for col in t4s.columns if col.startswith("t2_")])
         dropcols.extend([col for col in t4s.columns if col.startswith("mcp_") and col.endswith("_lower")])

@@ -26,10 +26,10 @@ class MDMaker:
         self.md_cols = [
             "file",
             "i_event", # the event
-            "simhit_system", # the system (IT, OT)
-            "simhit_layer_div_2", # the double layer
-            "simhit_module", # the phi-module
-            "simhit_sensor", # the z-sensor
+            "hit_system", # the system (IT, OT)
+            "hit_layer_div_2", # the double layer
+            "hit_module", # the phi-module
+            "hit_sensor", # the z-sensor
         ]
         self.fast_merge = fast_merge
         self.df, self.cutflow = self.make_doublets(hits)
@@ -44,10 +44,10 @@ class MDMaker:
         if not self.signal:
             groupby_cols += [
                 "i_event", # the event
-                "simhit_system", # the system (IT, OT)
-                "simhit_layer_div_2", # the double layer
-                "simhit_module", # the phi-module
-                "simhit_sensor", # the z-sensor
+                "hit_system", # the system (IT, OT)
+                "hit_layer_div_2", # the double layer
+                "hit_module", # the phi-module
+                "hit_sensor", # the z-sensor
             ]
 
         # group loop
@@ -89,8 +89,8 @@ class MDMaker:
 
     def make_doublets_from_group(self, group: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
-        lower_mask = group["simhit_layer_mod_2"] == 0
-        upper_mask = group["simhit_layer_mod_2"] == 1
+        lower_mask = group["hit_layer_mod_2"] == 0
+        upper_mask = group["hit_layer_mod_2"] == 1
         lower = group[lower_mask]
         upper = group[upper_mask]
 
@@ -108,24 +108,24 @@ class MDMaker:
             n_full = len(doublets)
 
         # doublet feature: xy, dr at point of closest approach to origin
-        slope_xy = np.divide(doublets["simhit_y_upper"] - doublets["simhit_y_lower"],
-                             doublets["simhit_x_upper"] - doublets["simhit_x_lower"])
-        intercept_xy = doublets["simhit_y_lower"] - slope_xy * doublets["simhit_x_lower"]
+        slope_xy = np.divide(doublets["hit_y_upper"] - doublets["hit_y_lower"],
+                             doublets["hit_x_upper"] - doublets["hit_x_lower"])
+        intercept_xy = doublets["hit_y_lower"] - slope_xy * doublets["hit_x_lower"]
         doublets["md_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
 
         # doublet feature: rz
-        slope_rz = np.divide(doublets["simhit_z_upper"] - doublets["simhit_z_lower"],
-                             doublets["simhit_r_upper"] - doublets["simhit_r_lower"])
-        doublets["md_dz"] = doublets["simhit_z_lower"] - doublets["simhit_r_lower"] * slope_rz
+        slope_rz = np.divide(doublets["hit_z_upper"] - doublets["hit_z_lower"],
+                             doublets["hit_r_upper"] - doublets["hit_r_lower"])
+        doublets["md_dz"] = doublets["hit_z_lower"] - doublets["hit_r_lower"] * slope_rz
         doublets["md_theta_rz"] = np.arctan(slope_rz)
 
         # deal with xy slope is NaN
         feature = "md_dr"
         isnull = doublets[feature].isnull()
         if isnull.any():
-            if np.any(isnull != (doublets["simhit_x_upper"] == doublets["simhit_x_lower"])):
+            if np.any(isnull != (doublets["hit_x_upper"] == doublets["hit_x_lower"])):
                 raise ValueError(f"Found NaN in {feature}, but not all are due to infinite slope")
-            doublets[feature] = doublets[feature].fillna(doublets["simhit_x_lower"])
+            doublets[feature] = doublets[feature].fillna(doublets["hit_x_lower"])
 
         # announce any nans
         for feature in ["md_dr", "md_dz"]:
@@ -140,8 +140,8 @@ class MDMaker:
         mask = {}
 
         # record some cut results
-        sy = doublets["simhit_system"]
-        dl = doublets["simhit_layer_div_2"]
+        sy = doublets["hit_system"]
+        dl = doublets["hit_layer_div_2"]
         doublets["md_ok_dr"] = np.abs(doublets["md_dr"]) < self.MD_DR_CUT[sy, dl]
         doublets["md_ok_dz"] = np.abs(doublets["md_dz"]) < self.MD_DZ_CUT[sy, dl]
         doublets["md_ok"] = doublets["md_ok_dr"] & doublets["md_ok_dz"]
@@ -155,29 +155,29 @@ class MDMaker:
 
         # rename some columns
         rename = {
-            "simhit_system": "md_system",
-            "simhit_layer_div_2": "md_doublelayer",
-            "simhit_sensor": "md_sensor",
-            "simhit_module": "md_module",
+            "hit_system": "md_system",
+            "hit_layer_div_2": "md_doublelayer",
+            "hit_sensor": "md_sensor",
+            "hit_module": "md_module",
         }
         doublets = doublets.rename(columns=rename)
-        doublets["md_glayer"] = doublets["simhit_glayer_lower"]
-        doublets["md_gdoublelayer"] = doublets["simhit_glayer_lower"] // 2
+        doublets["md_glayer"] = doublets["hit_glayer_lower"]
+        doublets["md_gdoublelayer"] = doublets["hit_glayer_lower"] // 2
 
         # doublet feature, xy dphi
-        phi_local = np.arctan2(doublets["simhit_y_upper"] - doublets["simhit_y_lower"],
-                                doublets["simhit_x_upper"] - doublets["simhit_x_lower"])
-        phi_global = np.arctan2((doublets["simhit_y_lower"] + doublets["simhit_y_upper"]) / 2.0,
-                                (doublets["simhit_x_lower"] + doublets["simhit_x_upper"]) / 2.0)
+        phi_local = np.arctan2(doublets["hit_y_upper"] - doublets["hit_y_lower"],
+                                doublets["hit_x_upper"] - doublets["hit_x_lower"])
+        phi_global = np.arctan2((doublets["hit_y_lower"] + doublets["hit_y_upper"]) / 2.0,
+                                (doublets["hit_x_lower"] + doublets["hit_x_upper"]) / 2.0)
         doublets["md_dphi"] = phi_local - phi_global
         doublets["md_dphi"] = (doublets["md_dphi"] + np.pi) % (2 * np.pi) - np.pi
         doublets["md_theta_xy"] = phi_local
 
         # doublet features: position
-        doublets["md_r"] = (doublets["simhit_r_lower"] + doublets["simhit_r_upper"]) / 2
-        doublets["md_z"] = (doublets["simhit_z_lower"] + doublets["simhit_z_upper"]) / 2
-        doublets["md_x"] = (doublets["simhit_x_lower"] + doublets["simhit_x_upper"]) / 2
-        doublets["md_y"] = (doublets["simhit_y_lower"] + doublets["simhit_y_upper"]) / 2
+        doublets["md_r"] = (doublets["hit_r_lower"] + doublets["hit_r_upper"]) / 2
+        doublets["md_z"] = (doublets["hit_z_lower"] + doublets["hit_z_upper"]) / 2
+        doublets["md_x"] = (doublets["hit_x_lower"] + doublets["hit_x_upper"]) / 2
+        doublets["md_y"] = (doublets["hit_y_lower"] + doublets["hit_y_upper"]) / 2
         doublets["md_phi"] = np.arctan2(doublets["md_y"], doublets["md_x"])
         doublets["md_theta"] = np.arctan2(doublets["md_r"], doublets["md_z"])
         doublets["md_eta"] = -np.log(np.tan(doublets["md_theta"] / 2))
@@ -194,17 +194,17 @@ class MDMaker:
 
         # pass-through the hit positions
         for coord in ["x", "y", "r", "z"]:
-            doublets[f"md_{coord}_0"] = doublets[f"simhit_{coord}_lower"]
-            doublets[f"md_{coord}_1"] = doublets[f"simhit_{coord}_upper"]
+            doublets[f"md_{coord}_0"] = doublets[f"hit_{coord}_lower"]
+            doublets[f"md_{coord}_1"] = doublets[f"hit_{coord}_upper"]
 
         # doublet feature: radius of circle composed of the two hits and the origin. R = abc/4K
         # then get pt from R
-        circle_a = doublets["simhit_r_lower"]
-        circle_b = doublets["simhit_r_upper"]
-        circle_c = np.sqrt((doublets["simhit_x_upper"] - doublets["simhit_x_lower"])**2 +
-                            (doublets["simhit_y_upper"] - doublets["simhit_y_lower"])**2)
-        circle_K = 0.5 * np.abs(doublets["simhit_x_lower"] * doublets["simhit_y_upper"] -
-                                doublets["simhit_x_upper"] * doublets["simhit_y_lower"])
+        circle_a = doublets["hit_r_lower"]
+        circle_b = doublets["hit_r_upper"]
+        circle_c = np.sqrt((doublets["hit_x_upper"] - doublets["hit_x_lower"])**2 +
+                            (doublets["hit_y_upper"] - doublets["hit_y_lower"])**2)
+        circle_K = 0.5 * np.abs(doublets["hit_x_lower"] * doublets["hit_y_upper"] -
+                                doublets["hit_x_upper"] * doublets["hit_y_lower"])
         doublets["md_circle_radius"] = np.divide(circle_a * circle_b * circle_c, 4.0 * circle_K)
         doublets["md_pt"] = SPEED_OF_LIGHT * MAGNETIC_FIELD * doublets["md_circle_radius"] * 1e-6
         doublets["md_qoverpt"] = doublets["md_q"] / doublets["md_pt"]
@@ -213,9 +213,9 @@ class MDMaker:
         mcp_ok = doublets["i_mcp_lower"] == doublets["i_mcp_upper"]
         doublets["i_mcp"] = doublets["i_mcp_lower"].where(mcp_ok, NO_MCP)
         if self.signal:
-            doublets["md_first_exit"] = doublets["simhit_first_exit_lower"] & doublets["simhit_first_exit_upper"]
-            doublets["md_from_fiducial_mcp"] = doublets["simhit_from_fiducial_mcp_lower"] & doublets["simhit_from_fiducial_mcp_upper"]
-            doublets["md_detectable"] = mcp_ok & doublets["simhit_detectable_lower"] & doublets["simhit_detectable_upper"]
+            doublets["md_first_exit"] = doublets["hit_first_exit_lower"] & doublets["hit_first_exit_upper"]
+            doublets["md_from_fiducial_mcp"] = doublets["hit_from_fiducial_mcp_lower"] & doublets["hit_from_fiducial_mcp_upper"]
+            doublets["md_detectable"] = mcp_ok & doublets["hit_detectable_lower"] & doublets["hit_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",
@@ -230,7 +230,7 @@ class MDMaker:
 
         # drop columns which arent used downstream
         dropcols = ["i_mcp_lower", "i_mcp_upper"]
-        dropcols.extend([col for col in doublets.columns if col.startswith("simhit_")])
+        dropcols.extend([col for col in doublets.columns if col.startswith("hit_")])
         dropcols.extend([col for col in doublets.columns if col.startswith("mcp_") and col.endswith("_lower")])
         dropcols.extend([col for col in doublets.columns if col.startswith("mcp_") and col.endswith("_upper")])
         doublets.drop(columns=dropcols, inplace=True)
@@ -259,14 +259,14 @@ class MDMaker:
         n_up = len(upper)
         n_full = n_lo * n_up
 
-        system = int(lower["simhit_system"].iloc[0])
-        doublelayer = int(lower["simhit_layer_div_2"].iloc[0])
+        system = int(lower["hit_system"].iloc[0])
+        doublelayer = int(lower["hit_layer_div_2"].iloc[0])
         dz_cut = float(self.MD_DZ_CUT[system, doublelayer])
 
-        z_lo = lower["simhit_z"].to_numpy(np.float64)
-        r_lo = lower["simhit_r"].to_numpy(np.float64)
-        z_up = upper["simhit_z"].to_numpy(np.float64)
-        r_up = upper["simhit_r"].to_numpy(np.float64)
+        z_lo = lower["hit_z"].to_numpy(np.float64)
+        r_lo = lower["hit_r"].to_numpy(np.float64)
+        z_up = upper["hit_z"].to_numpy(np.float64)
+        r_up = upper["hit_r"].to_numpy(np.float64)
 
         r_up_min = r_up.min()
         r_up_max = r_up.max()
