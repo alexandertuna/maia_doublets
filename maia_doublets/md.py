@@ -32,11 +32,11 @@ class MDMaker:
             "hit_sensor", # the z-sensor
         ]
         self.fast_merge = fast_merge
-        self.df, self.cutflow = self.make_doublets(hits)
+        self.df, self.cutflow = self.make_mds(hits)
 
 
-    def make_doublets(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        logger.info("Making doublets ...")
+    def make_mds(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        logger.info("Making mds ...")
 
         groupby_cols = [
             "file",
@@ -53,105 +53,105 @@ class MDMaker:
         # group loop
         logger.info("Grouping hits ...")
         groups = df.groupby(groupby_cols)
-        all_doublets, all_cutflows = [], []
+        all_mds, all_cutflows = [], []
 
         for i_group, (cols, group) in enumerate(groups):
 
-            doublets, cutflow = self.make_doublets_from_group(group)
+            mds, cutflow = self.make_mds_from_group(group)
 
-            all_doublets.append(doublets)
+            all_mds.append(mds)
             all_cutflows.append(cutflow)
 
             if (self.signal and i_group % 100 == 0) or (not self.signal and i_group % 4 == 0):
-                length = len(doublets)
-                size = doublets.memory_usage(deep=True).sum() * BYTE_TO_MB
-                logger.info(f"Processed group {i_group}/{len(groups)}, doublet size = {size:.1f} MB, n(doublets) = {length} ...")
+                length = len(mds)
+                size = mds.memory_usage(deep=True).sum() * BYTE_TO_MB
+                logger.info(f"Processed group {i_group}/{len(groups)}, md size = {size:.1f} MB, n(mds) = {length} ...")
 
-        # concatenate doublets and cutflows
-        logger.info(f"Concatenating doublets ...")
-        doublets = pd.concat(all_doublets, ignore_index=True)
+        # concatenate mds and cutflows
+        logger.info(f"Concatenating mds ...")
+        mds = pd.concat(all_mds, ignore_index=True)
         cutflow = pd.DataFrame(all_cutflows)
         for col in cutflow.columns:
-            logger.info(f"Doublets cutflow, {col}: {cutflow[col].sum()}")
-        if len(doublets) == 0:
-            raise ValueError("No doublets found in the DataFrame")
+            logger.info(f"Mds cutflow, {col}: {cutflow[col].sum()}")
+        if len(mds) == 0:
+            raise ValueError("No mds found in the DataFrame")
 
         # announcements
-        logger.info(f"Total doublets: {len(doublets)}")
-        logger.info(f"Total doublets size: {doublets.memory_usage(deep=True).sum() * BYTE_TO_MB:.1f} MB")
-        counts = doublets.groupby(["md_system",
+        logger.info(f"Total mds: {len(mds)}")
+        logger.info(f"Total mds size: {mds.memory_usage(deep=True).sum() * BYTE_TO_MB:.1f} MB")
+        counts = mds.groupby(["md_system",
                                    "md_doublelayer"]).size()
         for (system, doublelayer), total in counts.items():
-            logger.info(f"n(doublets) for system {system}, doublelayer {doublelayer}: {total}")
+            logger.info(f"n(mds) for system {system}, doublelayer {doublelayer}: {total}")
 
-        return doublets, cutflow
+        return mds, cutflow
 
 
-    def make_doublets_from_group(self, group: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    def make_mds_from_group(self, group: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
         lower_mask = group["hit_layer_mod_2"] == 0
         upper_mask = group["hit_layer_mod_2"] == 1
         lower = group[lower_mask]
         upper = group[upper_mask]
 
-        # inner join to find doublets
+        # inner join to find mds
         if self.cut_mds and self.fast_merge:
-            doublets, n_full = self.merge_binned(lower, upper)
+            mds, n_full = self.merge_binned(lower, upper)
         else:
-            doublets = pd.merge(
+            mds = pd.merge(
                 lower,
                 upper,
                 on=self.md_cols,
                 how="inner",
                 suffixes=("_lower", "_upper"),
             )
-            n_full = len(doublets)
+            n_full = len(mds)
 
-        # doublet feature: xy, dr at point of closest approach to origin
-        slope_xy = np.divide(doublets["hit_y_upper"] - doublets["hit_y_lower"],
-                             doublets["hit_x_upper"] - doublets["hit_x_lower"])
-        intercept_xy = doublets["hit_y_lower"] - slope_xy * doublets["hit_x_lower"]
-        doublets["md_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
+        # md feature: xy, dr at point of closest approach to origin
+        slope_xy = np.divide(mds["hit_y_upper"] - mds["hit_y_lower"],
+                             mds["hit_x_upper"] - mds["hit_x_lower"])
+        intercept_xy = mds["hit_y_lower"] - slope_xy * mds["hit_x_lower"]
+        mds["md_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
 
-        # doublet feature: rz
-        slope_rz = np.divide(doublets["hit_z_upper"] - doublets["hit_z_lower"],
-                             doublets["hit_r_upper"] - doublets["hit_r_lower"])
-        doublets["md_dz"] = doublets["hit_z_lower"] - doublets["hit_r_lower"] * slope_rz
-        doublets["md_theta_rz"] = np.arctan(slope_rz)
+        # md feature: rz
+        slope_rz = np.divide(mds["hit_z_upper"] - mds["hit_z_lower"],
+                             mds["hit_r_upper"] - mds["hit_r_lower"])
+        mds["md_dz"] = mds["hit_z_lower"] - mds["hit_r_lower"] * slope_rz
+        mds["md_theta_rz"] = np.arctan(slope_rz)
 
         # deal with xy slope is NaN
         feature = "md_dr"
-        isnull = doublets[feature].isnull()
+        isnull = mds[feature].isnull()
         if isnull.any():
-            if np.any(isnull != (doublets["hit_x_upper"] == doublets["hit_x_lower"])):
+            if np.any(isnull != (mds["hit_x_upper"] == mds["hit_x_lower"])):
                 raise ValueError(f"Found NaN in {feature}, but not all are due to infinite slope")
-            doublets[feature] = doublets[feature].fillna(doublets["hit_x_lower"])
+            mds[feature] = mds[feature].fillna(mds["hit_x_lower"])
 
         # announce any nans
         for feature in ["md_dr", "md_dz"]:
-            if doublets[feature].isnull().any():
-                n_nan = doublets[feature].isnull().sum()
+            if mds[feature].isnull().any():
+                n_nan = mds[feature].isnull().sum()
                 msg = f"Found {n_nan} unexpected NaN in {feature}"
                 logger.error(msg)
                 raise ValueError(msg)
 
         # record some numbers
-        cutflow = {"all": len(doublets)}
+        cutflow = {"all": len(mds)}
         mask = {}
 
         # record some cut results
-        sy = doublets["hit_system"]
-        dl = doublets["hit_layer_div_2"]
-        doublets["md_ok_dr"] = np.abs(doublets["md_dr"]) < self.MD_DR_CUT[sy, dl]
-        doublets["md_ok_dz"] = np.abs(doublets["md_dz"]) < self.MD_DZ_CUT[sy, dl]
-        doublets["md_ok"] = doublets["md_ok_dr"] & doublets["md_ok_dz"]
+        sy = mds["hit_system"]
+        dl = mds["hit_layer_div_2"]
+        mds["md_ok_dr"] = np.abs(mds["md_dr"]) < self.MD_DR_CUT[sy, dl]
+        mds["md_ok_dz"] = np.abs(mds["md_dz"]) < self.MD_DZ_CUT[sy, dl]
+        mds["md_ok"] = mds["md_ok_dr"] & mds["md_ok_dz"]
 
         # remove as desired
         if self.cut_mds:
-            cutflow["md_ok_dr"] = np.sum(doublets["md_ok_dr"])
-            cutflow["md_ok_dz"] = np.sum(doublets["md_ok_dz"])
-            cutflow["md_ok"] = np.sum(doublets["md_ok"])
-            doublets = doublets[doublets["md_ok"]]
+            cutflow["md_ok_dr"] = np.sum(mds["md_ok_dr"])
+            cutflow["md_ok_dz"] = np.sum(mds["md_ok_dz"])
+            cutflow["md_ok"] = np.sum(mds["md_ok"])
+            mds = mds[mds["md_ok"]]
 
         # rename some columns
         rename = {
@@ -160,62 +160,62 @@ class MDMaker:
             "hit_sensor": "md_sensor",
             "hit_module": "md_module",
         }
-        doublets = doublets.rename(columns=rename)
-        doublets["md_glayer"] = doublets["hit_glayer_lower"]
-        doublets["md_gdoublelayer"] = doublets["hit_glayer_lower"] // 2
+        mds = mds.rename(columns=rename)
+        mds["md_glayer"] = mds["hit_glayer_lower"]
+        mds["md_gdoublelayer"] = mds["hit_glayer_lower"] // 2
 
-        # doublet feature, xy dphi
-        phi_local = np.arctan2(doublets["hit_y_upper"] - doublets["hit_y_lower"],
-                                doublets["hit_x_upper"] - doublets["hit_x_lower"])
-        phi_global = np.arctan2((doublets["hit_y_lower"] + doublets["hit_y_upper"]) / 2.0,
-                                (doublets["hit_x_lower"] + doublets["hit_x_upper"]) / 2.0)
-        doublets["md_dphi"] = phi_local - phi_global
-        doublets["md_dphi"] = (doublets["md_dphi"] + np.pi) % (2 * np.pi) - np.pi
-        doublets["md_theta_xy"] = phi_local
+        # md feature, xy dphi
+        phi_local = np.arctan2(mds["hit_y_upper"] - mds["hit_y_lower"],
+                                mds["hit_x_upper"] - mds["hit_x_lower"])
+        phi_global = np.arctan2((mds["hit_y_lower"] + mds["hit_y_upper"]) / 2.0,
+                                (mds["hit_x_lower"] + mds["hit_x_upper"]) / 2.0)
+        mds["md_dphi"] = phi_local - phi_global
+        mds["md_dphi"] = (mds["md_dphi"] + np.pi) % (2 * np.pi) - np.pi
+        mds["md_theta_xy"] = phi_local
 
-        # doublet features: position
-        doublets["md_r"] = (doublets["hit_r_lower"] + doublets["hit_r_upper"]) / 2
-        doublets["md_z"] = (doublets["hit_z_lower"] + doublets["hit_z_upper"]) / 2
-        doublets["md_x"] = (doublets["hit_x_lower"] + doublets["hit_x_upper"]) / 2
-        doublets["md_y"] = (doublets["hit_y_lower"] + doublets["hit_y_upper"]) / 2
-        doublets["md_phi"] = np.arctan2(doublets["md_y"], doublets["md_x"])
-        doublets["md_theta"] = np.arctan2(doublets["md_r"], doublets["md_z"])
-        doublets["md_eta"] = -np.log(np.tan(doublets["md_theta"] / 2))
+        # md features: position
+        mds["md_r"] = (mds["hit_r_lower"] + mds["hit_r_upper"]) / 2
+        mds["md_z"] = (mds["hit_z_lower"] + mds["hit_z_upper"]) / 2
+        mds["md_x"] = (mds["hit_x_lower"] + mds["hit_x_upper"]) / 2
+        mds["md_y"] = (mds["hit_y_lower"] + mds["hit_y_upper"]) / 2
+        mds["md_phi"] = np.arctan2(mds["md_y"], mds["md_x"])
+        mds["md_theta"] = np.arctan2(mds["md_r"], mds["md_z"])
+        mds["md_eta"] = -np.log(np.tan(mds["md_theta"] / 2))
 
         # divide the eta/phi space into slices, to be used in T2 seeding
-        n_phi_slices = N_T2_PHI_SLICES[doublets["md_system"]]
-        n_eta_slices = N_T2_ETA_SLICES[doublets["md_system"]]
-        doublets["md_phi_slice"] = np.floor((doublets["md_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * n_phi_slices).astype(np.int16)
-        doublets["md_eta_slice"] = np.floor((doublets["md_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * n_eta_slices).astype(np.int16)
+        n_phi_slices = N_T2_PHI_SLICES[mds["md_system"]]
+        n_eta_slices = N_T2_ETA_SLICES[mds["md_system"]]
+        mds["md_phi_slice"] = np.floor((mds["md_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * n_phi_slices).astype(np.int16)
+        mds["md_eta_slice"] = np.floor((mds["md_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * n_eta_slices).astype(np.int16)
 
         # guess charge from dphi:
         # positively charged particles have negative dphi, and vice versa
-        doublets["md_q"] = (-1*np.sign(doublets["md_dphi"])).astype(np.int8)
+        mds["md_q"] = (-1*np.sign(mds["md_dphi"])).astype(np.int8)
 
         # pass-through the hit positions
         for coord in ["x", "y", "r", "z"]:
-            doublets[f"md_{coord}_0"] = doublets[f"hit_{coord}_lower"]
-            doublets[f"md_{coord}_1"] = doublets[f"hit_{coord}_upper"]
+            mds[f"md_{coord}_0"] = mds[f"hit_{coord}_lower"]
+            mds[f"md_{coord}_1"] = mds[f"hit_{coord}_upper"]
 
-        # doublet feature: radius of circle composed of the two hits and the origin. R = abc/4K
+        # md feature: radius of circle composed of the two hits and the origin. R = abc/4K
         # then get pt from R
-        circle_a = doublets["hit_r_lower"]
-        circle_b = doublets["hit_r_upper"]
-        circle_c = np.sqrt((doublets["hit_x_upper"] - doublets["hit_x_lower"])**2 +
-                            (doublets["hit_y_upper"] - doublets["hit_y_lower"])**2)
-        circle_K = 0.5 * np.abs(doublets["hit_x_lower"] * doublets["hit_y_upper"] -
-                                doublets["hit_x_upper"] * doublets["hit_y_lower"])
-        doublets["md_circle_radius"] = np.divide(circle_a * circle_b * circle_c, 4.0 * circle_K)
-        doublets["md_pt"] = SPEED_OF_LIGHT * MAGNETIC_FIELD * doublets["md_circle_radius"] * 1e-6
-        doublets["md_qoverpt"] = doublets["md_q"] / doublets["md_pt"]
+        circle_a = mds["hit_r_lower"]
+        circle_b = mds["hit_r_upper"]
+        circle_c = np.sqrt((mds["hit_x_upper"] - mds["hit_x_lower"])**2 +
+                            (mds["hit_y_upper"] - mds["hit_y_lower"])**2)
+        circle_K = 0.5 * np.abs(mds["hit_x_lower"] * mds["hit_y_upper"] -
+                                mds["hit_x_upper"] * mds["hit_y_lower"])
+        mds["md_circle_radius"] = np.divide(circle_a * circle_b * circle_c, 4.0 * circle_K)
+        mds["md_pt"] = SPEED_OF_LIGHT * MAGNETIC_FIELD * mds["md_circle_radius"] * 1e-6
+        mds["md_qoverpt"] = mds["md_q"] / mds["md_pt"]
 
-        # doublet feature: truth info
-        mcp_ok = doublets["i_mcp_lower"] == doublets["i_mcp_upper"]
-        doublets["i_mcp"] = doublets["i_mcp_lower"].where(mcp_ok, NO_MCP)
+        # md feature: truth info
+        mcp_ok = mds["i_mcp_lower"] == mds["i_mcp_upper"]
+        mds["i_mcp"] = mds["i_mcp_lower"].where(mcp_ok, NO_MCP)
         if self.signal:
-            doublets["md_first_exit"] = doublets["hit_first_exit_lower"] & doublets["hit_first_exit_upper"]
-            doublets["md_from_fiducial_mcp"] = doublets["hit_from_fiducial_mcp_lower"] & doublets["hit_from_fiducial_mcp_upper"]
-            doublets["md_detectable"] = mcp_ok & doublets["hit_detectable_lower"] & doublets["hit_detectable_upper"]
+            mds["md_first_exit"] = mds["hit_first_exit_lower"] & mds["hit_first_exit_upper"]
+            mds["md_from_fiducial_mcp"] = mds["hit_from_fiducial_mcp_lower"] & mds["hit_from_fiducial_mcp_upper"]
+            mds["md_detectable"] = mcp_ok & mds["hit_detectable_lower"] & mds["hit_detectable_upper"]
             for attr in [
                 "mcp_pt",
                 "mcp_eta",
@@ -226,21 +226,21 @@ class MDMaker:
                 "mcp_vertex_z",
                 "mcp_qoverpt",
             ]:
-                doublets[attr] = doublets[f"{attr}_lower"].where(mcp_ok, 0)
+                mds[attr] = mds[f"{attr}_lower"].where(mcp_ok, 0)
 
         # drop columns which arent used downstream
         dropcols = ["i_mcp_lower", "i_mcp_upper"]
-        dropcols.extend([col for col in doublets.columns if col.startswith("hit_")])
-        dropcols.extend([col for col in doublets.columns if col.startswith("mcp_") and col.endswith("_lower")])
-        dropcols.extend([col for col in doublets.columns if col.startswith("mcp_") and col.endswith("_upper")])
-        doublets.drop(columns=dropcols, inplace=True)
+        dropcols.extend([col for col in mds.columns if col.startswith("hit_")])
+        dropcols.extend([col for col in mds.columns if col.startswith("mcp_") and col.endswith("_lower")])
+        dropcols.extend([col for col in mds.columns if col.startswith("mcp_") and col.endswith("_upper")])
+        mds.drop(columns=dropcols, inplace=True)
 
-        return doublets, cutflow
+        return mds, cutflow
 
 
     def merge_binned(self, lower: pd.DataFrame, upper: pd.DataFrame) -> tuple[pd.DataFrame, int]:
         """
-        Experimental binned merge to speed up the doublet making, courtesy of Claude
+        Experimental binned merge to speed up the md making, courtesy of Claude
 
         Binned-merge equivalent of pd.merge(lower, upper, on=md_cols,
         how="inner", suffixes=("_lower","_upper")), restricted to upper hits whose
@@ -275,9 +275,9 @@ class MDMaker:
         # lower one. If radii overlap, fall back to the exact full merge.
         if r_up_min <= r_lo.max():
             logger.warning(f"MD binned merge: weird data, falling back to full merge")
-            doublets = pd.merge(lower, upper, on=self.md_cols, how="inner",
+            mds = pd.merge(lower, upper, on=self.md_cols, how="inner",
                                 suffixes=("_lower", "_upper"))
-            return doublets, n_full
+            return mds, n_full
 
         # allowed z_up interval per lower hit (union over r_up in [min, max])
         fmin_a = ((z_lo - dz_cut) * r_up_min + dz_cut * r_lo) / r_lo
@@ -294,9 +294,9 @@ class MDMaker:
         # degenerate (e.g. dz_cut == 0): nothing can pass, fall back is safe
         if not (bin_width > 0.0):
             logger.warning(f"MD binned merge: degenerate bin width, falling back to full merge")
-            doublets = pd.merge(lower, upper, on=self.md_cols, how="inner",
+            mds = pd.merge(lower, upper, on=self.md_cols, how="inner",
                                 suffixes=("_lower", "_upper"))
-            return doublets, n_full
+            return mds, n_full
 
         # discretise z (shared grid origin) and predict each lower hit's bin
         z0 = z_up.min()
@@ -318,9 +318,9 @@ class MDMaker:
 
         if len(matched) == 0:
             logger.warning(f"MD binned merge: no matches, falling back to full merge")
-            doublets = pd.merge(lower.iloc[:0], upper.iloc[:0], on=self.md_cols,
+            mds = pd.merge(lower.iloc[:0], upper.iloc[:0], on=self.md_cols,
                                 how="inner", suffixes=("_lower", "_upper"))
-            return doublets, n_full
+            return mds, n_full
 
         lower_pos = matched["_lpos"].to_numpy()
         upper_pos = matched["_upos"].to_numpy()
@@ -331,6 +331,6 @@ class MDMaker:
         keys = L[self.md_cols]
         L_other = L.drop(columns=self.md_cols).add_suffix("_lower")
         U_other = U.drop(columns=self.md_cols).add_suffix("_upper")
-        doublets = pd.concat([keys, L_other, U_other], axis=1)
+        mds = pd.concat([keys, L_other, U_other], axis=1)
 
-        return doublets, n_full
+        return mds, n_full

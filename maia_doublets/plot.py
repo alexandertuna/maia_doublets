@@ -158,7 +158,7 @@ class Plotter:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
 
-        # part 2a: doublets by hand
+        # part 2a: mds by hand
         md_cols = [
             "file",
             "i_event", # the event
@@ -175,13 +175,13 @@ class Plotter:
         # logger.info("Getting lower and upper hits ...")
         lower = self.hits[lower_mask].rename(columns={"i_mcp": "i_mcp_lower"})[md_cols + ["i_mcp_lower"]]
         upper = self.hits[upper_mask].rename(columns={"i_mcp": "i_mcp_upper"})[md_cols + ["i_mcp_upper"]]
-        doublets = lower.merge(upper, on=md_cols, how="inner")
-        logger.info(f"* {'Doublets':<30} :: {len(doublets):>10}")
+        mds = lower.merge(upper, on=md_cols, how="inner")
+        logger.info(f"* {'MDs':<30} :: {len(mds):>10}")
 
-        same_mcp = doublets["i_mcp_lower"] == doublets["i_mcp_upper"]
-        logger.info(f"* {'Doublets from same MCP':<30} :: {same_mcp.sum():>10}")
+        same_mcp = mds["i_mcp_lower"] == mds["i_mcp_upper"]
+        logger.info(f"* {'MDs from same MCP':<30} :: {same_mcp.sum():>10}")
 
-        # part 2b: doublets with dr and dz cuts
+        # part 2b: mds with dr and dz cuts
         doublelayer = self.mds["md_doublelayer"]
         dl_0 = doublelayer == 0
         dl_1 = doublelayer == 1
@@ -196,14 +196,14 @@ class Plotter:
             (self.mds["md_first_exit"])
         )
         quality_cuts = baseline_cuts & self.mds["md_ok"]
-        doublets_0 = self.mds[baseline_cuts & dl_0]
-        doublets_1 = self.mds[baseline_cuts & dl_1]
-        logger.info(f"* {'Doublets, baseline, L01':<30} :: {len(doublets_0):>10}")
-        logger.info(f"* {'Doublets, baseline, L23':<30} :: {len(doublets_1):>10}")
-        doublets_0 = self.mds[quality_cuts & dl_0]
-        doublets_1 = self.mds[quality_cuts & dl_1]
-        logger.info(f"* {'Doublets, drdz cuts, L01':<30} :: {len(doublets_0):>10}")
-        logger.info(f"* {'Doublets, drdz cuts, L23':<30} :: {len(doublets_1):>10}")
+        mds_0 = self.mds[baseline_cuts & dl_0]
+        mds_1 = self.mds[baseline_cuts & dl_1]
+        logger.info(f"* {'MDs, baseline, L01':<30} :: {len(mds_0):>10}")
+        logger.info(f"* {'MDs, baseline, L23':<30} :: {len(mds_1):>10}")
+        mds_0 = self.mds[quality_cuts & dl_0]
+        mds_1 = self.mds[quality_cuts & dl_1]
+        logger.info(f"* {'MDs, drdz cuts, L01':<30} :: {len(mds_0):>10}")
+        logger.info(f"* {'MDs, drdz cuts, L23':<30} :: {len(mds_1):>10}")
 
         # part 3: T2s
         keys = [
@@ -211,14 +211,14 @@ class Plotter:
             "i_event",
             "i_mcp",
         ]
-        t2s = doublets_0.merge(
-            doublets_1,
+        t2s = mds_0.merge(
+            mds_1,
             on=keys,
             how="inner",
             validate="many_to_many",
             suffixes=("_lower", "_upper"),
         )
-        logger.info(f"* {'T2s from doublets':<30} :: {len(t2s):>10}")
+        logger.info(f"* {'T2s from mds':<30} :: {len(t2s):>10}")
 
 
     def plot_numbers_for_comparison_background(self, pdf: PdfPages):
@@ -237,7 +237,7 @@ class Plotter:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
 
-        # part 2: doublets
+        # part 2: mds
         md_cols = [
             "file",
             "i_event", # the event
@@ -251,21 +251,21 @@ class Plotter:
         logger.info(f"* {'Lower hit':<30} :: {lower_mask.sum():>10}")
         logger.info(f"* {'Upper hit':<30} :: {upper_mask.sum():>10}")
 
-        # number of doublets by hand
+        # number of mds by hand
         # lower = self.hits[lower_mask][md_cols]
         # upper = self.hits[upper_mask][md_cols]
-        # doublets = lower.merge(upper, on=md_cols, how="inner")
-        # logger.info(f"* {'Doublets (by hand)':<30} :: {len(doublets):>10}")
+        # mds = lower.merge(upper, on=md_cols, how="inner")
+        # logger.info(f"* {'MDs (by hand)':<30} :: {len(mds):>10}")
 
-        # number of doublets
+        # number of mds
         mask = np.ones(len(self.mds), dtype=bool)
         for [req, label] in [
-            [self.mds["md_system"] == sy, "Doublets in OTB"],
-            [self.mds["md_doublelayer"] == dl, f"Doublets in layers {layers}"],
+            [self.mds["md_system"] == sy, "MDs in OTB"],
+            [self.mds["md_doublelayer"] == dl, f"MDs in layers {layers}"],
             # [self.mds["md_sensor"] == 20, "z-sensor 20"],
             # [self.mds["md_module"] == 0, "phi-module 0"],
-            [self.mds["md_ok_dz"], f"Doublets with |dz| cut"],
-            [self.mds["md_ok_dr"], f"Doublets with |dr| cut"],
+            [self.mds["md_ok_dz"], f"MDs with |dz| cut"],
+            [self.mds["md_ok_dr"], f"MDs with |dr| cut"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -333,7 +333,7 @@ class Plotter:
 
             fig, ax = plt.subplots()
             ax.hist(
-                ["Hits", "Doublets", "T2s", "T4s", "T8s"],
+                ["Hits", "MDs", "T2s", "T4s", "T8s"],
                 bins=bins,
                 weights=mult,
                 histtype="stepfilled",
@@ -483,10 +483,10 @@ class Plotter:
             for req in DOUBLET_REQS:
 
                 req_text, req_mask = self.md_requirements(group, req)
-                doublets = group[req_mask]
+                mds = group[req_mask]
 
-                logger.info(f"Occupancy of {NICKNAMES[system]} doublelayer {doublelayer}, {req}: {len(doublets)} doublets")
-                if len(doublets) == 0:
+                logger.info(f"Occupancy of {NICKNAMES[system]} doublelayer {doublelayer}, {req}: {len(mds)} mds")
+                if len(mds) == 0:
                     continue
 
                 layers = [doublelayer * 2, doublelayer * 2 + 1]
@@ -495,15 +495,15 @@ class Plotter:
                 # if not self.signal:
                 #     continue
 
-                # doublets = self.mds[mask]
+                # mds = self.mds[mask]
                 bins = [
-                    np.arange(-0.5, doublets["md_module"].max()+1.5, 1),
-                    np.arange(-0.5, doublets["md_sensor"].max()+1.5, 1),
+                    np.arange(-0.5, mds["md_module"].max()+1.5, 1),
+                    np.arange(-0.5, mds["md_sensor"].max()+1.5, 1),
                 ]
                 fig, ax = plt.subplots()
                 h2d, _, _, im = ax.hist2d(
-                    doublets["md_module"],
-                    doublets["md_sensor"],
+                    mds["md_module"],
+                    mds["md_sensor"],
                     bins=bins,
                     cmap="gist_rainbow",
                     norm=colors.LogNorm(vmin=0.9),
@@ -514,7 +514,7 @@ class Plotter:
                 ax.set_xlabel("Phi module")
                 ax.set_ylabel("Z sensor")
                 ax.set_title(f"{NICKNAMES[system]}, layers {layers}, {req_text}")
-                fig.colorbar(im, ax=ax, label="Number of doublets", pad=0.01)
+                fig.colorbar(im, ax=ax, label="Number of mds", pad=0.01)
                 pdf.savefig()
                 plt.close()
 
@@ -617,17 +617,17 @@ class Plotter:
             "md_sensor", # the z-sensor
         ]
 
-        # filter doublets to only those with same parent mcp
+        # filter mds to only those with same parent mcp
         pass_cuts = (
             (self.mds["i_mcp"] != NO_MCP) &
             self.mds["md_ok"] &
             self.mds["md_first_exit"]
         )
-        doublets = self.mds[pass_cuts][ md_cols + ["i_mcp"] ].drop_duplicates()
+        mds = self.mds[pass_cuts][ md_cols + ["i_mcp"] ].drop_duplicates()
 
-        # check if doublets's [file, i_event, i_mcp] is in denominator
+        # check if mds's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in doublets.groupby(["md_system",
+            for ((system, doublelayer), group) in mds.groupby(["md_system",
                                                                     "md_doublelayer",
                                                                     ]):
                 layers = [doublelayer * 2, doublelayer * 2 + 1]
@@ -649,7 +649,7 @@ class Plotter:
                     color="dodgerblue",
                 )
                 ax.set_xlabel(self.xlabel[kin])
-                ax.set_ylabel("Doublet algorithm efficiency")
+                ax.set_ylabel("MD algorithm efficiency")
                 ax.set_title(f"{NICKNAMES[system]}, layers {layers}")
                 ax.set_ylim(0.7, 1.03)
                 pdf.savefig()
@@ -674,13 +674,13 @@ class Plotter:
             "md_sensor", # the z-sensor
         ]
 
-        # filter doublets to only those with same parent mcp
+        # filter mds to only those with same parent mcp
         same_parent = self.mds["i_mcp"] != NO_MCP
-        doublets = self.mds[same_parent][ md_cols + ["i_mcp"] ].drop_duplicates()
+        mds = self.mds[same_parent][ md_cols + ["i_mcp"] ].drop_duplicates()
 
-        # check if doublets's [file, i_event, i_mcp] is in denominator
+        # check if mds's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in doublets.groupby(["md_system",
+            for ((system, doublelayer), group) in mds.groupby(["md_system",
                                                                     "md_doublelayer",
                                                                     ]):
                 layers = [doublelayer * 2, doublelayer * 2 + 1]
@@ -702,7 +702,7 @@ class Plotter:
                     color="dodgerblue",
                 )
                 ax.set_xlabel(self.xlabel[kin])
-                ax.set_ylabel("Doublet finding efficiency")
+                ax.set_ylabel("MD finding efficiency")
                 ax.set_title(f"{NICKNAMES[system]}, layers {layers}")
                 ax.set_ylim(0.7, 1.03)
                 pdf.savefig()
@@ -743,7 +743,7 @@ class Plotter:
             "hit_r",
         ]
 
-        logger.info("Making doublets by hand for a sec ...")
+        logger.info("Making mds by hand for a sec ...")
         mask = self.hits["hit_first_exit"] & self.hits["hit_from_fiducial_mcp"]
         lower_mask = mask & (self.hits["hit_glayer"] == 14)
         upper_mask = mask & (self.hits["hit_glayer"] == 15)
@@ -770,7 +770,7 @@ class Plotter:
             ax.semilogy()
         ax.set_ylim(0.8 if semilogy else 0, None)
         ax.set_xlabel("hit_z_upper - hit_z_lower")
-        ax.set_ylabel("Doublets")
+        ax.set_ylabel("MDs")
         # ax.set_title(f"{NICKNAMES[system]} layers {layers}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
         # ax.text(0.05, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes)
         pdf.savefig()
@@ -779,7 +779,7 @@ class Plotter:
 
 
     def plot_md_features(self, pdf: PdfPages):
-        logger.info("Plotting doublet features ...")
+        logger.info("Plotting md features ...")
         baseline = self.mds["md_detectable"] if self.signal else np.ones(len(self.mds), dtype=bool)
 
         bins = {
@@ -798,7 +798,7 @@ class Plotter:
             "md_dr": r"dr in xy-plane [mm]",
             "md_dphi": r"dphi in xy-plane [rad]",
             "md_pt": r"pT [GeV]",
-            "md_qoverpt": r"Doublet q/pT [1/GeV]",
+            "md_qoverpt": r"MD q/pT [1/GeV]",
             "md_phi_slice": r"Phi slice",
             "mcp_qoverpt": r"MC q/pT [1/GeV]",
             "mc_pt": r"MC pT [GeV]",
@@ -833,7 +833,7 @@ class Plotter:
 
                         bins["md_phi_slice"] = np.linspace(-1, N_T2_PHI_SLICES[system]+1, N_T2_PHI_SLICES[system]+3)
 
-                        # logger.info(f"Plotting signal doublet feature {feature}, system {system}, doublelayer {doublelayer} ...")
+                        # logger.info(f"Plotting signal md feature {feature}, system {system}, doublelayer {doublelayer} ...")
                         layers = [doublelayer * 2, doublelayer * 2 + 1]
                         if len(group) == 0:
                             continue
@@ -858,7 +858,7 @@ class Plotter:
                         fmt = formatting[feature]
                         ax.set_ylim(0.8 if semilogy else 0, None)
                         ax.set_xlabel(xlabel[feature])
-                        ax.set_ylabel("Doublets")
+                        ax.set_ylabel("MDs")
                         ax.set_title(f"{NICKNAMES[system]} layers {layers}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
                         ax.text(0.05, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes)
                         logger.info(f"{NICKNAMES[system]} doublelayer {doublelayer} {feature}: 99.7% in {p997:{fmt}}")
@@ -880,7 +880,7 @@ class Plotter:
                                                                                    "md_doublelayer",
                                                                                     ]):
 
-                logger.info(f"Plotting signal doublet features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
+                logger.info(f"Plotting signal md features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
                 layers = [doublelayer * 2, doublelayer * 2 + 1]
                 if len(group) == 0:
                     continue
@@ -895,7 +895,7 @@ class Plotter:
                 )
                 if np.nansum(h2d) == 0:
                     raise ValueError(f"No entries in 2d histogram. Fix the binning!")
-                fig.colorbar(im, ax=ax, label="Doublets", pad=0.01)
+                fig.colorbar(im, ax=ax, label="MDs", pad=0.01)
                 num = len(group)
                 ax.set_xlabel(xlabel[feature_x])
                 ax.set_ylabel(xlabel[feature_y])
@@ -906,10 +906,10 @@ class Plotter:
 
     def plot_md_quality_efficiency(self, pdf: PdfPages):
 
-        # only consider truth-match doublets
+        # only consider truth-match mds
         baseline = self.mds["md_detectable"]
-        logger.info(f"Doublet efficiency: total doublets: {len(self.mds)}")
-        logger.info(f"Doublet efficiency: total doublets in baseline: {baseline.sum()}")
+        logger.info(f"MD efficiency: total mds: {len(self.mds)}")
+        logger.info(f"MD efficiency: total mds in baseline: {baseline.sum()}")
 
         # todo: add comment
         for i_kin, kin in enumerate([
@@ -922,7 +922,7 @@ class Plotter:
                                                                                    "md_doublelayer",
                                                                                    ]):
 
-                logger.info(f"Plotting doublet quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
+                logger.info(f"Plotting md quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
                 layers = [doublelayer * 2, doublelayer * 2 + 1]
 
                 for req in DOUBLET_REQS:
@@ -930,8 +930,8 @@ class Plotter:
                     denom = group
                     numer = group[req_mask]
                     if i_kin == 0:
-                        logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} doublets")
-                        logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} doublets")
+                        logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} mds")
+                        logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} mds")
 
                     n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
                     n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
@@ -948,7 +948,7 @@ class Plotter:
                         color="dodgerblue",
                     )
                     ax.set_xlabel(self.xlabel[kin])
-                    ax.set_ylabel("Doublet quality efficiency")
+                    ax.set_ylabel("MD quality efficiency")
                     ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req_text}")
                     ax.set_ylim(0.965, 1.004)
                     pdf.savefig()
@@ -989,15 +989,15 @@ class Plotter:
             "t2_chi2_sz": np.logspace(-5.5, 0, 201),
         }
         xlabel = {
-            "t2_deta": r"upper doublet eta - lower doublet eta",
-            "t2_dphi": r"upper doublet phi - lower doublet phi [rad]",
+            "t2_deta": r"upper md eta - lower md eta",
+            "t2_dphi": r"upper md phi - lower md phi [rad]",
             "t2_dr": "T2 dr [mm]",
             "t2_dz": "T2 dz [mm]",
-            "t2_ddr": "upper doublet dr - lower doublet dr",
-            "t2_ddz": "upper doublet dz - lower doublet dz",
-            "t2_dqoverpt": "upper doublet q/pt - lower doublet q/pt",
-            "t2_dtheta_rz": "upper doublet theta_rz - lower doublet theta_rz",
-            "t2_dtheta_xy": "upper doublet theta_xy - lower doublet theta_xy",
+            "t2_ddr": "upper md dr - lower md dr",
+            "t2_ddz": "upper md dz - lower md dz",
+            "t2_dqoverpt": "upper md q/pt - lower md q/pt",
+            "t2_dtheta_rz": "upper md theta_rz - lower md theta_rz",
+            "t2_dtheta_xy": "upper md theta_xy - lower md theta_xy",
             "t2_chi2_xy": "Diff^2 between circle(xy, 012) and 3 [mm^2]",
             "t2_chi2_sz": "Diff^2 between line(z, s) [mm^2]",
         }
@@ -1118,7 +1118,7 @@ class Plotter:
             "t2_doublelayer", # the first double layer
         ]
 
-        # filter doublets to only those with same parent mcp
+        # filter mds to only those with same parent mcp
         same_parent = self.t2s["i_mcp"] != NO_MCP
         t2s = self.t2s[same_parent][t2_cols].drop_duplicates()
 
@@ -1156,7 +1156,7 @@ class Plotter:
 
     def plot_t2_quality_efficiency(self, pdf: PdfPages):
 
-        # only consider truth-match doublets
+        # only consider truth-match mds
         baseline = self.t2s["t2_detectable"]
         logger.info(f"T2 efficiency: total t2s: {len(self.t2s)}")
         logger.info(f"T2 efficiency: total t2s in baseline: {baseline.sum()}")
@@ -1181,8 +1181,8 @@ class Plotter:
                     denom = group
                     numer = group[req_mask]
                     if i_kin == 0:
-                        logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} doublets")
-                        logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} doublets")
+                        logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} mds")
+                        logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} mds")
 
                     n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
                     n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
@@ -1369,7 +1369,7 @@ class Plotter:
             "i_mcp", # the parent mc particle
         ]
 
-        # filter doublets to only those with same parent mcp
+        # filter only those with same parent mcp
         same_parent = self.t4s["i_mcp"] != NO_MCP
         t4s = self.t4s[same_parent][numer_cols].drop_duplicates()
 
@@ -1419,7 +1419,7 @@ class Plotter:
             "t4_gdoublelayer", # the first global double layer
         ]
 
-        # filter doublets to only those with same parent mcp
+        # filter only those with same parent mcp
         same_parent = self.t4s["i_mcp"] != NO_MCP
         t4s = self.t4s[same_parent][numer_cols].drop_duplicates()
 
@@ -1607,7 +1607,7 @@ class Plotter:
             "i_mcp", # the parent mc particle
         ]
 
-        # filter doublets to only those with same parent mcp
+        # filter only those with same parent mcp
         same_parent = self.t8s["i_mcp"] != NO_MCP
         t8s = self.t8s[same_parent][numer_cols].drop_duplicates()
 

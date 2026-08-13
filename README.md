@@ -53,6 +53,5 @@ Keep this in mind when applying the `--cut-xx` flags.
 
 This is a non-exhaustive list of things which I should address:
 
-- Mixing "doublet" with "md"
 - Mixing global double layer with system, layer, double-layer
 - Using double-layers at all? Is that silly?
