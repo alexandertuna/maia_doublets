@@ -45,22 +45,22 @@ class HitMaker:
 
 
     def convert(self) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        mcps, simhits = self.convert_all_files()
+        mcps, hits = self.convert_all_files()
         mcps = sort_mcps(mcps)
-        simhits = sort_hits(simhits)
-        announce_inside_bounds(simhits)
-        memory_usage = simhits.memory_usage(deep=True).sum() * BYTE_TO_MB
-        logger.info(f"simhits.memory_usage: {memory_usage:.1f} MB")
-        counts = simhits.groupby([
+        hits = sort_hits(hits)
+        announce_inside_bounds(hits)
+        memory_usage = hits.memory_usage(deep=True).sum() * BYTE_TO_MB
+        logger.info(f"hits.memory_usage: {memory_usage:.1f} MB")
+        counts = hits.groupby([
             "simhit_system",
             "simhit_layer",
         ]).size()
         cutflow = {}
         for (system, layer), total in counts.items():
-            logger.info(f"N(simhits) in system {system} layer {layer}: {total}")
+            logger.info(f"N(hits) in system {system} layer {layer}: {total}")
             cutflow[f"system_{system}_layer_{layer}"] = total
         cutflow = pd.DataFrame([cutflow])
-        return mcps, simhits, cutflow
+        return mcps, hits, cutflow
 
 
     def convert_all_files(self) -> pd.DataFrame:
@@ -94,8 +94,8 @@ class HitMaker:
             )
         logger.info("Merging DataFrames ...")
         return [
-            pd.concat([mcps for (mcps, simhits) in results], ignore_index=True),
-            pd.concat([simhits for (mcps, simhits) in results], ignore_index=True),
+            pd.concat([mcps for (mcps, hits) in results], ignore_index=True),
+            pd.concat([hits for (mcps, hits) in results], ignore_index=True),
         ]
 
 
@@ -130,7 +130,7 @@ def convert_one_root_file(
         layers: dict[int, set[int]],
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Parse a ROOT file for MCParticles and simhits, returning two DataFrames.
+    Parse a ROOT file for MCParticles and hits, returning two DataFrames.
     This is an alternative to convert_one_lcio_file that uses uproot instead of pyLCIO.
     """
     rf = uproot.open(root_file_path)
@@ -156,7 +156,7 @@ def convert_one_root_file(
     mcps = sort_mcps(mcps)
     if signal:
         hits = postprocess_mcps(hits)
-    hits = postprocess_simhits(hits, signal)
+    hits = postprocess_hits(hits, signal)
     hits = sort_hits(hits)
 
     # Bonus features: define if a mcp is "detectable" or not
@@ -510,7 +510,7 @@ def convert_one_lcio_file(
 
     # list for holding all hits
     mcps = []
-    simhits = []
+    hits = []
 
     # loop over all events in the slcio file
     for i_event, event in enumerate(reader):
@@ -616,7 +616,7 @@ def convert_one_lcio_file(
                     continue
 
                 # record the hit info
-                simhits.append({
+                hits.append({
                     'file': file_number,
                     'i_event': i_event,
                     'i_mcp': i_mcp,
@@ -629,7 +629,7 @@ def convert_one_lcio_file(
                 })
                 if signal:
                     mcp_ok = i_mcp != NO_MCP
-                    simhits[-1].update({
+                    hits[-1].update({
                         'simhit_px': momentum[0],
                         'simhit_py': momentum[1],
                         'simhit_pz': momentum[2],
@@ -656,15 +656,15 @@ def convert_one_lcio_file(
     # Convert the list of hits to a pandas DataFrame and postprocess
     logger.info("Creating DataFrames ...")
     mcps = pd.DataFrame(mcps)
-    simhits = pd.DataFrame(simhits)
+    hits = pd.DataFrame(hits)
 
     # sanity check
     if len(mcps) == 0:
         msg = f"No MCParticles found in file {os.path.basename(slcio_file_path)}"
         logger.error(msg)
         raise RuntimeError(msg)
-    if len(simhits) == 0:
-        msg = f"No simhits found in file {os.path.basename(slcio_file_path)}"
+    if len(hits) == 0:
+        msg = f"No hits found in file {os.path.basename(slcio_file_path)}"
         logger.error(msg)
         raise RuntimeError(msg)
 
@@ -672,14 +672,14 @@ def convert_one_lcio_file(
     logger.info("Postprocessing DataFrames ...")
     mcps = postprocess_mcps(mcps)
     if signal:
-        simhits = postprocess_mcps(simhits)
-    simhits = postprocess_simhits(simhits, geo_version, signal)
+        hits = postprocess_mcps(hits)
+    hits = postprocess_hits(hits, geo_version, signal)
 
     # Bonus features: define if a mcp is "detectable" or not
     if signal:
-        mcps = add_detectable_columns(mcps, simhits)
+        mcps = add_detectable_columns(mcps, hits)
 
-    return mcps, simhits
+    return mcps, hits
 
 
 def postprocess_mcps(df: pd.DataFrame) -> pd.DataFrame:
@@ -714,7 +714,7 @@ def postprocess_mcps(df: pd.DataFrame) -> pd.DataFrame:
     return df[sorted(df.columns)]
 
 
-def postprocess_simhits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.DataFrame:
+def postprocess_hits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.DataFrame:
     logger.info(f"Postprocessing DataFrame, geo_version={geo_version}, signal={signal} ...")
     df["simhit_r"] = np.sqrt(df["simhit_x"]**2 + df["simhit_y"]**2)
     df["simhit_system"], df["simhit_side"], df["simhit_layer"], df["simhit_module"], df["simhit_sensor"] = decode_cellid(df["simhit_cellid0"], geo_version=geo_version)
@@ -812,7 +812,7 @@ def sort_hits(df: pd.DataFrame) -> pd.DataFrame:
     return df.sort_values(by=columns).reset_index(drop=True)
 
 
-def add_detectable_columns(mcps: pd.DataFrame, simhits: pd.DataFrame) -> pd.DataFrame:
+def add_detectable_columns(mcps: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFrame:
 
     GROUP_COLS = ["file", "i_event", "i_mcp"]
     MATCH_COLS = GROUP_COLS + ["simhit_module", "simhit_sensor"]
@@ -820,7 +820,7 @@ def add_detectable_columns(mcps: pd.DataFrame, simhits: pd.DataFrame) -> pd.Data
     LAYER_PAIRS = [(0, 1), (2, 3), (4, 5), (6, 7)]
 
     def get_detectable_mcps(
-        simhits_system: pd.DataFrame,
+        hits_system: pd.DataFrame,
         layer_lower: int,
         layer_upper: int,
     ) -> pd.DataFrame:
@@ -828,14 +828,14 @@ def add_detectable_columns(mcps: pd.DataFrame, simhits: pd.DataFrame) -> pd.Data
         Returns a DataFrame of GROUP_COLS rows for every MCP that has at least
         one (module, sensor) pair with hits in both layer_lower and layer_upper.
         """
-        lo = simhits_system[simhits_system["simhit_layer"] == layer_lower][MATCH_COLS]
-        hi = simhits_system[simhits_system["simhit_layer"] == layer_upper][MATCH_COLS]
+        lo = hits_system[hits_system["simhit_layer"] == layer_lower][MATCH_COLS]
+        hi = hits_system[hits_system["simhit_layer"] == layer_upper][MATCH_COLS]
         return lo.merge(hi, on=MATCH_COLS)[GROUP_COLS].drop_duplicates()
 
     for system in SYSTEMS:
 
         nickname = NICKNAMES[system]
-        sysdf = simhits[ simhits["simhit_first_exit"] & (simhits["simhit_system"] == system) ]
+        sysdf = hits[ hits["simhit_first_exit"] & (hits["simhit_system"] == system) ]
 
         for lo, hi in LAYER_PAIRS:
 
@@ -861,7 +861,7 @@ def add_detectable_columns(mcps: pd.DataFrame, simhits: pd.DataFrame) -> pd.Data
 def announce_inside_bounds(df: pd.DataFrame):
     for bounds in [OUTSIDE_BOUNDS, INSIDE_BOUNDS, UNDEFINED_BOUNDS]:
         n_bounds = len(df[df["simhit_inside_bounds"] == bounds])
-        logger.info(f"N(simhits) with bounds == {BOUNDS[bounds]}: {n_bounds}")
+        logger.info(f"N(hits) with bounds == {BOUNDS[bounds]}: {n_bounds}")
 
 
 def decode_cellid(cellid0: int, geo_version: str) -> tuple:
