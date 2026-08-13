@@ -47,7 +47,7 @@ class HitMaker:
     def convert(self) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         mcps, simhits = self.convert_all_files()
         mcps = sort_mcps(mcps)
-        simhits = sort_simhits(simhits)
+        simhits = sort_hits(simhits)
         announce_inside_bounds(simhits)
         memory_usage = simhits.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"simhits.memory_usage: {memory_usage:.1f} MB")
@@ -157,7 +157,7 @@ def convert_one_root_file(
     if signal:
         hits = postprocess_mcps(hits)
     hits = postprocess_simhits(hits, signal)
-    hits = sort_simhits(hits)
+    hits = sort_hits(hits)
 
     # Bonus features: define if a mcp is "detectable" or not
     if signal:
@@ -797,7 +797,7 @@ def sort_mcps(df: pd.DataFrame) -> pd.DataFrame:
     return df.sort_values(by=columns).reset_index(drop=True)
 
 
-def sort_simhits(df: pd.DataFrame) -> pd.DataFrame:
+def sort_hits(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Sorting DataFrame ...")
     columns = [
         "file",
