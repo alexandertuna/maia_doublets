@@ -1,9 +1,5 @@
 import numpy as np
 
-MCP_PKL = "mcps.pkl"
-SIMHIT_PKL = "simhits.pkl"
-DOUBLET_PKL = "doublets.pkl"
-
 MUON = 13
 MUON_NEUTRINO = 14
 CHARGED_PION = 211
