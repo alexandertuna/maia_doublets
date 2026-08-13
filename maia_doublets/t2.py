@@ -11,12 +11,6 @@ from maia_doublets.constants import BAD_CHI2, N_LAYERS_IN_T2
 
 class T2Maker:
 
-    #
-    # To make doublets, we do 2 groupbys:
-    #  Layers 01, 23, ... grouped by md_doublelayer_mod_2
-    #  Layers 12, 34, ... grouped by md_doublelayer_plus_1_mod_2
-    #
-
     def __init__(
             self,
             signal: bool,
@@ -320,7 +314,7 @@ class T2Maker:
             new[f"t2_{coord}_2"] = new[f"t2_{coord}_2"].astype(np.float32)
             new[f"t2_{coord}_3"] = new[f"t2_{coord}_3"].astype(np.float32)
 
-        # assign features from lower doublet (arbitrary choice)
+        # assign features from lower md (arbitrary choice)
         t2s["t2_module"] = t2s["t2_module_lower"]
         t2s["t2_sensor"] = t2s["t2_sensor_lower"]
         t2s["t2_glayer"] = t2s["t2_glayer_lower"]
