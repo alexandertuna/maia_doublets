@@ -142,16 +142,16 @@ class MDMaker:
         # record some cut results
         sy = doublets["simhit_system"]
         dl = doublets["simhit_layer_div_2"]
-        mask["dr"] = np.abs(doublets["md_dr"]) < self.MD_DR_CUT[sy, dl]
-        mask["dz"] = np.abs(doublets["md_dz"]) < self.MD_DZ_CUT[sy, dl]
-        mask["and"] = mask["dr"] & mask["dz"]
-        doublets["md_ok"] = mask["and"].astype(bool)
+        doublets["md_ok_dr"] = np.abs(doublets["md_dr"]) < self.MD_DR_CUT[sy, dl]
+        doublets["md_ok_dz"] = np.abs(doublets["md_dz"]) < self.MD_DZ_CUT[sy, dl]
+        doublets["md_ok"] = doublets["md_ok_dr"] & doublets["md_ok_dz"]
 
         # remove as desired
         if self.cut_mds:
-            for cut in mask.keys():
-                cutflow[cut] = np.sum(mask[cut])
-            doublets = doublets[mask["and"]]
+            cutflow["md_ok_dr"] = np.sum(doublets["md_ok_dr"])
+            cutflow["md_ok_dz"] = np.sum(doublets["md_ok_dz"])
+            cutflow["md_ok"] = np.sum(doublets["md_ok"])
+            doublets = doublets[doublets["md_ok"]]
 
         # rename some columns
         rename = {

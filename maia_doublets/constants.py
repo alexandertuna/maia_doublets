@@ -107,17 +107,15 @@ DOUBLET_REQS = [
 
 T2_REQ_DR_POS = "dr req."
 T2_REQ_DZ_POS = "dz req."
-T2_REQ_XY_ANG = "dtheta xy req."
 T2_REQ_XY_CHI2 = "xy chi2 req."
-T2_REQ_RZ_ANG = "dtheta rz req."
+T2_REQ_SZ_CHI2 = "sz chi2 req."
 T2_REQ_ALL = "all reqs"
 T2_REQS = [
     REQ_PASSTHROUGH,
     T2_REQ_DR_POS,
     T2_REQ_DZ_POS,
-    # T2_REQ_XY_ANG,
     T2_REQ_XY_CHI2,
-    T2_REQ_RZ_ANG,
+    T2_REQ_SZ_CHI2,
     T2_REQ_ALL,
 ]
 

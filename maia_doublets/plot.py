@@ -35,10 +35,9 @@ from maia_doublets.constants import PARTICLES_OF_INTEREST, MUON
 from maia_doublets.constants import BARREL_TRACKER_MAX_ETA
 from maia_doublets.constants import ONE_POINT_FIVE_GEV, ZERO_POINT_ZERO_ONE_MM
 from maia_doublets.constants import NICKNAMES, INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
-from maia_doublets.constants import CUT_MISSING
 from maia_doublets.constants import REQ_PASSTHROUGH, REQ_RZ, REQ_XY, REQ_RZ_XY
 from maia_doublets.constants import DOUBLET_REQS, NO_MCP
-from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_RZ_ANG, T2_REQ_ALL
+from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_SZ_CHI2, T2_REQ_ALL
 from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import N_T2_PHI_SLICES
 
@@ -94,28 +93,12 @@ class Plotter:
             "mcp_phi": r"Muon $\phi$ [rad]",
         }
 
-        # shorthands for cuts
-        self.MD_DZ_CUT = calibs.get("md_dz", CUT_MISSING)
-        self.MD_DR_CUT = calibs.get("md_dr", CUT_MISSING)
-        self.T2_DZ_CUT = calibs.get("t2_dz", CUT_MISSING)
-        self.T2_DR_CUT = calibs.get("t2_dr", CUT_MISSING)
-        self.T2_DTHETA_RZ_CUT = calibs.get("t2_dtheta_rz", CUT_MISSING)
-        self.T2_CHI2_XY_CUT = calibs.get("t2_chi2_xy", CUT_MISSING)
-        self.T2_CHI2_SZ_CUT = calibs.get("t2_chi2_sz", CUT_MISSING)
-        self.T4_DR_CUT = calibs.get("t4_dr", CUT_MISSING)
-        self.T4_DZ_CUT = calibs.get("t4_dz", CUT_MISSING)
-        self.T4_DTHETA_RZ_CUT = calibs.get("t4_dtheta_rz", CUT_MISSING)
-        self.T4_CHI2_XY_CUT = calibs.get("t4_chi2_xy", CUT_MISSING)
-        self.T8_DZ_CUT = calibs.get("t8_dz", CUT_MISSING)
-        self.T8_DR_CUT = calibs.get("t8_dr", CUT_MISSING)
-
 
     def plot(self):
         logger.info(f"Writing plots to {self.pdf} ...")
         with PdfPages(self.pdf) as pdf:
             # self.plot_numbers_for_comparison(pdf)
             self.write_date(pdf)
-            # self.write_quality_cuts(pdf)
             # self.plot_multiplicity(pdf)
             self.plot_time(pdf)
             # self.plot_layer_occupancy_1d(pdf)
@@ -281,8 +264,8 @@ class Plotter:
             [self.mds["md_doublelayer"] == dl, f"Doublets in layers {layers}"],
             # [self.mds["md_sensor"] == 20, "z-sensor 20"],
             # [self.mds["md_module"] == 0, "phi-module 0"],
-            [np.abs(self.mds["md_dz"]) < self.MD_DZ_CUT[sy, dl], f"Doublets with |dz| < {self.MD_DZ_CUT[sy, dl]}mm"],
-            [np.abs(self.mds["md_dr"]) < self.MD_DR_CUT[sy, dl], f"Doublets with |dr| < {self.MD_DR_CUT[sy, dl]}mm"],
+            [self.mds["md_ok_dz"], f"Doublets with |dz| cut"],
+            [self.mds["md_ok_dr"], f"Doublets with |dr| cut"],
         ]:
             mask &= req
             logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -293,12 +276,12 @@ class Plotter:
         else:
             mask = np.ones(len(self.t2s), dtype=bool)
             for [req, label] in [
-                [self.t2s["t2_system"] == sy, "LS in OTB"],
-                [self.t2s["t2_doublelayer"] == dl, f"LS starting on layer {dl}"],
-                [np.abs(self.t2s["t2_dz"]) < self.T2_DZ_CUT[sy, dl], f"LS with |dz| < {self.T2_DZ_CUT[sy, dl]}mm"],
-                [np.abs(self.t2s["t2_dr"]) < self.T2_DR_CUT[sy, dl], f"LS with |dr| < {self.T2_DR_CUT[sy, dl]}mm"],
-                [np.abs(self.t2s["t2_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl], f"LS with |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[sy, dl]}"],
-                [np.abs(self.t2s["t2_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl], f"LS with |chi2_xy| < {self.T2_CHI2_XY_CUT[sy, dl]}"],
+                [self.t2s["t2_system"] == sy, "T2 in OTB"],
+                [self.t2s["t2_doublelayer"] == dl, f"T2 starting on layer {dl}"],
+                [self.t2s["t2_ok_dz"], f"T2 with |dz| cut"],
+                [self.t2s["t2_ok_dr"], f"T2 with |dr| cut"],
+                [self.t2s["t2_ok_chi2_xy"], f"T2 with |chi2_xy| cut"],
+                [self.t2s["t2_ok_chi2_sz"], f"T2 with |chi2_sz| cut"],
             ]:
                 mask &= req
                 logger.info(f"* {label:<30} :: {mask.sum():>10}")
@@ -311,47 +294,6 @@ class Plotter:
         fig, ax = plt.subplots(figsize=(8, 8))
         args = {"ha":"left", "va":"top", "fontfamily":"monospace"}
         ax.text(0.0, 0.7, text, **args, fontsize=16)
-        ax.axis("off")
-        pdf.savefig()
-        plt.close()
-
-
-    def write_quality_cuts(self, pdf: PdfPages):
-        logger.info(f"Writing quality cuts")
-        text = textwrap.dedent(f"""\
-            Quality cuts for MDs:
-            * |dr| < {self.MD_DR_CUT[0]} mm (DL0)
-            * |dr| < {self.MD_DR_CUT[1]} mm (DL1)
-            * |dr| < {self.MD_DR_CUT[2]} mm (DL2)
-            * |dr| < {self.MD_DR_CUT[3]} mm (DL3)
-            * |dz| < {self.MD_DZ_CUT[0]} mm (DL0)
-            * |dz| < {self.MD_DZ_CUT[1]} mm (DL1)
-            * |dz| < {self.MD_DZ_CUT[2]} mm (DL2)
-            * |dz| < {self.MD_DZ_CUT[3]} mm (DL3)
-
-            Quality cuts for T2s:
-            * |dr| < {self.T2_DR_CUT[0]} mm (DL0)
-            * |dr| < {self.T2_DR_CUT[1]} mm (DL1)
-            * |dr| < {self.T2_DR_CUT[2]} mm (DL2)
-            * |dz| < {self.T2_DZ_CUT[0]} mm (DL0)
-            * |dz| < {self.T2_DZ_CUT[1]} mm (DL1)
-            * |dz| < {self.T2_DZ_CUT[2]} mm (DL2)
-            * |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[0]} (DL0)
-            * |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[1]} (DL1)
-            * |dtheta_rz| < {self.T2_DTHETA_RZ_CUT[2]} (DL2)
-            * |chi2_xy| < {self.T2_CHI2_XY_CUT[0]} (DL0)
-            * |chi2_xy| < {self.T2_CHI2_XY_CUT[1]} (DL1)
-            * |chi2_xy| < {self.T2_CHI2_XY_CUT[2]} (DL2)
-
-            Quality cuts for T4s:
-            * |dr| < {self.T4_DR_CUT[0]} mm (DL0)
-            * |dz| < {self.T4_DZ_CUT[0]} mm (DL0)
-            * |dtheta_rz| < {self.T4_DTHETA_RZ_CUT[0]} (DL0)
-            * |chi2_xy| < {self.T4_CHI2_XY_CUT[0]} (DL0)
-        """)
-        fig, ax = plt.subplots(figsize=(8, 8))
-        args = {"ha":"left", "va":"top", "fontfamily":"monospace"}
-        ax.text(0.0, 0.9, text, **args, fontsize=12)
         ax.axis("off")
         pdf.savefig()
         plt.close()
@@ -514,27 +456,20 @@ class Plotter:
             plt.close()
 
 
-    def md_requirements(self, doublets: pd.DataFrame, req: str) -> tuple[str, pd.DataFrame]:
+    def md_requirements(self, df: pd.DataFrame, req: str) -> tuple[str, pd.DataFrame]:
         # return description and mask
-        doublelayer = doublets["md_doublelayer"]
-        if len(doublelayer.unique()) != 1:
-            raise ValueError(f"Multiple doublelayers found: {doublelayer.unique()}")
-        doublelayer = doublelayer.iloc[0]
         if req == REQ_PASSTHROUGH:
             text = "No requirement"
-            mask = np.ones(len(doublets), dtype=bool)
+            mask = np.ones(len(df), dtype=bool)
         elif req == REQ_XY:
-            text = f"|dr| < {self.MD_DR_CUT[doublelayer]}mm"
-            mask = np.abs(doublets["md_dr"]) < self.MD_DR_CUT[doublelayer]
+            text = f"|dr| cut"
+            mask = df["md_ok_dr"]
         elif req == REQ_RZ:
-            text = f"|dz| < {self.MD_DZ_CUT[doublelayer]}mm"
-            mask = np.abs(doublets["md_dz"]) < self.MD_DZ_CUT[doublelayer]
+            text = f"|dz| cut"
+            mask = df["md_ok_dz"]
         elif req == REQ_RZ_XY:
-            text = f"|dr| < {self.MD_DR_CUT[doublelayer]}mm, |dz| < {self.MD_DZ_CUT[doublelayer]}mm"
-            mask = (
-                (np.abs(doublets["md_dz"]) < self.MD_DZ_CUT[doublelayer]) &
-                (np.abs(doublets["md_dr"]) < self.MD_DR_CUT[doublelayer])
-            )
+            text = f"|dr| cut, |dz| cut"
+            mask = df["md_ok"]
         else:
             raise ValueError(f"Unknown requirement: {req}")
         return text, mask
@@ -817,24 +752,12 @@ class Plotter:
         upper = self.hits[upper_mask][md_cols + bonus_cols]
         mds = lower.merge(upper, on=md_cols, how="inner", suffixes=("_lower", "_upper"))
 
-        slope_rz = np.divide(mds["simhit_z_upper"] - mds["simhit_z_lower"],
-                             mds["simhit_r_upper"] - mds["simhit_r_lower"])
-        slope_xy = np.divide(mds["simhit_y_upper"] - mds["simhit_y_lower"],
-                             mds["simhit_x_upper"] - mds["simhit_x_lower"])
-        intercept_xy = mds["simhit_y_lower"] - slope_xy * mds["simhit_x_lower"]
-        mds["md_dr"] = np.abs(intercept_xy) / np.sqrt(1 + slope_xy**2)
-        mds["md_dz"] = mds["simhit_z_lower"] - mds["simhit_r_lower"] * slope_rz
-        idx = mds["simhit_system"], mds["simhit_layer_lower"] // 2
-        ok_dr = np.abs(mds["md_dr"]) < self.MD_DR_CUT[idx]
-        ok_dz = np.abs(mds["md_dz"]) < self.MD_DZ_CUT[idx]
-        ok = ok_dr & ok_dz
-
         semilogy = True
         bins = np.linspace(-10, 10, 601)
 
         fig, ax = plt.subplots()
         ax.hist(
-            (mds["simhit_z_upper"] - mds["simhit_z_lower"])[ok],
+            mds["simhit_z_upper"] - mds["simhit_z_lower"],
             bins=bins,
             histtype="stepfilled",
             color=self.colors["mds"],
@@ -1285,31 +1208,23 @@ class Plotter:
 
     def t2_requirements(self, df: pd.DataFrame, req: str) -> tuple[str, pd.DataFrame]:
         # return description and mask
-        sy = df["t2_system"]
-        dl = df["t2_doublelayer"]
-        if len(sy.unique()) != 1:
-            raise ValueError(f"Multiple systems found: {sy.unique()}")
-        if len(dl.unique()) != 1:
-            raise ValueError(f"Multiple doublelayers found: {dl.unique()}")
-        sy = sy.iloc[0]
-        dl = dl.iloc[0]
         if req == REQ_PASSTHROUGH:
             text = "No requirement"
             mask = np.ones(len(df), dtype=bool)
         elif req == T2_REQ_DR_POS:
-            text = f"|dr| < {self.T2_DR_CUT[sy, dl]}mm"
-            mask = np.abs(df["t2_dr"]) < self.T2_DR_CUT[sy, dl]
+            text = f"|dr| cut"
+            mask = df["t2_ok_dr"]
         elif req == T2_REQ_DZ_POS:
-            text = f"|dz| < {self.T2_DZ_CUT[sy, dl]}mm"
-            mask = np.abs(df["t2_dz"]) < self.T2_DZ_CUT[sy, dl]
-        elif req == T2_REQ_RZ_ANG:
-            text = f"|dtheta(rz)| < {self.T2_DTHETA_RZ_CUT[sy, dl]}rad"
-            mask = np.abs(df["t2_dtheta_rz"]) < self.T2_DTHETA_RZ_CUT[sy, dl]
+            text = f"|dz| cut"
+            mask = df["t2_ok_dz"]
         elif req == T2_REQ_XY_CHI2:
-            text = f"Chi2(xy,012) < {self.T2_CHI2_XY_CUT[sy, dl]}"
-            mask = np.abs(df["t2_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl]
+            text = f"Chi2 xy cut"
+            mask = df["t2_ok_chi2_xy"]
+        elif req == T2_REQ_SZ_CHI2:
+            text = f"Chi2 sz cut"
+            mask = df["t2_ok_chi2_sz"]
         elif req == T2_REQ_ALL:
-            text = f"All LS requirements"
+            text = f"All T2 requirements"
             mask = df["t2_ok"]
         else:
             raise ValueError(f"Unknown t2 requirement: {req}")
