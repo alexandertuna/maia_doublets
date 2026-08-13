@@ -132,16 +132,16 @@ class Plotter:
                 self.write_denominator_info(pdf)
                 self.plot_denominator(pdf)
                 self.plot_detectable_efficiency_vs_kinematics(pdf)
-                # self.plot_md_efficiency_vs_kinematics_2(pdf)
+                self.plot_md_efficiency_vs_kinematics_2(pdf)
                 # self.plot_md_efficiency_vs_kinematics(pdf)
                 # self.write_md_denominator_info(pdf)
                 # self.plot_md_quality_efficiency(pdf)
-                # self.plot_segment_efficiency_vs_kinematics(pdf)
-                # self.plot_segment_quality_efficiency(pdf)
+                self.plot_segment_efficiency_vs_kinematics(pdf)
+                self.plot_segment_quality_efficiency(pdf)
+                self.plot_t4_efficiency_vs_kinematics(pdf)
+                self.plot_t4_quality_efficiency(pdf)
                 self.plot_t4_efficiency_vs_kinematics_overall(pdf)
                 self.plot_t8_efficiency_vs_kinematics_overall(pdf)
-                # self.plot_t4_efficiency_vs_kinematics(pdf)
-                # self.plot_t4_quality_efficiency(pdf)
 
 
     def plot_numbers_for_comparison(self, pdf: PdfPages):
@@ -1400,9 +1400,6 @@ class Plotter:
                 # True,
             ]:
 
-                # groupby_cols = ["t4_system", "t4_doublelayer"]
-                # for ((system, doublelayer), group) in self.t4s[baseline].groupby(groupby_cols):
-
                 gdls = ["t4_gdoublelayer_lower", "t4_gdoublelayer_upper"]
                 for ([gdl_l, gdl_u], group) in self.t4s[baseline].groupby(gdls):
 
@@ -1504,8 +1501,7 @@ class Plotter:
             "file", # the file
             "i_event", # the event
             "i_mcp", # the parent mc particle
-            "t4_system", # the system (IT, OT)
-            "t4_doublelayer", # the first double layer
+            "t4_gdoublelayer", # the first global double layer
         ]
 
         # filter doublets to only those with same parent mcp
@@ -1514,11 +1510,7 @@ class Plotter:
 
         # check if t4s's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in t4s.groupby(["t4_system",
-                                                               "t4_doublelayer",
-                                                               ]):
-                layer = doublelayer * 2
-                layers = range(layer, layer + 8)
+            for (gdl, group) in t4s.groupby("t4_gdoublelayer"):
 
                 keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
                 merged = denom.merge(keys, on=["file", "i_event", "i_mcp"], how="inner")
@@ -1538,7 +1530,7 @@ class Plotter:
                 )
                 ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("T4 finding efficiency")
-                ax.set_title(f"{NICKNAMES[system]}, layers {list(layers)}")
+                ax.set_title(f"Global double layer {gdl}")
                 ax.set_ylim(0.7, 1.03)
                 pdf.savefig()
                 plt.close()
@@ -1565,19 +1557,16 @@ class Plotter:
             "mcp_phi"
         ]):
 
-            groupbys = ["t4_system", "t4_doublelayer"]
-            for ((system, doublelayer), group) in self.t4s[baseline].groupby(groupbys):
+            for (gdl, group) in self.t4s[baseline].groupby("t4_gdoublelayer"):
 
-                logger.info(f"Plotting T4 quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
-                layer = doublelayer * 2
-                layers = range(layer, layer + 4)
+                logger.info(f"Plotting T4 quality efficiency vs {kin}, global double layer {gdl} ...")
 
                 for req in reqs:
                     denom = group
                     numer = group[ group[req] ]
                     if i_kin == 0:
-                        logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} doublets")
-                        logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} doublets")
+                        logger.info(f"Denom for gdl {gdl} {req}: {len(denom)}")
+                        logger.info(f"Numer for gdl {gdl} {req}: {len(numer)}")
 
                     n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
                     n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
@@ -1595,7 +1584,7 @@ class Plotter:
                     )
                     ax.set_xlabel(self.xlabel[kin])
                     ax.set_ylabel("T4 quality efficiency")
-                    ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req}")
+                    ax.set_title(f"Global double layer {gdl}: {req}")
                     ax.set_ylim(0.965, 1.004)
                     pdf.savefig()
                     plt.close()
