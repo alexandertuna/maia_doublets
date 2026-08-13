@@ -38,7 +38,7 @@ from maia_doublets.constants import NICKNAMES, INNER_TRACKER_BARREL, OUTER_TRACK
 from maia_doublets.constants import REQ_PASSTHROUGH, REQ_RZ, REQ_XY, REQ_RZ_XY
 from maia_doublets.constants import DOUBLET_REQS, NO_MCP
 from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_SZ_CHI2, T2_REQ_ALL
-from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
+from maia_doublets.constants import MIN_COSTHETA, MIN_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import N_T2_PHI_SLICES
 
 
@@ -151,7 +151,7 @@ class Plotter:
             [np.abs(self.hits["mcp_vertex_z"]) < ZERO_POINT_ZERO_ONE_MM, "abs(vertex z) < 0.01 mm"],
             [self.hits["simhit_t_corrected"] < MAX_TIME, f"corrected t < {MAX_TIME} ns"],
             [self.hits["simhit_costheta"] > MIN_COSTHETA, f"costheta > {MIN_COSTHETA}"],
-            [self.hits["simhit_p"] / self.hits["mcp_p"] > MIN_SIMHIT_PT_FRACTION, f"simhit p / mcp p > {MIN_SIMHIT_PT_FRACTION}"],
+            [self.hits["simhit_p"] / self.hits["mcp_p"] > MIN_PT_FRACTION, f"simhit p / mcp p > {MIN_PT_FRACTION}"],
             # [self.hits["simhit_sensor"] == 20, "z-sensor 20"],
             # [self.hits["simhit_module"] == 0, "phi-module 0"],
         ]:
@@ -962,7 +962,7 @@ class Plotter:
         ax.text(-0.1, 0.9, text, **args, fontsize=16)
         ax.text(-0.1, 0.4, f"MIN_COSTHETA = {MIN_COSTHETA}")
         ax.text(-0.1, 0.3, f"MAX_TIME = {MAX_TIME} ns")
-        ax.text(-0.1, 0.2, f"MIN_SIMHIT_PT_FRACTION = {MIN_SIMHIT_PT_FRACTION}")
+        ax.text(-0.1, 0.2, f"MIN_PT_FRACTION = {MIN_PT_FRACTION}")
         ax.axis("off")
         pdf.savefig()
         plt.close()

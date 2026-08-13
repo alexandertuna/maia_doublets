@@ -16,7 +16,7 @@ from maia_doublets.constants import INNER_TRACKER_BARREL_COLLECTION, OUTER_TRACK
 from maia_doublets.constants import INNER_TRACKER_BARREL_HITS, OUTER_TRACKER_BARREL_HITS
 from maia_doublets.constants import INNER_TRACKER_BARREL_RELATIONS, OUTER_TRACKER_BARREL_RELATIONS
 from maia_doublets.constants import BYTE_TO_MB, NO_MCP, PODIO_NO_MCP
-from maia_doublets.constants import MIN_COSTHETA, MIN_SIMHIT_PT_FRACTION, MAX_TIME
+from maia_doublets.constants import MIN_COSTHETA, MIN_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
 from maia_doublets.constants import NICKNAMES, LAYER_OFFSET
 from maia_doublets.constants import PARTICLES_OF_INTEREST, ONE_POINT_FIVE_GEV, BARREL_TRACKER_MAX_ETA, ZERO_POINT_ZERO_ONE_MM
@@ -739,7 +739,7 @@ def postprocess_hits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.Dat
         df["simhit_first_exit"] = (
             (df["simhit_t_corrected"] < MAX_TIME) &
             (df["simhit_costheta"] > MIN_COSTHETA) &
-            (df["simhit_p"] / df["mcp_p"] > MIN_SIMHIT_PT_FRACTION)
+            (df["simhit_p"] / df["mcp_p"] > MIN_PT_FRACTION)
         )
         df["simhit_detectable"] = df["simhit_first_exit"] & df["simhit_from_fiducial_mcp"]
 
