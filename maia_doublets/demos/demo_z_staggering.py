@@ -45,7 +45,7 @@ def main():
     zstag.announce()
     if ops.plot:
         zstag.plot()
-    zstag.write_xml("tmp.xml")
+    zstag.write_xml(ops.xml)
 
 
 class Module:
@@ -634,6 +634,7 @@ def options():
     parser.add_argument("--phi-mod-2", type=int, default=None, choices=[0, 1], help="Specify the phi_mod_2 for the demo")
     parser.add_argument("--tracker", type=str, default=None, choices=["IT", "OT"], help="Specify the tracker for the demo")
     parser.add_argument("--version", type=str, default=None, choices=["v01", "v05"], help="Specify the version for the demo")
+    parser.add_argument("--xml", type=str, default="tmp.xml", help="Filename of output xml")
     return parser.parse_args()
 
 
