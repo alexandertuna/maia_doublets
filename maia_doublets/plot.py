@@ -573,6 +573,7 @@ class Plotter:
         numers["mcp_detectable_OTB_67"] = self.mcps[dmask & (self.mcps["mcp_detectable_OTB_67"] == True)]
         numers["mcp_detectable_ITB"] = self.mcps[dmask & (self.mcps["mcp_detectable_ITB"] == True)]
         numers["mcp_detectable_OTB"] = self.mcps[dmask & (self.mcps["mcp_detectable_OTB"] == True)]
+        numers["mcp_detectable"] = self.mcps[dmask & (self.mcps["mcp_detectable"] == True)]
 
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
 

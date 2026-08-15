@@ -850,10 +850,15 @@ def add_detectable_columns(mcps: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFra
             # fill nan with False (not detectable)
             mcps[column] = mcps[column].notna()
 
-        # combine all double layers to get overall detectable status
+        # combine all double layers per system to get overall detectable status
         mcps[f"mcp_detectable_{nickname}"] = np.logical_and.reduce([
             mcps[f"mcp_detectable_{nickname}_{lo}{hi}"] for (lo, hi) in LAYER_PAIRS
         ])
+
+    # combine all double layers across systems to get overall detectable status
+    mcps["mcp_detectable"] = np.logical_and.reduce([
+        mcps[f"mcp_detectable_{NICKNAMES[system]}"] for system in SYSTEMS
+    ])
 
     return mcps
 
