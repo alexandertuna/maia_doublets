@@ -343,6 +343,12 @@ background100_filepaths = {
     ("v05", "digi", "10um"): [
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v05/neutrinoGun/10um/neutrinoGun_digi_3.slcio",
     ],
+    ("v06", "digi", "10um"): [
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun/10um/neutrinoGun_digi_3.slcio",
+    ],
+    ("v07", "digi", "10um"): [
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun/10um/neutrinoGun_digi_3.slcio",
+    ],
 }
 
 background10_filepaths = {
