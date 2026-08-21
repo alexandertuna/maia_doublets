@@ -1,8 +1,11 @@
 """
-
+Run me like:
+> python ../maia_doublets/demos/demo_yields_and_efficiency.py --geo v06 -n 10
 """
 import argparse
 from glob import glob
+import os
+import time
 import numpy as np
 import pandas as pd
 # import datashader as ds
@@ -23,38 +26,59 @@ def main():
                         format="%(asctime)s [%(levelname)s] %(message)s")
     args = options()
 
-    paths = {
-        "background_mcps": args.background_mcps,
-        "background_hits": args.background_hits,
-        "background_mds": args.background_mds,
-        "background_t2s": args.background_t2s,
-        "background_t4s": args.background_t4s,
-        "background_t8s": args.background_t8s,
-        "signal_mcps": args.signal_mcps,
-        "signal_hits": args.signal_hits,
-        "signal_mds": args.signal_mds,
-        "signal_t2s": args.signal_t2s,
-        "signal_t4s": args.signal_t4s,
-        "signal_t8s": args.signal_t8s,
-    }
+    if args.geo:
+        logger.info(f"Using geometry version {args.geo}")
+        outdir = f"../output"
+        paths = {
+            "background_mcps": f"{outdir}/{args.geo}_background100_digi_10um/mcps_*.pkl",
+            "background_hits": f"{outdir}/{args.geo}_background100_digi_10um/hits_*.pkl",
+            "background_mds": f"{outdir}/{args.geo}_background100_digi_10um/mds_*.pkl",
+            "background_t2s": f"{outdir}/{args.geo}_background100_digi_10um/t2s_*.pkl",
+            "background_t4s": f"{outdir}/{args.geo}_background100_digi_10um/t4s_*.pkl",
+            "background_t8s": f"{outdir}/{args.geo}_background100_digi_10um/t8s_*.pkl",
+            "signal_mcps": f"{outdir}/{args.geo}_signal_digi_10um/mcps.pkl",
+            "signal_hits": f"{outdir}/{args.geo}_signal_digi_10um/hits.pkl",
+            "signal_mds": f"{outdir}/{args.geo}_signal_digi_10um/mds.pkl",
+            "signal_t2s": f"{outdir}/{args.geo}_signal_digi_10um/t2s.pkl",
+            "signal_t4s": f"{outdir}/{args.geo}_signal_digi_10um/t4s.pkl",
+            "signal_t8s": f"{outdir}/{args.geo}_signal_digi_10um/t8s.pkl",
+        }
+    else:
+        paths = {
+            "background_mcps": args.background_mcps,
+            "background_hits": args.background_hits,
+            "background_mds": args.background_mds,
+            "background_t2s": args.background_t2s,
+            "background_t4s": args.background_t4s,
+            "background_t8s": args.background_t8s,
+            "signal_mcps": args.signal_mcps,
+            "signal_hits": args.signal_hits,
+            "signal_mds": args.signal_mds,
+            "signal_t2s": args.signal_t2s,
+            "signal_t4s": args.signal_t4s,
+            "signal_t8s": args.signal_t8s,
+        }
 
-    data = DataGrabber(paths, args.pdf, args.precision_timing)
+    pdf = args.pdf if args.pdf else f"yields_and_efficiency_{args.geo}.pdf"
+    data = DataGrabber(paths=paths, pdf=pdf, num=args.n, do_precision_timing=args.precision_timing)
     data.plot()
 
 
 class DataGrabber:
 
     def __init__(self,
-                 data_paths: dict,
-                 pdf_path: str,
+                 paths: dict,
+                 pdf: str,
+                 num: int,
                  do_precision_timing: bool,
                  ):
+        self.num = num
         self.paths = {}
         self.nfiles_per_key = {}
-        for key, objs in data_paths.items():
+        for key, objs in paths.items():
             self.paths[key] = self.get_input_filenames(objs)
             self.nfiles_per_key[key] = len(self.paths[key])
-        self.pdf_path = pdf_path
+        self.pdf = pdf
         self.do_precision_timing = do_precision_timing
         self.unique_cols = ["file", "i_event", "i_mcp"]
         self.columns_background = ["file"]
@@ -85,6 +109,19 @@ class DataGrabber:
         else:
             for patt in input_str.split(","):
                 fnames.extend(glob(patt))
+        def sort_key(fname):
+            # assume name is /dir/filename_123.pkl
+            base = os.path.basename(fname)
+            parts = base.split("_")
+            for part in reversed(parts):
+                if part.endswith(".pkl"):
+                    part = part[:-4]
+                if part.isdigit():
+                    return int(part)
+            return 0
+        fnames.sort(key=sort_key)
+        if self.num > 0:
+            fnames = fnames[:self.num]
         return fnames
 
 
@@ -188,12 +225,23 @@ class DataGrabber:
 
 
     def plot(self):
-        with PdfPages(self.pdf_path) as pdf:
+        with PdfPages(self.pdf) as pdf:
+            self.plot_title_page(pdf)
             self.plot_yields_and_efficiency(pdf, do_signal=True)
             self.plot_yields_and_efficiency(pdf, do_signal=False)
             if self.do_precision_timing:
                 self.plot_yields_and_efficiency(pdf, do_signal=True, do_precision_timing=True)
             self.plot_efficiency_vs_kinematics(pdf)
+
+
+    def plot_title_page(self, pdf):
+        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        fig, ax = plt.subplots()
+        ax.axis("off")
+        for i, text in enumerate([now] + list(self.paths.values())):
+            ax.text(0.01, 0.8 - i * 0.05, text, fontsize=14, ha="left", va="center")
+        pdf.savefig(fig)
+        plt.close(fig)
 
 
     def plot_yields_and_efficiency(self,
@@ -234,12 +282,16 @@ class DataGrabber:
             len(y_vals_l) != len(y_vals_r_algorithmic) or
             len(y_vals_l) != len(x_vals)
             ):
-            msg = f"Length mismatch: y_vals_l={len(y_vals_l)}, y_vals_r_overall={len(y_vals_r_overall)}, y_vals_r_algorithmic={len(y_vals_r_algorithmic)}, x_vals={len(x_vals)}"
+            msg = f"Length mismatch: "
+            msg += f"y_vals_l={len(y_vals_l)}, "
+            msg += f"y_vals_r_overall={len(y_vals_r_overall)}, "
+            msg += f"y_vals_r_algorithmic={len(y_vals_r_algorithmic)}, "
+            msg += f"x_vals={len(x_vals)}"
             logger.error(msg)
             raise ValueError(msg)
 
         # plot background yields
-        fig, ax_l = plt.subplots(figsize=(8, 8))
+        fig, ax_l = plt.subplots()
         ax_l.hist(
             x_vals,
             bins=bins,
@@ -253,9 +305,9 @@ class DataGrabber:
         ax_l.set_xlabel("")
         ax_l.set_ylabel("Average BIB yield per event")
         ax_l.semilogy()
-        ymin, ymax = ax_l.get_ylim()
-        ax_l.set_ylim(0.08, ymax * 1.35)
-        ymin, ymax = ax_l.get_ylim()
+        ymin, ymax = 0.08, 1.5e8
+        logger.info(f"Setting y-axis limits manually: {ymin} to {ymax}")
+        ax_l.set_ylim(ymin, ymax)
 
         # make a horizontal dotted line in case no tracks are found in the last bin
         if y_vals_l[-1] == 0:
@@ -263,15 +315,15 @@ class DataGrabber:
             logger.info(f"Upper limit for last bin: {upper_limit} (95% CL tracks per event)")
             if upper_limit > ymin:
                 center = len(x_vals) - 1
-                # ax_l.hlines(y=upper_limit,
-                #             xmin=center - 0.15,
-                #             xmax=center + 0.15,
-                #             color="black")
-                # ax_l.annotate("",
-                #               xy=(center, upper_limit),
-                #               xytext=(center, upper_limit / 2.5),
-                #               arrowprops=dict(arrowstyle="<-"),
-                #               )
+                ax_l.hlines(y=upper_limit,
+                            xmin=center - 0.15,
+                            xmax=center + 0.15,
+                            color="black")
+                ax_l.annotate("",
+                              xy=(center, upper_limit),
+                              xytext=(center, upper_limit / 2.5),
+                              arrowprops=dict(arrowstyle="<-"),
+                              )
 
         # force y-axis ticks at 1e-1 to 1e7, with minor ticks at 2, 3, 4, 5, 6, 7, 8, 9 times each power of ten
         ax_l.set_yticks([10 ** i for i in range(-1, 8)], minor=False)
@@ -290,6 +342,7 @@ class DataGrabber:
         # plot signal efficiency
         if do_signal:
             ax_r = ax_l.twinx()
+            ax_l.grid(True)
 
             # plot overall efficiency as filled circle
             ax_r.plot(x_vals, y_vals_r_overall, marker="o", color=self.color_r)
@@ -390,42 +443,23 @@ class DataGrabber:
 
 
 def options():
-    _num = "1"
-    _default = {
-        "--background-mcps": f"v01_background100_digi_10um/mcps_{_num}.pkl",
-        "--background-hits": f"v01_background100_digi_10um/simhits_{_num}.pkl",
-        "--background-mds": f"v01_background100_digi_10um/mds_{_num}.pkl",
-        "--background-t2s": f"v01_background100_digi_10um/t2s_{_num}.pkl",
-        "--background-t4s": f"v01_background100_digi_10um/t4s_{_num}.pkl",
-        "--background-t8s": f"v01_background100_digi_10um/t8s_{_num}.pkl",
-        # "--signal-mcps": f"v01_signal_digi_10um/mcps.pkl",
-        # "--signal-hits": f"v01_signal_digi_10um/hits.pkl",
-        # "--signal-mds": f"v01_signal_digi_10um/mds.pkl",
-        # "--signal-t2s": f"v01_signal_digi_10um/t2s.pkl",
-        # "--signal-t4s": f"v01_signal_digi_10um/t4s.pkl",
-        # "--signal-t8s": f"v01_signal_digi_10um/t8s.pkl",
-        "--signal-mcps": f"v01_muonGun_pT_0_10_digi_10um/mcps.pkl",
-        "--signal-hits": f"v01_muonGun_pT_0_10_digi_10um/hits.pkl",
-        "--signal-mds": f"v01_muonGun_pT_0_10_digi_10um/mds.pkl",
-        "--signal-t2s": f"v01_muonGun_pT_0_10_digi_10um/t2s.pkl",
-        "--signal-t4s": f"v01_muonGun_pT_0_10_digi_10um/t4s.pkl",
-        "--signal-t8s": f"v01_muonGun_pT_0_10_digi_10um/t8s.pkl",
-    }
     parser = argparse.ArgumentParser(description="Demo for 2D scatter plot")
+    parser.add_argument("-n", type=int, default=-1, help="Number of files to process (default: all)")
+    parser.add_argument("--geo", default="", help="Geometry version")
+    parser.add_argument("--pdf", default="", help="Output pdf file path")
     parser.add_argument("--precision-timing", action="store_true", help="Mention precision timing for the plots")
-    parser.add_argument("--background-mcps", default=_default["--background-mcps"], help="Comma-separated list of input mcps file paths")
-    parser.add_argument("--background-hits", default=_default["--background-hits"], help="Comma-separated list of input hits file paths")
-    parser.add_argument("--background-mds", default=_default["--background-mds"], help="Comma-separated list of input mds file paths")
-    parser.add_argument("--background-t2s", default=_default["--background-t2s"], help="Comma-separated list of input t2s file paths")
-    parser.add_argument("--background-t4s", default=_default["--background-t4s"], help="Comma-separated list of input t4s file paths")
-    parser.add_argument("--background-t8s", default=_default["--background-t8s"], help="Comma-separated list of input t8s file paths")
-    parser.add_argument("--signal-mcps", default=_default["--signal-mcps"], help="Comma-separated list of input signal mcps file paths")
-    parser.add_argument("--signal-hits", default=_default["--signal-hits"], help="Comma-separated list of input signal file paths")
-    parser.add_argument("--signal-mds", default=_default["--signal-mds"], help="Comma-separated list of input signal mds file paths")
-    parser.add_argument("--signal-t2s", default=_default["--signal-t2s"], help="Comma-separated list of input signal t2s file paths")
-    parser.add_argument("--signal-t4s", default=_default["--signal-t4s"], help="Comma-separated list of input signal t4s file paths")
-    parser.add_argument("--signal-t8s", default=_default["--signal-t8s"], help="Comma-separated list of input signal t8s file paths")
-    parser.add_argument("--pdf", default="yields_and_efficiency.pdf", help="Output pdf file path")
+    parser.add_argument("--background-mcps", default="", help="Comma-separated list of input mcps file paths")
+    parser.add_argument("--background-hits", default="", help="Comma-separated list of input hits file paths")
+    parser.add_argument("--background-mds", default="", help="Comma-separated list of input mds file paths")
+    parser.add_argument("--background-t2s", default="", help="Comma-separated list of input t2s file paths")
+    parser.add_argument("--background-t4s", default="", help="Comma-separated list of input t4s file paths")
+    parser.add_argument("--background-t8s", default="", help="Comma-separated list of input t8s file paths")
+    parser.add_argument("--signal-mcps", default="", help="Comma-separated list of input signal mcps file paths")
+    parser.add_argument("--signal-hits", default="", help="Comma-separated list of input signal file paths")
+    parser.add_argument("--signal-mds", default="", help="Comma-separated list of input signal mds file paths")
+    parser.add_argument("--signal-t2s", default="", help="Comma-separated list of input signal t2s file paths")
+    parser.add_argument("--signal-t4s", default="", help="Comma-separated list of input signal t4s file paths")
+    parser.add_argument("--signal-t8s", default="", help="Comma-separated list of input signal t8s file paths")
     return parser.parse_args()
 
 
