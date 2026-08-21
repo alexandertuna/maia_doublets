@@ -99,7 +99,7 @@ class Plotter:
         with PdfPages(self.pdf) as pdf:
             # self.plot_numbers_for_comparison(pdf)
             self.write_date(pdf)
-            # self.plot_multiplicity(pdf)
+            self.plot_multiplicity(pdf)
             self.plot_time(pdf)
             # self.plot_layer_occupancy_1d(pdf)
             # self.plot_layer_occupancy_2d(pdf)
