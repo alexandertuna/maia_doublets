@@ -385,25 +385,28 @@ def plot_barrel_xy(df: pd.DataFrame, geo: str, pdf: PdfPages) -> None:
             ax.text(0.02, 1.01, '"Layer" (r-coordinate)', transform=ax.transAxes, fontsize=16)
             ax.text(0.74, 1.01, now, transform=ax.transAxes, fontsize=10)
             if geo in ["v01", "v06"]:
-                ax.text(0, 200, "IT, L0-L3", ha=ha)
-                ax.text(0, 580, "IT, L4-L7", ha=ha)
-                ax.text(0, 920, "OT, L0-L3", ha=ha)
-                ax.text(0, 1200, "OT, L4-L7", ha=ha)
+                ax.text(0, 210, "IT, L0-L3", ha=ha)
+                ax.text(0, 590, "IT, L4-L7", ha=ha)
+                ax.text(0, 950, "OT, L0-L3", ha=ha)
+                ax.text(0, 1190, "OT, L4-L7", ha=ha)
             elif geo in ["v05", "v07"]:
-                FONTSIZE = 12
-                ax.text(0, 140, "IT, L0-L1", ha=ha, fontsize=FONTSIZE)
-                ax.text(0, 290, "IT, L2-L3", ha=ha, fontsize=FONTSIZE)
-                ax.text(0, 440, "IT, L4-L5", ha=ha, fontsize=FONTSIZE)
-                ax.text(0, 580, "IT, L6-L7", ha=ha, fontsize=FONTSIZE)
-                ax.text(0, 850, "OT, L0-L1", ha=ha, fontsize=FONTSIZE)
-                ax.text(0, 1050, "OT, L2-L3", ha=ha, fontsize=FONTSIZE)
-                ax.text(0, 1260, "OT, L4-L5", ha=ha, fontsize=FONTSIZE)
-                ax.text(0, 1480, "OT, L6-L7", ha=ha, fontsize=FONTSIZE)
+                FONTSIZE_IT = 10
+                FONTSIZE_OT = 12
+                ax.text(0, 160, "IT, L0-L1", ha=ha, fontsize=FONTSIZE_IT)
+                ax.text(0, 300, "IT, L2-L3", ha=ha, fontsize=FONTSIZE_IT)
+                ax.text(0, 440, "IT, L4-L5", ha=ha, fontsize=FONTSIZE_IT)
+                ax.text(0, 580, "IT, L6-L7", ha=ha, fontsize=FONTSIZE_IT)
+                ax.text(0, 850, "OT, L0-L1", ha=ha, fontsize=FONTSIZE_OT)
+                ax.text(0, 1050, "OT, L2-L3", ha=ha, fontsize=FONTSIZE_OT)
+                ax.text(0, 1260, "OT, L4-L5", ha=ha, fontsize=FONTSIZE_OT)
+                ax.text(0, 1480, "OT, L6-L7", ha=ha, fontsize=FONTSIZE_OT)
         elif it == 1:
             # draw entire xy with layer and module annotations
             ha = "center"
             for (system, layer, module, zstaggered), group in grouped:
                 if layer not in [0, 3, 4, 7]:
+                    continue
+                if zstaggered:
                     continue
                 x_corners, y_corners = get_points_for_line(group)
                 x_avg, y_avg = np.mean(x_corners), np.mean(y_corners)
@@ -421,37 +424,37 @@ def plot_barrel_xy(df: pd.DataFrame, geo: str, pdf: PdfPages) -> None:
             va = "center"
             gap = InnerTracker_Barrel_DoubleLayer_Gap
             gap = f"Doublet gap: {int(gap)}mm"
-            ax.text(115, 0, "IT, L0", va=va)
-            ax.text(131, 0, "IT, L1", va=va)
-            ax.text(155, 0, "IT, L2", va=va)
-            ax.text(172, 0, "IT, L3", va=va)
+            ax.text(115 if geo == "v01" else 115, 0, "IT, L0", va=va)
+            ax.text(131 if geo == "v01" else 136, 0, "IT, L1", va=va)
+            ax.text(155 if geo == "v01" else 155, 0, "IT, L2", va=va)
+            ax.text(172 if geo == "v01" else 177, 0, "IT, L3", va=va)
             ax.text(0.02, 1.01, gap, transform=ax.transAxes)
         elif it == 3:
             va = "center"
             gap = InnerTracker_Barrel_DoubleLayer_Gap
             gap = f"Doublet gap: {int(gap)}mm"
             ax.text(498 if geo == "v01" else 490, 0, "IT, L4", va=va)
-            ax.text(515 if geo == "v01" else 507, 0, "IT, L5", va=va)
+            ax.text(515 if geo == "v01" else 510, 0, "IT, L5", va=va)
             ax.text(538 if geo == "v01" else 530, 0, "IT, L6", va=va)
-            ax.text(555 if geo == "v01" else 547, 0, "IT, L7", va=va)
+            ax.text(555 if geo == "v01" else 550, 0, "IT, L7", va=va)
             ax.text(0.02, 1.01, gap, transform=ax.transAxes)
         elif it == 4:
             va = "center"
             gap = OuterTracker_Barrel_DoubleLayer_Gap
             gap = f"Doublet gap: {int(gap)}mm"
-            ax.text(794, 0, "OT, L0", va=va)
-            ax.text(824, 0, "OT, L1", va=va)
-            ax.text(874, 0, "OT, L2", va=va)
-            ax.text(904, 0, "OT, L3", va=va)
+            ax.text(794 if geo == "v01" else 795, 0, "OT, L0", va=va)
+            ax.text(824 if geo == "v01" else 828, 0, "OT, L1", va=va)
+            ax.text(874 if geo == "v01" else 875, 0, "OT, L2", va=va)
+            ax.text(904 if geo == "v01" else 908, 0, "OT, L3", va=va)
             ax.text(0.02, 1.01, gap, transform=ax.transAxes)
         elif it == 5:
             va = "center"
             gap = OuterTracker_Barrel_DoubleLayer_Gap
             gap = f"Doublet gap: {int(gap)}mm"
             ax.text(1341 if geo == "v01" else 1333, 0, "OT, L4", va=va)
-            ax.text(1371 if geo == "v01" else 1363, 0, "OT, L5", va=va)
+            ax.text(1371 if geo == "v01" else 1368, 0, "OT, L5", va=va)
             ax.text(1421 if geo == "v01" else 1413, 0, "OT, L6", va=va)
-            ax.text(1451 if geo == "v01" else 1443, 0, "OT, L7", va=va)
+            ax.text(1451 if geo == "v01" else 1448, 0, "OT, L7", va=va)
             ax.text(0.02, 1.01, gap, transform=ax.transAxes)
         else:
             raise Exception("What?")
