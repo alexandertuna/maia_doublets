@@ -742,6 +742,13 @@ def postprocess_hits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.Dat
             (df["hit_p"] / df["mcp_p"] > MIN_PT_FRACTION)
         )
         df["hit_detectable"] = df["hit_first_exit"] & df["hit_from_fiducial_mcp"]
+    if geo_version in ["v06", "v07"]:
+        df["hit_zstaggered"] = (
+            ((df["hit_z"] >= 0) & (df["hit_sensor"] % 2 == 0)) |
+            ((df["hit_z"] < 0) & (df["hit_sensor"] % 2 == 1))
+        ).astype(bool)
+    else:
+        df["hit_zstaggered"] = np.zeros(len(df), dtype=bool)
 
     # remove unused columns
     drop_cols = [
