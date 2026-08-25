@@ -327,7 +327,7 @@ signal_filepaths = {
     ]
 }
 
-background100_filepaths = {
+neutrinoGun_filepaths = {
     ("v01", "sim"): [
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun/sim/neutrinoGun_digi_3.slcio",
     ],
@@ -380,8 +380,8 @@ def parse_filepaths(
 def get_filepaths(
     geometry_version: str,
     signal: bool,
+    neutrinoGun: bool,
     neutrinoGun10: bool,
-    background100: bool,
     sim: bool,
     digi: bool,
     smear: str,
@@ -392,8 +392,8 @@ def get_filepaths(
     if sim:
         if signal:
             fpaths = signal_filepaths[(geometry_version, "sim")]
-        elif background100:
-            fpaths = background100_filepaths[(geometry_version, "sim")]
+        elif neutrinoGun:
+            fpaths = neutrinoGun_filepaths[(geometry_version, "sim")]
         elif neutrinoGun10:
             fpaths = neutrinoGun10_filepaths[(geometry_version, "sim")]
         else:
@@ -401,8 +401,8 @@ def get_filepaths(
     elif digi:
         if signal:
             fpaths = signal_filepaths[(geometry_version, "digi", smear)]
-        elif background100:
-            fpaths = background100_filepaths[(geometry_version, "digi", smear)]
+        elif neutrinoGun:
+            fpaths = neutrinoGun_filepaths[(geometry_version, "digi", smear)]
         elif neutrinoGun10:
             fpaths = neutrinoGun10_filepaths[(geometry_version, "digi", smear)]
         else:
