@@ -38,7 +38,7 @@ def main():
         fnames = get_filepaths(
             geometry_version=ops.geo,
             signal=ops.signal,
-            background10=ops.background10,
+            neutrinoGun10=ops.neutrinoGun10,
             background100=ops.background100,
             sim=ops.sim,
             digi=ops.digi,
@@ -57,6 +57,8 @@ def main():
     cut_t2s = ops.cut_t2s or not signal
     cut_t4s = ops.cut_t4s or not signal
     cut_t8s = ops.cut_t8s or not signal
+    if ops.no_cuts:
+        cut_mds = cut_t2s = cut_t4s = cut_t8s = False
     if ops.calibrate and (cut_mds or cut_t2s or cut_t4s or cut_t8s):
         raise ValueError("Cannot use --calibrate with any of --cut-mds, --cut-t2s, --cut-t4s, or --cut-t8s")
 
@@ -86,6 +88,9 @@ def main():
     # hits and mcparticles
     hits, mcps, hit_cutflow, hit_time = get_hits_and_mcps(ops, fnames, geo_version, geometry, signal, layers)
     write_hits_and_mcps(ops, hits, mcps, hit_cutflow)
+    if ops.stop_after_hits:
+        logger.info("Stopping after hits, as requested")
+        return
 
     # mini-doublets (mds)
     mds, md_cutflow, md_time = get_mds(ops, hits, signal, cut_mds, calibs)
@@ -94,6 +99,9 @@ def main():
         calib_mds(ops, mds)
         calibs = CalibConstants(calib_json(ops)).calibs
         mds, md_cutflow, md_time = get_mds(ops, hits, signal, cut_mds, calibs)
+    if ops.stop_after_mds:
+        logger.info("Stopping after MDs, as requested")
+        return
 
     # t2s
     t2s, t2_cutflow, t2_time = get_t2s(ops, mds, signal, cut_t2s, calibs)
@@ -418,6 +426,9 @@ def options():
     parser = argparse.ArgumentParser(usage=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-i", default=[], help="Input slcio file or glob pattern")
     parser.add_argument("--calibrate", action="store_true", help="Measure and write calibration constants (signal intervals) to file")
+    parser.add_argument("--no-cuts", action="store_true", help="Dont cut anything (overrides default behavior)")
+    parser.add_argument("--stop-after-hits", action="store_true", help="Stop the analysis after processing hits")
+    parser.add_argument("--stop-after-mds", action="store_true", help="Stop the analysis after processing mini-doublets")
     parser.add_argument("--calib-dir", type=str, default=guess_calib_dir(), help="Directory of calibration constants")
     parser.add_argument("--geometry", action="store_true", help="Load compact geometry from xml")
     parser.add_argument("--layers", nargs="+", type=str, default=preset, help="List of layers to consider")
@@ -444,7 +455,7 @@ def options():
     parser.add_argument("--geo", type=str, help="Version of geometry to use for cuts (e.g. v01, v04)", required=True)
     parser.add_argument("--smear", type=str, default="00um", help="Smear value to use for digi hits (e.g. 10um)")
     parser.add_argument("--signal", action="store_true", help="Use signal files in the analysis")
-    parser.add_argument("--background10", action="store_true", help="Use background files (10 percent) in the analysis")
+    parser.add_argument("--neutrinoGun10", action="store_true", help="Use neutrinoGun files (10 percent) in the analysis")
     parser.add_argument("--background100", action="store_true", help="Use background files (100 percent) in the analysis")
     parser.add_argument("--cutflow", type=str, default="cutflow.ndjson", help="Path to output newline-delimited JSON for cutflows file")
     parser.add_argument("--debug", action="store_true", help="Print some debug information")
