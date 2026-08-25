@@ -351,13 +351,19 @@ background100_filepaths = {
     ],
 }
 
-background10_filepaths = {
+neutrinoGun10_filepaths = {
     ("v01", "sim"): [
         # neutrinoGun 10% (-5, 15)
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun_n5_p15_0.10/neutrinoGun_digi_3.slcio",
     ],
     ("v01", "digi", "10um"): [
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun_n5_p15_0.10/10um/neutrinoGun_digi_0.slcio",
+    ],
+    ("v06", "digi", "10um"): [
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/10um/neutrinoGun_digi_0.slcio",
+    ],
+    ("v07", "digi", "10um"): [
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/10um/neutrinoGun_digi_0.slcio",
     ],
 }
 
@@ -374,7 +380,7 @@ def parse_filepaths(
 def get_filepaths(
     geometry_version: str,
     signal: bool,
-    background10: bool,
+    neutrinoGun10: bool,
     background100: bool,
     sim: bool,
     digi: bool,
@@ -388,8 +394,8 @@ def get_filepaths(
             fpaths = signal_filepaths[(geometry_version, "sim")]
         elif background100:
             fpaths = background100_filepaths[(geometry_version, "sim")]
-        elif background10:
-            fpaths = background10_filepaths[(geometry_version, "sim")]
+        elif neutrinoGun10:
+            fpaths = neutrinoGun10_filepaths[(geometry_version, "sim")]
         else:
             raise ValueError("Must specify either signal or background filepaths.")
     elif digi:
@@ -397,8 +403,8 @@ def get_filepaths(
             fpaths = signal_filepaths[(geometry_version, "digi", smear)]
         elif background100:
             fpaths = background100_filepaths[(geometry_version, "digi", smear)]
-        elif background10:
-            fpaths = background10_filepaths[(geometry_version, "digi", smear)]
+        elif neutrinoGun10:
+            fpaths = neutrinoGun10_filepaths[(geometry_version, "digi", smear)]
         else:
             raise ValueError("Must specify either signal or background filepaths.")
     return parse_filepaths(fpaths)
