@@ -47,7 +47,6 @@ def main():
     if not fnames:
         raise ValueError("No input files found")
     layers = parse_layers(ops.layers)
-    geometry = ops.geometry
     data_source = get_data_source(ops)
     signal = (ops.signal or
               any(SIGNAL in os.path.basename(fname) for fname in fnames) or
@@ -87,7 +86,7 @@ def main():
     calibs = CalibConstants(calib_json(ops)).calibs
 
     # hits and mcparticles
-    hits, mcps, hit_cutflow, hit_time = get_hits_and_mcps(ops, fnames, geo_version, geometry, signal, layers)
+    hits, mcps, hit_cutflow, hit_time = get_hits_and_mcps(ops, fnames, geo_version, signal, layers)
     write_hits_and_mcps(ops, hits, mcps, hit_cutflow)
     if ops.stop_after_hits:
         logger.info("Stopping after hits, as requested")
@@ -200,7 +199,6 @@ def get_hits_and_mcps(
     ops: argparse.Namespace,
     fnames: list[str],
     geo_version: str,
-    geometry: bool,
     signal: bool,
     layers: dict[int, set[int]]
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, float]:
@@ -220,7 +218,6 @@ def get_hits_and_mcps(
             # convert slcio to hits dataframe
             converter = HitMaker(slcio_file_paths=fnames,
                                 geo_version=geo_version,
-                                load_geometry=geometry,
                                 signal=signal,
                                 sim=ops.sim,
                                 layers=layers,
@@ -442,7 +439,6 @@ def options():
     parser.add_argument("--stop-after-hits", action="store_true", help="Stop the analysis after processing hits")
     parser.add_argument("--stop-after-mds", action="store_true", help="Stop the analysis after processing mini-doublets")
     parser.add_argument("--calib-dir", type=str, default=guess_calib_dir(), help="Directory of calibration constants")
-    parser.add_argument("--geometry", action="store_true", help="Load compact geometry from xml")
     parser.add_argument("--layers", nargs="+", type=str, default=preset, help="List of layers to consider")
     parser.add_argument("--sim", action="store_true", help="Use sim hits in the analysis")
     parser.add_argument("--digi", action="store_true", help="Use digi hits in the analysis")

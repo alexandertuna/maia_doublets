@@ -1,6 +1,4 @@
-import contextlib
 import os
-import sys
 import numpy as np
 import pandas as pd
 import uproot
@@ -8,10 +6,7 @@ import multiprocessing as mp
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import OUTSIDE_BOUNDS, INSIDE_BOUNDS, UNDEFINED_BOUNDS, BOUNDS
-from maia_doublets.constants import EPSILON, MCPARTICLE, PARTICLES_OF_INTEREST, SPEED_OF_LIGHT
-from maia_doublets.constants import MM_TO_CM, CM_TO_MM
-from maia_doublets.constants import XML
+from maia_doublets.constants import MCPARTICLE, PARTICLES_OF_INTEREST, SPEED_OF_LIGHT
 from maia_doublets.constants import INNER_TRACKER_BARREL_COLLECTION, OUTER_TRACKER_BARREL_COLLECTION
 from maia_doublets.constants import INNER_TRACKER_BARREL_HITS, OUTER_TRACKER_BARREL_HITS
 from maia_doublets.constants import INNER_TRACKER_BARREL_RELATIONS, OUTER_TRACKER_BARREL_RELATIONS
@@ -21,9 +16,6 @@ from maia_doublets.constants import INNER_TRACKER_BARREL, OUTER_TRACKER_BARREL
 from maia_doublets.constants import NICKNAMES, LAYER_OFFSET
 from maia_doublets.constants import PARTICLES_OF_INTEREST, ONE_POINT_FIVE_GEV, BARREL_TRACKER_MAX_ETA, ZERO_POINT_ZERO_ONE_MM
 
-_detector = None
-_surfman = None
-_maps = None
 
 class HitMaker:
 
@@ -31,14 +23,12 @@ class HitMaker:
             self,
             slcio_file_paths: list[str],
             geo_version: str,
-            load_geometry: bool,
             signal: bool,
             sim: bool,
             layers: dict[int, set[int]],
         ):
         self.slcio_file_paths = slcio_file_paths
         self.geo_version = geo_version
-        self.load_geometry = load_geometry
         self.signal = signal
         self.sim = sim
         self.layers = layers
@@ -48,7 +38,6 @@ class HitMaker:
         mcps, hits = self.convert_all_files()
         mcps = sort_mcps(mcps)
         hits = sort_hits(hits)
-        announce_inside_bounds(hits)
         memory_usage = hits.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"hits.memory_usage: {memory_usage:.1f} MB")
         counts = hits.groupby([
@@ -70,14 +59,12 @@ class HitMaker:
         if not is_root and not is_lcio:
             raise ValueError(f"Files must be all ROOT or all LCIO. Found mixed: {self.slcio_file_paths}")
         convert_func = convert_one_root_file if is_root else convert_one_lcio_file
-        initializer = init_worker if self.load_geometry else init_dummy
         processes = min(mp.cpu_count(), len(self.slcio_file_paths))
         logger.info(f"Using {processes} processes for conversion ...")
-        with mp.Pool(processes=processes, initializer=initializer) as pool:
+        with mp.Pool(processes=processes) as pool:
             n_map = len(self.slcio_file_paths)
             file_numbers = list(range(n_map))
             geo_version = [self.geo_version]*n_map
-            load_geometry = [self.load_geometry]*n_map
             signal = [self.signal]*n_map
             sim = [self.sim]*n_map
             layers = [self.layers]*n_map
@@ -86,7 +73,6 @@ class HitMaker:
                 zip(self.slcio_file_paths,
                     file_numbers,
                     geo_version,
-                    load_geometry,
                     signal,
                     sim,
                     layers,
@@ -99,32 +85,10 @@ class HitMaker:
         ]
 
 
-def init_dummy():
-    pass
-
-
-def init_worker():
-    # Sorry for these global variables. They are needed for multiprocessing
-    global _detector, _surfman, _maps
-    import dd4hep, DDRec
-    dd4hep.setPrintLevel(dd4hep.PrintLevel.WARNING)
-    with silence_c_stdout_stderr():
-        # Sorry for this context manager. dd4hep can be very noisy
-        _detector = dd4hep.Detector.getInstance()
-        _detector.fromCompact(XML)
-        _surfman = DDRec.SurfaceManager(_detector)
-        dets = {
-            INNER_TRACKER_BARREL_COLLECTION: _detector.detector("InnerTrackerBarrel"),
-            OUTER_TRACKER_BARREL_COLLECTION: _detector.detector("OuterTrackerBarrel"),
-        }
-        _maps = {name: _surfman.map(det.name()) for name, det in dets.items()}
-
-
 def convert_one_root_file(
         root_file_path: str,
         file_number: int,
         geo_version: str,
-        load_geometry: bool,
         signal: bool,
         use_sim: bool,
         layers: dict[int, set[int]],
@@ -316,14 +280,11 @@ def convert_one_root_file_to_hits_per_system(
         data[col]["i_event"] = np.array(i_events)
         if col == sim_col or col == digi_col:
             data[col]["i_object"] = np.array(i_object)
-            data[col]["hit_inside_bounds"] = np.array([UNDEFINED_BOUNDS]*n_rows)
             correction = (np.sqrt(data[col]["hit_x"]**2 + \
-                                data[col]["hit_y"]**2 + \
-                                data[col]["hit_z"]**2) / SPEED_OF_LIGHT) if col == sim_col else 0.0
+                                  data[col]["hit_y"]**2 + \
+                                  data[col]["hit_z"]**2) / SPEED_OF_LIGHT) if col == sim_col else 0.0
             data[col]["hit_t_corrected"] = data[col]["hit_t"] - correction
-            if signal:
-                data[col]["hit_distance"] = np.array([-1]*n_rows)
-            else:
+            if not signal:
                 data[col]["i_mcp"] = np.array([NO_MCP]*n_rows)
 
         # convert to DataFrame
@@ -456,7 +417,6 @@ def convert_one_lcio_file(
         slcio_file_path: str,
         file_number: int,
         geo_version: str,
-        load_geometry: bool,
         signal: bool,
         use_sim: bool,
         layers: dict[int, set[int]],
@@ -465,11 +425,7 @@ def convert_one_lcio_file(
     # import here to avoid:
     #  - unnecessary imports if not used
     #  - issues with multiprocessing
-    with silence_c_stdout_stderr():
-        import pyLCIO
-    if load_geometry:
-        import dd4hep
-        import DDRec
+    import pyLCIO
 
     # check for file existence
     if not os.path.isfile(slcio_file_path):
@@ -599,22 +555,6 @@ def convert_one_lcio_file(
                 pathlength = simhit.getPathLength() if (use_sim or signal) else 0
                 correction = (np.sqrt(position[0]**2 + position[1]**2 + position[2]**2) / SPEED_OF_LIGHT) if use_sim else 0.0
 
-                # hit/surface relations
-                if load_geometry:
-                    surf = _maps[collection].find(simhit.getCellID0()).second
-                    pos = dd4hep.rec.Vector3D(position[0] * MM_TO_CM,
-                                              position[1] * MM_TO_CM,
-                                              position[2] * MM_TO_CM)
-                    inside_bounds = INSIDE_BOUNDS if surf.insideBounds(pos) else OUTSIDE_BOUNDS
-                    distance = surf.distance(pos) * CM_TO_MM
-                else:
-                    inside_bounds = UNDEFINED_BOUNDS
-                    distance = -1
-
-                # ignore hits outside bounds
-                if inside_bounds == OUTSIDE_BOUNDS:
-                    continue
-
                 # record the hit info
                 hits.append({
                     'file': file_number,
@@ -624,7 +564,6 @@ def convert_one_lcio_file(
                     'hit_y': position[1],
                     'hit_z': position[2],
                     'hit_cellid0': cellid0,
-                    'hit_inside_bounds': inside_bounds,
                     'hit_t_corrected': time - correction,
                 })
                 if signal:
@@ -634,7 +573,6 @@ def convert_one_lcio_file(
                         'hit_py': momentum[1],
                         'hit_pz': momentum[2],
                         'hit_pathlength': pathlength,
-                        'hit_distance': distance,
                         'hit_t': time,
                         'hit_e': energy,
                         'mcp_px': mcp_px[i_mcp] if mcp_ok else 0,
@@ -769,7 +707,6 @@ def postprocess_hits(df: pd.DataFrame, geo_version: str, signal: bool) -> pd.Dat
     df["file"] = df["file"].astype(np.uint32)
     df["i_event"] = df["i_event"].astype(np.uint32)
     df["i_mcp"] = df["i_mcp"].astype(np.uint32)
-    df["hit_inside_bounds"] = df["hit_inside_bounds"].astype(np.uint8)
     df["hit_side"] = df["hit_side"].astype(np.uint8)
     df["hit_system"] = df["hit_system"].astype(np.uint8)
     df["hit_layer"] = df["hit_layer"].astype(np.uint8)
@@ -870,12 +807,6 @@ def add_detectable_columns(mcps: pd.DataFrame, hits: pd.DataFrame) -> pd.DataFra
     return mcps
 
 
-def announce_inside_bounds(df: pd.DataFrame):
-    for bounds in [OUTSIDE_BOUNDS, INSIDE_BOUNDS, UNDEFINED_BOUNDS]:
-        n_bounds = len(df[df["hit_inside_bounds"] == bounds])
-        logger.info(f"N(hits) with bounds == {BOUNDS[bounds]}: {n_bounds}")
-
-
 def decode_cellid(cellid0: int, geo_version: str) -> tuple:
     """
     Decode a cellid0 integer into its components: system, side, layer, module, sensor.
@@ -902,27 +833,4 @@ def decode_cellid(cellid0: int, geo_version: str) -> tuple:
         raise ValueError(msg)
     return system, side, layer, module, sensor
 
-
-@contextlib.contextmanager
-def silence_c_stdout_stderr():
-    # Flush Python buffers
-    sys.stdout.flush()
-    sys.stderr.flush()
-
-    # Save original FDs
-    old_stdout_fd = os.dup(1)
-    old_stderr_fd = os.dup(2)
-
-    # Redirect to /dev/null
-    with open(os.devnull, "w") as devnull:
-        os.dup2(devnull.fileno(), 1)
-        os.dup2(devnull.fileno(), 2)
-        try:
-            yield
-        finally:
-            # Restore original FDs
-            os.dup2(old_stdout_fd, 1)
-            os.dup2(old_stderr_fd, 2)
-            os.close(old_stdout_fd)
-            os.close(old_stderr_fd)
 
