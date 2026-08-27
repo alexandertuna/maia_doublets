@@ -6,19 +6,20 @@ OUTPUT_DIR=$(dirname "${BASH_SOURCE[0]}")/../output
 mkdir -p ${OUTPUT_DIR}
 
 # How to calibrate cut thresholds (3sigma intervals)
-# maia_doublets --geo v01 --signal --digi --smear 10um --calibrate
-# maia_doublets --geo v05 --signal --digi --smear 10um --calibrate
-# maia_doublets --geo v06 --signal --digi --smear 10um --calibrate
-# maia_doublets --geo v07 --signal --digi --smear 10um --calibrate
+# maia_doublets --geo v01 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
+# maia_doublets --geo v05 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
+# maia_doublets --geo v06 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
+maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
 
 # How to make plots
 # GEO="v07"
 # SMEAR="10um"
-# PKL_DIR=${OUTPUT_DIR}/${GEO}_signal_digi_${SMEAR}
+# DATASET="muonGun_pT_2p0_2p1"
+# PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
 # mkdir -p ${PKL_DIR}
 # maia_doublets \
 #     --geo ${GEO} \
-#     --signal \
+#     --dataset ${DATASET} \
 #     --digi \
 #     --smear ${SMEAR} \
 #     --write-hits ${PKL_DIR}/hits.pkl \
@@ -33,11 +34,12 @@ mkdir -p ${OUTPUT_DIR}
 #   and without stressing the memory by writing all layers at once
 GEO="v07"
 SMEAR="10um"
-PKL_DIR=${OUTPUT_DIR}/${GEO}_neutrinoGun10_digi_${SMEAR}
+DATASET="neutrinoGun10"
+PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
 mkdir -p ${PKL_DIR}
 CMD="maia_doublets \
     --geo ${GEO} \
-    --neutrinoGun10 \
+    --dataset ${DATASET} \
     --digi \
     --smear ${SMEAR} \
     --no-cuts \
@@ -52,9 +54,9 @@ CMD="maia_doublets \
 # time ${CMD} --write-mds ${PKL_DIR}/mds_OTB6_OTB7.pkl --layers OTB6 OTB7
 
 # How to find the overall efficiency
-# maia_doublets --geo v05 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
-# maia_doublets --geo v06 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
-# maia_doublets --geo v07 --signal --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+# maia_doublets --geo v05 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+# maia_doublets --geo v06 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+# maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
 
 # How to plot the 0-10 GeV pionGun sample
 # maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/pionGun_pT_0_10/10um/pionGun_pT_0_10_digi_3*" --digi --smear 10um --plot
@@ -85,43 +87,21 @@ CMD="maia_doublets \
 
 
 # How to run background neutrinoGun
-GEO="v06"
-SMEAR="10um"
-PKL_DIR=${OUTPUT_DIR}/${GEO}_neutrinoGun_digi_${SMEAR}
-mkdir -p ${PKL_DIR}
-maia_doublets \
-  --geo ${GEO} \
-  --neutrinoGun \
-  --digi \
-  --smear ${SMEAR} \
-  --cutflow ${PKL_DIR}/cutflow.ndjson \
-  --write-mcps ${PKL_DIR}/mcps.pkl \
-  --write-hits ${PKL_DIR}/hits.pkl \
-  --write-mds ${PKL_DIR}/mds.pkl \
-  --write-t2s ${PKL_DIR}/t2s.pkl \
-  --write-t4s ${PKL_DIR}/t4s.pkl \
-  --write-t8s ${PKL_DIR}/t8s.pkl \
-  --fast-mds --plot
-
-# How to make background dz plot for OTB L01 only
-# GEO="v01"
+# GEO="v06"
 # SMEAR="10um"
+# PKL_DIR=${OUTPUT_DIR}/${GEO}_neutrinoGun_digi_${SMEAR}
+# mkdir -p ${PKL_DIR}
 # maia_doublets \
 #   --geo ${GEO} \
+#   --dataset neutrinoGun \
 #   --digi \
 #   --smear ${SMEAR} \
-#   --layers OTB0 OTB1 \
-#   --cutflow "" \
-#   --plot \
-#   --signal
-# #   --background10
+#   --cutflow ${PKL_DIR}/cutflow.ndjson \
+#   --write-mcps ${PKL_DIR}/mcps.pkl \
+#   --write-hits ${PKL_DIR}/hits.pkl \
+#   --write-mds ${PKL_DIR}/mds.pkl \
+#   --write-t2s ${PKL_DIR}/t2s.pkl \
+#   --write-t4s ${PKL_DIR}/t4s.pkl \
+#   --write-t8s ${PKL_DIR}/t8s.pkl \
+#   --fast-mds --plot
 
-# How to make the scatter plot demo
-# time python ../maia_doublets/demos/demo_scatter2d.py \
-#     --hits v01_neutrinoGun_digi_10um/hits_0.pkl \
-#     --mds v01_neutrinoGun_digi_10um/mds_0.pkl \
-#     --t2s v01_neutrinoGun_digi_10um/t2s_0.pkl \
-#     --t4s v01_neutrinoGun_digi_10um/t4s_0.pkl \
-#     --t8s v01_neutrinoGun_digi_10um/t8s_0.pkl \
-#     --signal v01_signal_digi_10um/t8s.pkl \
-#     --output tmp.png

@@ -1,6 +1,8 @@
 from glob import glob
 
-signal_filepaths = {
+filepaths = {}
+
+filepaths["muonGun_pT_2p0_2p1"] = {
     ("v01", "sim"): [
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/muonGun_pT_2p0_2p1_sim_300.slcio",
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_2p0_2p1/muonGun_pT_2p0_2p1_sim_301.slcio",
@@ -327,7 +329,7 @@ signal_filepaths = {
     ]
 }
 
-neutrinoGun_filepaths = {
+filepaths["neutrinoGun"] = {
     ("v01", "sim"): [
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun/sim/neutrinoGun_digi_3.slcio",
     ],
@@ -351,7 +353,7 @@ neutrinoGun_filepaths = {
     ],
 }
 
-neutrinoGun10_filepaths = {
+filepaths["neutrinoGun10"] = {
     ("v01", "sim"): [
         # neutrinoGun 10% (-5, 15)
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun_n5_p15_0.10/neutrinoGun_digi_3.slcio",
@@ -367,9 +369,8 @@ neutrinoGun10_filepaths = {
     ],
 }
 
-def parse_filepaths(
-    fnames: str | list[str],
-) -> list[str]:
+
+def parse_filepaths(fnames: str | list[str]) -> list[str]:
     names = []
     if isinstance(fnames, str):
         fnames = fnames.split(",")
@@ -377,34 +378,18 @@ def parse_filepaths(
         names.extend(sorted(glob(fname)))
     return names
 
-def get_filepaths(
-    geometry_version: str,
-    signal: bool,
-    neutrinoGun: bool,
-    neutrinoGun10: bool,
-    sim: bool,
-    digi: bool,
-    smear: str,
-) -> list[str]:
+
+def get_filepaths(geometry_version: str,
+                  dataset: str,
+                  sim: bool,
+                  digi: bool,
+                  smear: str,
+                  ) -> list[str]:
     if not sim and not digi:
         raise ValueError("Must specify either sim or digi")
     fpaths = []
     if sim:
-        if signal:
-            fpaths = signal_filepaths[(geometry_version, "sim")]
-        elif neutrinoGun:
-            fpaths = neutrinoGun_filepaths[(geometry_version, "sim")]
-        elif neutrinoGun10:
-            fpaths = neutrinoGun10_filepaths[(geometry_version, "sim")]
-        else:
-            raise ValueError("Must specify either signal or background filepaths.")
+        fpaths = filepaths[dataset][(geometry_version, "sim")]
     elif digi:
-        if signal:
-            fpaths = signal_filepaths[(geometry_version, "digi", smear)]
-        elif neutrinoGun:
-            fpaths = neutrinoGun_filepaths[(geometry_version, "digi", smear)]
-        elif neutrinoGun10:
-            fpaths = neutrinoGun10_filepaths[(geometry_version, "digi", smear)]
-        else:
-            raise ValueError("Must specify either signal or background filepaths.")
+        fpaths = filepaths[dataset][(geometry_version, "digi", smear)]
     return parse_filepaths(fpaths)

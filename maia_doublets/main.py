@@ -10,7 +10,7 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
-from maia_doublets.constants import SIGNAL, PIONGUN, NICKNAME_TO_SYSTEM
+from maia_doublets.constants import MUONGUN, PIONGUN, NICKNAME_TO_SYSTEM
 from maia_doublets.datasets import get_filepaths, parse_filepaths
 from maia_doublets.slcio import HitMaker
 from maia_doublets.md import MDMaker
@@ -37,9 +37,7 @@ def main():
     else:
         fnames = get_filepaths(
             geometry_version=ops.geo,
-            signal=ops.signal,
-            neutrinoGun=ops.neutrinoGun,
-            neutrinoGun10=ops.neutrinoGun10,
+            dataset=ops.dataset,
             sim=ops.sim,
             digi=ops.digi,
             smear=ops.smear,
@@ -47,9 +45,8 @@ def main():
     if not fnames:
         raise ValueError("No input files found")
     layers = parse_layers(ops.layers)
-    data_source = get_data_source(ops)
-    signal = (ops.signal or
-              any(SIGNAL in os.path.basename(fname) for fname in fnames) or
+    data_source = ops.dataset
+    signal = (any(MUONGUN in os.path.basename(fname) for fname in fnames) or
               any(PIONGUN in os.path.basename(fname) for fname in fnames))
     pdf = ops.pdf or f"{calib_key(ops)}_{data_source}.pdf"
     geo_version = ops.geo
@@ -414,17 +411,6 @@ def guess_calib_dir() -> str:
     return calib_guess[0]
 
 
-def get_data_source(ops: argparse.Namespace) -> str:
-    if ops.signal:
-        return "signal"
-    elif ops.neutrinoGun:
-        return "neutrinoGun"
-    elif ops.neutrinoGun10:
-        return "neutrinoGun10"
-    else:
-        raise ValueError("Bad data source!")
-
-
 def options():
     preset = [
         "ITB0", "ITB1", "ITB2", "ITB3",
@@ -433,7 +419,6 @@ def options():
         "OTB4", "OTB5", "OTB6", "OTB7",
     ]
     parser = argparse.ArgumentParser(usage=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-i", default=[], help="Input slcio file or glob pattern")
     parser.add_argument("--calibrate", action="store_true", help="Measure and write calibration constants (signal intervals) to file")
     parser.add_argument("--no-cuts", action="store_true", help="Dont cut anything (overrides default behavior)")
     parser.add_argument("--stop-after-hits", action="store_true", help="Stop the analysis after processing hits")
@@ -462,9 +447,7 @@ def options():
     parser.add_argument("--write-t8s", type=str, help="Write T8s to pickle file")
     parser.add_argument("--geo", type=str, help="Version of geometry to use for cuts (e.g. v01, v04)", required=True)
     parser.add_argument("--smear", type=str, default="00um", help="Smear value to use for digi hits (e.g. 10um)")
-    parser.add_argument("--signal", action="store_true", help="Use signal files in the analysis")
-    parser.add_argument("--neutrinoGun10", action="store_true", help="Use neutrinoGun files (10 percent) in the analysis")
-    parser.add_argument("--neutrinoGun", action="store_true", help="Use neutrinoGun files (100 percent) in the analysis")
+    parser.add_argument("--dataset", type=str, help="Specify the dataset to use in the analysis")
     parser.add_argument("--cutflow", type=str, default="cutflow.ndjson", help="Path to output newline-delimited JSON for cutflows file")
     parser.add_argument("--debug", action="store_true", help="Print some debug information")
     parser.add_argument("--pdf", type=str, default="", help="Path to output PDF file")

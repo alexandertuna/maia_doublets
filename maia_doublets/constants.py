@@ -11,7 +11,7 @@ PARTICLES_OF_INTEREST = [
 
 SPEED_OF_LIGHT = 299.792458  # mm/ns
 
-SIGNAL = "muonGun"
+MUONGUN = "muonGun"
 PIONGUN = "pionGun"
 NO_MCP = np.uint32(0xffffffff)
 
