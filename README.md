@@ -2,9 +2,21 @@
 
 Set up the analysis environment like:
 
-```bash
-apptainer run /cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-alma9:v2.9.8-amd64
+```
+# Run this once, after cloning the repo for the first time
+apptainer run /cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-ubuntu24:v2.9.8-amd64
 apptainer> setup_mucoll
+apptainer> cd run/
+apptainer> python -m venv env_ubuntu24
+apptainer> source env_ubuntu24/bin/activate
+apptainer> pip install -e ../
+```
+
+```bash
+# Run this at the start of each new login session
+apptainer run /cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-ubuntu24:v2.9.8-amd64
+apptainer> setup_mucoll
+apptainer> source env_ubuntu24/bin/activate
 ```
 
 # Code conventions
