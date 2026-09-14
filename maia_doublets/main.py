@@ -32,16 +32,13 @@ def main():
     # parse options
     ops = options()
     check_options(ops)
-    if ops.i:
-        fnames = parse_filepaths(ops.i)
-    else:
-        fnames = get_filepaths(
-            geometry_version=ops.geo,
-            dataset=ops.dataset,
-            sim=ops.sim,
-            digi=ops.digi,
-            smear=ops.smear,
-        )
+    fnames = get_filepaths(
+        geometry_version=ops.geo,
+        dataset=ops.dataset,
+        sim=ops.sim,
+        digi=ops.digi,
+        smear=ops.smear,
+    )
     if not fnames:
         raise ValueError("No input files found")
     layers = parse_layers(ops.layers)
@@ -165,7 +162,7 @@ def main():
 
 def check_options(ops: argparse.Namespace) -> None:
     valid_geos = ["v01", "v04", "v05", "v06", "v07"]
-    valid_smears = ["00um", "05um", "10um", "20um"]
+    valid_smears = ["00um", "05um", "10um", "20um", "30um", "50um"]
     if ops.geo not in valid_geos:
         raise ValueError(f"Invalid geometry version specified, must be one of {valid_geos}")
     if ops.smear not in valid_smears:
