@@ -268,6 +268,8 @@ class T8Calibrator:
 def format_interval(interval: float, feature: str = "") -> float:
     # return interval
     if feature.startswith("md_"):
+        if interval < 1.0:
+            return np.round(interval, decimals=1)
         return np.round(interval)
     return float(np.format_float_positional(interval, precision=INTERVAL_PRECISION, fractional=False))
 
