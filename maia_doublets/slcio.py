@@ -355,6 +355,7 @@ def convert_one_root_file_to_mcps(evs: uproot.TTree,
         "MCParticle.momentum.z": "mcp_pz",
         "MCParticle.mass": "mcp_m",
         "MCParticle.charge": "mcp_q",
+        "MCParticle.time": "mcp_time",
         "MCParticle.PDG": "mcp_pdg",
         "MCParticle.vertex.x": "mcp_vertex_x",
         "MCParticle.vertex.y": "mcp_vertex_y",
@@ -400,7 +401,7 @@ def merge_mcp_info_into_hits(
 
     on_cols = ["file", "i_event", "i_mcp"]
     mcp_cols = [
-        "mcp_pdg", "mcp_q",
+        "mcp_pdg", "mcp_q", "mcp_time",
         "mcp_px", "mcp_py", "mcp_pz",
         "mcp_vertex_x", "mcp_vertex_y", "mcp_vertex_z",
         "mcp_endpoint_x", "mcp_endpoint_y", "mcp_endpoint_z",
@@ -482,12 +483,41 @@ def convert_one_lcio_file(
         mcp_m = [mcp.getMass() for mcp in mcparticles]
         mcp_q = [mcp.getCharge() for mcp in mcparticles]
         mcp_pdg = [mcp.getPDG() for mcp in mcparticles]
+        mcp_time = [mcp.getTime() for mcp in mcparticles]
         mcp_vertex_x = [mcp.getVertex()[0] for mcp in mcparticles]
         mcp_vertex_y = [mcp.getVertex()[1] for mcp in mcparticles]
         mcp_vertex_z = [mcp.getVertex()[2] for mcp in mcparticles]
         mcp_endpoint_x = [mcp.getEndpoint()[0] for mcp in mcparticles]
         mcp_endpoint_y = [mcp.getEndpoint()[1] for mcp in mcparticles]
         mcp_endpoint_z = [mcp.getEndpoint()[2] for mcp in mcparticles]
+
+        # # tmp
+        # of_interest = [
+        #     [0, 0],
+        #     [0, 1],
+        #     [0, 2],
+        #     [0, 3],
+        #     [0, 4],
+        #     [0, 5],
+        #     [0, 6],
+        #     [0, 7],
+        #     [0, 8],
+        #     [0, 9],
+        #     # [6, 470],
+        #     # [9, 481],
+        # ]
+        # if [file_number, i_event] in of_interest:
+        #     print(f"File {file_number}, Event {i_event} is of interest with MCParticles: {len(mcparticles)}")
+        #     for i_mcp in range(len(mcparticles)):
+        #         mcp_pt = (mcp_px[i_mcp]**2 + mcp_py[i_mcp]**2)**0.5
+        #         mcp_vertex_r = (mcp_vertex_x[i_mcp]**2 + mcp_vertex_y[i_mcp]**2)**0.5
+        #         nparents = len(mcparticles[i_mcp].getParents())
+        #         parent_mcp = None if (nparents == 0) else mcparticles[i_mcp].getParents()[0]
+        #         parent_index = -1 if (nparents == 0) else mcparticles.index(parent_mcp)
+        #         # parent = -1 if (nparents == 0) else mcparticles.index(mcparticles[i_mcp].getParents()[0])
+        #         print(f" MCP {i_mcp:>3}: PDG={mcp_pdg[i_mcp]:>4}, Parent={parent_index:>2}, pT={mcp_pt:.3f}, t={mcp_time[i_mcp]:.2f}, vertex=({mcp_vertex_r:.1f}, {mcp_vertex_z[i_mcp]:.1f})")
+        # # /tmp
+
         for i_mcp in range(len(mcparticles)):
             if abs(mcp_pdg[i_mcp]) not in PARTICLES_OF_INTEREST:
                 continue
@@ -500,6 +530,7 @@ def convert_one_lcio_file(
                 'mcp_pz': mcp_pz[i_mcp],
                 'mcp_m': mcp_m[i_mcp],
                 'mcp_q': mcp_q[i_mcp],
+                'mcp_time': mcp_time[i_mcp],
                 'mcp_pdg': mcp_pdg[i_mcp],
                 'mcp_vertex_x': mcp_vertex_x[i_mcp],
                 'mcp_vertex_y': mcp_vertex_y[i_mcp],
@@ -580,6 +611,7 @@ def convert_one_lcio_file(
                         'mcp_pz': mcp_pz[i_mcp] if mcp_ok else 0,
                         "mcp_pdg": mcp_pdg[i_mcp] if mcp_ok else 0,
                         "mcp_q": mcp_q[i_mcp] if mcp_ok else 0,
+                        "mcp_time": mcp_time[i_mcp] if mcp_ok else 0,
                         "mcp_vertex_x": mcp_vertex_x[i_mcp] if mcp_ok else 0,
                         "mcp_vertex_y": mcp_vertex_y[i_mcp] if mcp_ok else 0,
                         "mcp_vertex_z": mcp_vertex_z[i_mcp] if mcp_ok else 0,
@@ -647,6 +679,7 @@ def postprocess_mcps(df: pd.DataFrame) -> pd.DataFrame:
     df["i_mcp"] = df["i_mcp"].astype(np.uint32)
     df["mcp_pdg"] = df["mcp_pdg"].astype(np.int32)
     df["mcp_q"] = df["mcp_q"].astype(np.float32)
+    df["mcp_time"] = df["mcp_time"].astype(np.float32)
 
     # sort columns alphabetically
     return df[sorted(df.columns)]
