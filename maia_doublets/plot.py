@@ -1045,8 +1045,7 @@ class Plotter:
             "file", # the file
             "i_event", # the event
             "i_mcp", # the parent mc particle
-            "t2_system", # the system (IT, OT)
-            "t2_doublelayer", # the first double layer
+            "t2_gdoublelayer", # the first double layer
         ]
 
         # filter mds to only those with same parent mcp
@@ -1055,11 +1054,9 @@ class Plotter:
 
         # check if t2s's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in t2s.groupby(["t2_system",
-                                                                    "t2_doublelayer",
-                                                                    ]):
-                layer = doublelayer * 2
-                layers = range(layer, layer + 4)
+            for (gdl, group) in t2s.groupby("t2_gdoublelayer"):
+                glayer = gdl * 2
+                glayers = list(range(glayer, glayer + 4))
 
                 t2_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
                 merged = denom.merge(t2_keys, on=["file", "i_event", "i_mcp"], how="inner")
@@ -1079,7 +1076,7 @@ class Plotter:
                 )
                 ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("T2 finding efficiency")
-                ax.set_title(f"{NICKNAMES[system]}, layers {list(layers)}")
+                ax.set_title(f"glayers {glayers}")
                 ax.set_ylim(0.7, 1.03)
                 pdf.savefig()
                 plt.close()
@@ -1099,21 +1096,19 @@ class Plotter:
             "mcp_phi"
         ]):
 
-            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["t2_system",
-                                                                              "t2_doublelayer",
-            ]):
+            for (gdl, group) in self.t2s[baseline].groupby("t2_gdoublelayer"):
 
-                logger.info(f"Plotting t2 quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
-                layer = doublelayer * 2
-                layers = range(layer, layer + 4)
+                logger.info(f"Plotting t2 quality efficiency vs {kin}, gdl {gdl} ...")
+                glayer = gdl * 2
+                glayers = list(range(glayer, glayer + 4))
 
                 for req in T2_REQS:
                     req_text, req_mask = self.t2_requirements(group, req)
                     denom = group
                     numer = group[req_mask]
                     if i_kin == 0:
-                        logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} mds")
-                        logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} mds")
+                        logger.info(f"Denom for gdl {gdl} {req}: {len(denom)} mds")
+                        logger.info(f"Numer for gdl {gdl} {req}: {len(numer)} mds")
 
                     n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
                     n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
@@ -1131,7 +1126,7 @@ class Plotter:
                     )
                     ax.set_xlabel(self.xlabel[kin])
                     ax.set_ylabel("T2 quality efficiency")
-                    ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req_text}")
+                    ax.set_title(f"glayers {glayers}: {req_text}")
                     ax.set_ylim(0.965, 1.004)
                     pdf.savefig()
                     plt.close()
