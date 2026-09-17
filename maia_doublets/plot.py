@@ -972,11 +972,7 @@ class Plotter:
                 # True,
             ]:
 
-                for ((system, doublelayer), group) in self.t2s[baseline].groupby(["t2_system",
-                                                                                  "t2_doublelayer",
-                                                                                  ]):
-
-                        # logger.info(f"Plotting signal t2 feature {feature}, system {system}, doublelayer {doublelayer} ...")
+                for (gdl, group) in self.t2s[baseline].groupby("t2_gdoublelayer"):
 
                         fig, ax = plt.subplots()
                         ax.hist(
@@ -1001,9 +997,9 @@ class Plotter:
                         ax.set_ylim(0.8 if ax.get_yscale() == "log" else 0, None)
                         ax.set_xlabel(xlabel[feature])
                         ax.set_ylabel("T2s")
-                        ax.set_title(f"{NICKNAMES[system]}. DL={doublelayer}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+                        ax.set_title(f"GDL={gdl}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
                         ax.text(0.66, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes, fontsize=16)
-                        logger.info(f"{NICKNAMES[system]} doublelayer {doublelayer} {feature}: 99.7% in {p997:{fmt}}")
+                        logger.info(f"T2 gdl {gdl} {feature}: 99.7% in {p997:{fmt}}")
                         pdf.savefig()
                         plt.close()
 
@@ -1012,13 +1008,11 @@ class Plotter:
             # ("t2_dphi", "t2_dr"),
         ]:
 
-            for ((system, doublelayer), group) in self.t2s[baseline].groupby(["t2_system",
-                                                                              "t2_doublelayer",
-                                                                              ]):
+            for (gdl, group) in self.t2s[baseline].groupby("t2_gdoublelayer"):
 
-                logger.info(f"Plotting signal t2 features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
+                logger.info(f"Plotting signal t2 features {feature_x} vs {feature_y}, gdl {gdl} ...")
                 if len(group) == 0:
-                    logger.info(f"No t2s in {NICKNAMES[system]} doublelayer {doublelayer} passing baseline, skipping feature plot")
+                    logger.info(f"No t2s in gdl {gdl} passing baseline, skipping feature plot")
                     continue
 
                 fig, ax = plt.subplots()
@@ -1033,7 +1027,7 @@ class Plotter:
                 num = len(group)
                 ax.set_xlabel(xlabel[feature_x])
                 ax.set_ylabel(xlabel[feature_y])
-                ax.set_title(f"{NICKNAMES[system]} DL={doublelayer}. N={num}")
+                ax.set_title(f"gdl={gdl}. N={num}")
                 pdf.savefig()
                 plt.close()
 
