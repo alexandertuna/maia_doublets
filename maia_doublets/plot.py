@@ -40,6 +40,7 @@ from maia_doublets.constants import DOUBLET_REQS, NO_MCP
 from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_SZ_CHI2, T2_REQ_ALL
 from maia_doublets.constants import MIN_COSTHETA, MIN_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import N_T2_PHI_SLICES
+from maia_doublets.constants import GLOBAL_DOUBLELAYER_TO_SYSTEM
 
 
 class Plotter:
@@ -476,20 +477,19 @@ class Plotter:
 
 
     def plot_md_occupancy(self, pdf: PdfPages):
-        for ((system, doublelayer), group) in self.mds.groupby(["md_system",
-                                                                     "md_doublelayer",
-                                                                    ]):
+        for (gdl, group) in self.mds.groupby("md_gdoublelayer"):
+
             zmax = None
             for req in DOUBLET_REQS:
 
                 req_text, req_mask = self.md_requirements(group, req)
                 mds = group[req_mask]
 
-                logger.info(f"Occupancy of {NICKNAMES[system]} doublelayer {doublelayer}, {req}: {len(mds)} mds")
+                logger.info(f"Occupancy of gdl {gdl}, {req}: {len(mds)} mds")
                 if len(mds) == 0:
                     continue
 
-                layers = [doublelayer * 2, doublelayer * 2 + 1]
+                layers = [gdl * 2, gdl * 2 + 1]
 
                 # skip these plots to save time
                 # if not self.signal:
@@ -513,7 +513,7 @@ class Plotter:
                 im.set_clim(0.9, zmax)
                 ax.set_xlabel("Phi module")
                 ax.set_ylabel("Z sensor")
-                ax.set_title(f"{NICKNAMES[system]}, layers {layers}, {req_text}")
+                ax.set_title(f"Global double-layers {layers}, {req_text}")
                 fig.colorbar(im, ax=ax, label="Number of mds", pad=0.01)
                 pdf.savefig()
                 plt.close()
@@ -828,43 +828,41 @@ class Plotter:
                 # True,
             ]:
 
-                for ((system, doublelayer), group) in self.mds[baseline].groupby(["md_system",
-                                                                                       "md_doublelayer",
-                                                                                       ]):
+                for (gdl, group) in self.mds[baseline].groupby("md_gdoublelayer"):
 
-                        bins["md_phi_slice"] = np.linspace(-1, N_T2_PHI_SLICES[system]+1, N_T2_PHI_SLICES[system]+3)
+                    system = GLOBAL_DOUBLELAYER_TO_SYSTEM[gdl]
+                    bins["md_phi_slice"] = np.linspace(-1, N_T2_PHI_SLICES[system]+1, N_T2_PHI_SLICES[system]+3)
 
-                        # logger.info(f"Plotting signal md feature {feature}, system {system}, doublelayer {doublelayer} ...")
-                        layers = [doublelayer * 2, doublelayer * 2 + 1]
-                        if len(group) == 0:
-                            continue
+                    layers = [gdl * 2, gdl * 2 + 1]
+                    if len(group) == 0:
+                        continue
 
-                        fig, ax = plt.subplots()
-                        ax.hist(
-                            group[feature],
-                            bins=bins[feature],
-                            histtype="stepfilled",
-                            color=self.colors["mds"],
-                            hatch=self.hatch,
-                            edgecolor="black",
-                            linewidth=1.0,
-                            alpha=0.9,
-                        )
-                        if semilogy:
-                            ax.semilogy()
-                        num = len(group)
-                        mean = np.mean(group[feature])
-                        rms = np.sqrt(np.mean((group[feature] - mean) ** 2))
-                        p997 = np.percentile(np.abs(group[feature]), 99.7)
-                        fmt = formatting[feature]
-                        ax.set_ylim(0.8 if semilogy else 0, None)
-                        ax.set_xlabel(xlabel[feature])
-                        ax.set_ylabel("MDs")
-                        ax.set_title(f"{NICKNAMES[system]} layers {layers}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
-                        ax.text(0.05, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes)
-                        logger.info(f"{NICKNAMES[system]} doublelayer {doublelayer} {feature}: 99.7% in {p997:{fmt}}")
-                        pdf.savefig()
-                        plt.close()
+                    fig, ax = plt.subplots()
+                    ax.hist(
+                        group[feature],
+                        bins=bins[feature],
+                        histtype="stepfilled",
+                        color=self.colors["mds"],
+                        hatch=self.hatch,
+                        edgecolor="black",
+                        linewidth=1.0,
+                        alpha=0.9,
+                    )
+                    if semilogy:
+                        ax.semilogy()
+                    num = len(group)
+                    mean = np.mean(group[feature])
+                    rms = np.sqrt(np.mean((group[feature] - mean) ** 2))
+                    p997 = np.percentile(np.abs(group[feature]), 99.7)
+                    fmt = formatting[feature]
+                    ax.set_ylim(0.8 if semilogy else 0, None)
+                    ax.set_xlabel(xlabel[feature])
+                    ax.set_ylabel("MDs")
+                    ax.set_title(f"glayers {layers}. N={num}, Mean={mean:{fmt}}, RMS={rms:{fmt}}")
+                    ax.text(0.05, 0.95, f"99.7% in {p997:{fmt}}", transform=ax.transAxes)
+                    logger.info(f"gdl {gdl} {feature}: 99.7% in {p997:{fmt}}")
+                    pdf.savefig()
+                    plt.close()
 
 
         # 2d histograms
