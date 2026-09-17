@@ -771,8 +771,7 @@ class Plotter:
 
                     if len(group) == 0:
                         continue
-                    system = group["md_system"].iloc[0]
-                    bins["md_phi_slice"] = np.linspace(-1, N_T2_PHI_SLICES[system]+1, N_T2_PHI_SLICES[system]+3)
+                    bins["md_phi_slice"] = np.linspace(-1, N_T2_PHI_SLICES+1, N_T2_PHI_SLICES+3)
 
                     layers = [gdl * 2, gdl * 2 + 1]
                     if len(group) == 0:

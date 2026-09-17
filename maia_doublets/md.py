@@ -183,10 +183,8 @@ class MDMaker:
         mds["md_eta"] = -np.log(np.tan(mds["md_theta"] / 2))
 
         # divide the eta/phi space into slices, to be used in T2 seeding
-        n_phi_slices = N_T2_PHI_SLICES[mds["md_system"]]
-        n_eta_slices = N_T2_ETA_SLICES[mds["md_system"]]
-        mds["md_phi_slice"] = np.floor((mds["md_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * n_phi_slices).astype(np.int16)
-        mds["md_eta_slice"] = np.floor((mds["md_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * n_eta_slices).astype(np.int16)
+        mds["md_phi_slice"] = np.floor((mds["md_phi"] + DETECTOR_MAX_PHI) / (2 * DETECTOR_MAX_PHI) * N_T2_PHI_SLICES).astype(np.int16)
+        mds["md_eta_slice"] = np.floor((mds["md_eta"] + DETECTOR_MAX_ETA) / (2 * DETECTOR_MAX_ETA) * N_T2_ETA_SLICES).astype(np.int16)
 
         # guess charge from dphi:
         # positively charged particles have negative dphi, and vice versa

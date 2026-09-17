@@ -119,15 +119,13 @@ class T2Maker:
             and upper df could be MDs which span OT layers 2-3 (global doublelayer 5).
         """
 
-        n_t2_phi_slices = N_T2_PHI_SLICES[upper["md_system"]]
-
         # get combinations of lower and upper
         # within neighboring phi/eta slices
         cands = []
         for phi_shift in (-1, 0, 1):
             for eta_shift in (-1, 0, 1):
                 shifted = upper.assign(
-                    md_phi_slice=(upper["md_phi_slice"] + phi_shift) % n_t2_phi_slices,
+                    md_phi_slice=(upper["md_phi_slice"] + phi_shift) % N_T2_PHI_SLICES,
                     md_eta_slice=(upper["md_eta_slice"] + eta_shift),
                 )
                 logger.info(f"Merging phi_shift={phi_shift}, eta_shift={eta_shift} ...")
