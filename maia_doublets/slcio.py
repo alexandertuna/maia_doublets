@@ -491,33 +491,6 @@ def convert_one_lcio_file(
         mcp_endpoint_y = [mcp.getEndpoint()[1] for mcp in mcparticles]
         mcp_endpoint_z = [mcp.getEndpoint()[2] for mcp in mcparticles]
 
-        # # tmp
-        # of_interest = [
-        #     [0, 0],
-        #     [0, 1],
-        #     [0, 2],
-        #     [0, 3],
-        #     [0, 4],
-        #     [0, 5],
-        #     [0, 6],
-        #     [0, 7],
-        #     [0, 8],
-        #     [0, 9],
-        #     # [6, 470],
-        #     # [9, 481],
-        # ]
-        # if [file_number, i_event] in of_interest:
-        #     print(f"File {file_number}, Event {i_event} is of interest with MCParticles: {len(mcparticles)}")
-        #     for i_mcp in range(len(mcparticles)):
-        #         mcp_pt = (mcp_px[i_mcp]**2 + mcp_py[i_mcp]**2)**0.5
-        #         mcp_vertex_r = (mcp_vertex_x[i_mcp]**2 + mcp_vertex_y[i_mcp]**2)**0.5
-        #         nparents = len(mcparticles[i_mcp].getParents())
-        #         parent_mcp = None if (nparents == 0) else mcparticles[i_mcp].getParents()[0]
-        #         parent_index = -1 if (nparents == 0) else mcparticles.index(parent_mcp)
-        #         # parent = -1 if (nparents == 0) else mcparticles.index(mcparticles[i_mcp].getParents()[0])
-        #         print(f" MCP {i_mcp:>3}: PDG={mcp_pdg[i_mcp]:>4}, Parent={parent_index:>2}, pT={mcp_pt:.3f}, t={mcp_time[i_mcp]:.2f}, vertex=({mcp_vertex_r:.1f}, {mcp_vertex_z[i_mcp]:.1f})")
-        # # /tmp
-
         for i_mcp in range(len(mcparticles)):
             if abs(mcp_pdg[i_mcp]) not in PARTICLES_OF_INTEREST:
                 continue
