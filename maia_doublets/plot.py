@@ -116,8 +116,7 @@ class Plotter:
                 self.write_denominator_info(pdf)
                 self.plot_denominator(pdf)
                 self.plot_detectable_efficiency_vs_kinematics(pdf)
-                self.plot_md_efficiency_vs_kinematics_2(pdf)
-                # self.plot_md_efficiency_vs_kinematics(pdf)
+                self.plot_md_efficiency_vs_kinematics(pdf)
                 # self.write_md_denominator_info(pdf)
                 # self.plot_md_quality_efficiency(pdf)
                 self.plot_t2_efficiency_vs_kinematics(pdf)
@@ -489,8 +488,6 @@ class Plotter:
                 if len(mds) == 0:
                     continue
 
-                layers = [gdl * 2, gdl * 2 + 1]
-
                 # skip these plots to save time
                 # if not self.signal:
                 #     continue
@@ -513,7 +510,7 @@ class Plotter:
                 im.set_clim(0.9, zmax)
                 ax.set_xlabel("Phi module")
                 ax.set_ylabel("Z sensor")
-                ax.set_title(f"Global double-layers {layers}, {req_text}")
+                ax.set_title(f"Global double-layer {gdl}, {req_text}")
                 fig.colorbar(im, ax=ax, label="Number of mds", pad=0.01)
                 pdf.savefig()
                 plt.close()
@@ -600,10 +597,10 @@ class Plotter:
                 plt.close()
 
 
-    def plot_md_efficiency_vs_kinematics_2(self, pdf: PdfPages):
+    def plot_md_efficiency_vs_kinematics(self, pdf: PdfPages):
 
         # denominator
-        dmask = self.get_denominator_mask() & (self.mcps["mcp_detectable_OTB"] == True)
+        dmask = self.get_denominator_mask()
         denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_pt", "mcp_eta", "mcp_phi"]]
         if denom.duplicated().any():
             raise ValueError("Denominator has duplicated rows!")
@@ -612,8 +609,7 @@ class Plotter:
         md_cols = [
             "file",
             "i_event", # the event
-            "md_system", # the system (IT, OT)
-            "md_doublelayer", # the double layer
+            "md_gdoublelayer", # the global double layer
             "md_module", # the phi-module
             "md_sensor", # the z-sensor
         ]
@@ -628,10 +624,7 @@ class Plotter:
 
         # check if mds's [file, i_event, i_mcp] is in denominator
         for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in mds.groupby(["md_system",
-                                                                    "md_doublelayer",
-                                                                    ]):
-                layers = [doublelayer * 2, doublelayer * 2 + 1]
+            for (gdl, group) in mds.groupby("md_gdoublelayer"):
 
                 md_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
                 merged = denom.merge(md_keys, on=["file", "i_event", "i_mcp"], how="inner")
@@ -651,60 +644,7 @@ class Plotter:
                 )
                 ax.set_xlabel(self.xlabel[kin])
                 ax.set_ylabel("MD algorithm efficiency")
-                ax.set_title(f"{NICKNAMES[system]}, layers {layers}")
-                ax.set_ylim(0.7, 1.03)
-                pdf.savefig()
-                plt.close()
-
-
-    def plot_md_efficiency_vs_kinematics(self, pdf: PdfPages):
-
-        # denominator
-        dmask = self.get_denominator_mask()
-        denom = self.mcps[dmask][["file", "i_event", "i_mcp", "mcp_pt", "mcp_eta", "mcp_phi"]]
-        if denom.duplicated().any():
-            raise ValueError("Denominator has duplicated rows!")
-
-        # numerator
-        md_cols = [
-            "file",
-            "i_event", # the event
-            "md_system", # the system (IT, OT)
-            "md_doublelayer", # the double layer
-            "md_module", # the phi-module
-            "md_sensor", # the z-sensor
-        ]
-
-        # filter mds to only those with same parent mcp
-        same_parent = self.mds["i_mcp"] != NO_MCP
-        mds = self.mds[same_parent][ md_cols + ["i_mcp"] ].drop_duplicates()
-
-        # check if mds's [file, i_event, i_mcp] is in denominator
-        for kin in ["mcp_pt", "mcp_eta", "mcp_phi"]:
-            for ((system, doublelayer), group) in mds.groupby(["md_system",
-                                                                    "md_doublelayer",
-                                                                    ]):
-                layers = [doublelayer * 2, doublelayer * 2 + 1]
-
-                md_keys = group[["file", "i_event", "i_mcp"]].drop_duplicates()
-                merged = denom.merge(md_keys, on=["file", "i_event", "i_mcp"], how="inner")
-
-                n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
-                n_numer, edges = np.histogram(merged[kin], bins=self.bins[kin])
-                efficiency = np.divide(n_numer, n_denom, out=np.zeros_like(n_numer, dtype=float), where=n_denom!=0)
-                centers = 0.5 * (edges[1:] + edges[:-1])
-                fig, ax = plt.subplots()
-                ax.plot(
-                    centers,
-                    efficiency,
-                    marker="o",
-                    markersize=1,
-                    linestyle="-",
-                    color="dodgerblue",
-                )
-                ax.set_xlabel(self.xlabel[kin])
-                ax.set_ylabel("MD finding efficiency")
-                ax.set_title(f"{NICKNAMES[system]}, layers {layers}")
+                ax.set_title(f"Global double-layer {gdl}")
                 ax.set_ylim(0.7, 1.03)
                 pdf.savefig()
                 plt.close()
