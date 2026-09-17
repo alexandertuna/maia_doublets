@@ -40,7 +40,6 @@ from maia_doublets.constants import DOUBLET_REQS, NO_MCP
 from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_SZ_CHI2, T2_REQ_ALL
 from maia_doublets.constants import MIN_COSTHETA, MIN_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import N_T2_PHI_SLICES
-from maia_doublets.constants import GLOBAL_DOUBLELAYER_TO_SYSTEM
 
 
 class Plotter:
@@ -118,7 +117,7 @@ class Plotter:
                 self.plot_detectable_efficiency_vs_kinematics(pdf)
                 self.plot_md_efficiency_vs_kinematics(pdf)
                 # self.write_md_denominator_info(pdf)
-                # self.plot_md_quality_efficiency(pdf)
+                self.plot_md_quality_efficiency(pdf)
                 self.plot_t2_efficiency_vs_kinematics(pdf)
                 self.plot_t2_quality_efficiency(pdf)
                 self.plot_t4_efficiency_vs_kinematics(pdf)
@@ -770,7 +769,9 @@ class Plotter:
 
                 for (gdl, group) in self.mds[baseline].groupby("md_gdoublelayer"):
 
-                    system = GLOBAL_DOUBLELAYER_TO_SYSTEM[gdl]
+                    if len(group) == 0:
+                        continue
+                    system = group["md_system"].iloc[0]
                     bins["md_phi_slice"] = np.linspace(-1, N_T2_PHI_SLICES[system]+1, N_T2_PHI_SLICES[system]+3)
 
                     layers = [gdl * 2, gdl * 2 + 1]
@@ -815,14 +816,12 @@ class Plotter:
             if not self.signal and any(["mcp" in feat for feat in [feature_x, feature_y]]):
                 continue
 
-            for ((system, doublelayer), group) in self.mds[baseline].groupby(["md_system",
-                                                                                   "md_doublelayer",
-                                                                                    ]):
+            for (gdl, group) in self.mds[baseline].groupby("md_gdoublelayer"):
 
-                logger.info(f"Plotting signal md features {feature_x} vs {feature_y}, system {system}, doublelayer {doublelayer} ...")
-                layers = [doublelayer * 2, doublelayer * 2 + 1]
+                logger.info(f"Plotting signal md features {feature_x} vs {feature_y}, gdl {gdl} ...")
                 if len(group) == 0:
                     continue
+                system = group["md_system"].iloc[0]
 
                 fig, ax = plt.subplots()
                 h2d, _, _, im = ax.hist2d(
@@ -838,7 +837,7 @@ class Plotter:
                 num = len(group)
                 ax.set_xlabel(xlabel[feature_x])
                 ax.set_ylabel(xlabel[feature_y])
-                ax.set_title(f"{NICKNAMES[system]} layers {layers}. N={num}")
+                ax.set_title(f"{NICKNAMES[system]}, gdl {gdl}. N={num}")
                 pdf.savefig()
                 plt.close()
 
@@ -850,27 +849,26 @@ class Plotter:
         logger.info(f"MD efficiency: total mds: {len(self.mds)}")
         logger.info(f"MD efficiency: total mds in baseline: {baseline.sum()}")
 
-        # todo: add comment
         for i_kin, kin in enumerate([
             "mcp_pt",
             "mcp_eta",
             "mcp_phi"
         ]):
 
-            for ((system, doublelayer), group) in self.mds[baseline].groupby(["md_system",
-                                                                                   "md_doublelayer",
-                                                                                   ]):
+            for (gdl, group) in self.mds[baseline].groupby("md_doublelayer"):
 
-                logger.info(f"Plotting md quality efficiency vs {kin}, system {system}, doublelayer {doublelayer} ...")
-                layers = [doublelayer * 2, doublelayer * 2 + 1]
+                logger.info(f"Plotting md quality efficiency vs {kin}, gdl {gdl} ...")
+                if len(group) == 0:
+                    continue
+                system = group["md_system"].iloc[0]
 
                 for req in DOUBLET_REQS:
                     req_text, req_mask = self.md_requirements(group, req)
                     denom = group
                     numer = group[req_mask]
                     if i_kin == 0:
-                        logger.info(f"Denom for system {system} layers {layers} {req}: {len(denom)} mds")
-                        logger.info(f"Numer for system {system} layers {layers} {req}: {len(numer)} mds")
+                        logger.info(f"Denom for system {system} gdl {gdl} {req}: {len(denom)} mds")
+                        logger.info(f"Numer for system {system} gdl {gdl} {req}: {len(numer)} mds")
 
                     n_denom, edges = np.histogram(denom[kin], bins=self.bins[kin])
                     n_numer, edges = np.histogram(numer[kin], bins=self.bins[kin])
@@ -888,7 +886,7 @@ class Plotter:
                     )
                     ax.set_xlabel(self.xlabel[kin])
                     ax.set_ylabel("MD quality efficiency")
-                    ax.set_title(f"{NICKNAMES[system]} layers {layers}: {req_text}")
+                    ax.set_title(f"{NICKNAMES[system]}, gdl {gdl}: {req_text}")
                     ax.set_ylim(0.965, 1.004)
                     pdf.savefig()
                     plt.close()
