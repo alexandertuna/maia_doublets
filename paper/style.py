@@ -1,0 +1,21 @@
+from matplotlib import rcParams
+rcParams.update({
+    "font.size": 16,
+    "figure.figsize": (8, 8),
+    "xtick.direction": "in",
+    "ytick.direction": "in",
+    "xtick.top": True,
+    "ytick.right": True,
+    "xtick.minor.visible": True,
+    "ytick.minor.visible": True,
+    # "axes.grid": True,
+    # "axes.grid.which": "both",
+    # "axes.axisbelow": True,
+    # "grid.linewidth": 0.5,
+    # "grid.alpha": 0.1,
+    # "grid.color": "gray",
+    "figure.subplot.left": 0.15,
+    "figure.subplot.bottom": 0.09,
+    "figure.subplot.right": 0.97,
+    "figure.subplot.top": 0.95,
+})
