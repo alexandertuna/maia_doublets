@@ -32,13 +32,16 @@ def main():
     # parse options
     ops = options()
     check_options(ops)
-    fnames = get_filepaths(
-        geometry_version=ops.geo,
-        dataset=ops.dataset,
-        sim=ops.sim,
-        digi=ops.digi,
-        smear=ops.smear,
-    )
+    if ops.input:
+        fnames = parse_filepaths(ops.input)
+    else:
+        fnames = get_filepaths(
+            geometry_version=ops.geo,
+            dataset=ops.dataset,
+            sim=ops.sim,
+            digi=ops.digi,
+            smear=ops.smear,
+        )
     if not fnames:
         raise ValueError("No input files found")
     layers = parse_layers(ops.layers)
@@ -444,10 +447,11 @@ def options():
     parser.add_argument("--write-t8s", type=str, help="Write T8s to pickle file")
     parser.add_argument("--geo", type=str, help="Version of geometry to use for cuts (e.g. v01, v04)", required=True)
     parser.add_argument("--smear", type=str, default="00um", help="Smear value to use for digi hits (e.g. 10um)")
-    parser.add_argument("--dataset", type=str, help="Specify the dataset to use in the analysis")
+    parser.add_argument("--dataset", type=str, help="Specify the dataset to use in the analysis", required=True)
     parser.add_argument("--cutflow", type=str, default="cutflow.ndjson", help="Path to output newline-delimited JSON for cutflows file")
     parser.add_argument("--debug", action="store_true", help="Print some debug information")
     parser.add_argument("--pdf", type=str, default="", help="Path to output PDF file")
+    parser.add_argument("-i", "--input", type=str, default="", help="Path to input slcio file (overrides dataset)")
     return parser.parse_args()
 
 
