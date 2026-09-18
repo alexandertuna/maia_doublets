@@ -1,21 +1,30 @@
-GEO="v07"
+#
+# Run me like:
+# > source run_background.sh
+#
+GEO="v06"
 SMEAR="10um"
-DATA_DIR="/ceph/users/atuna/work/maia/maia_datasets/samples/${GEO}/neutrinoGun/${SMEAR}"
+DATASET="neutrinoGun20"
 
+DATA_DIR="/ceph/users/atuna/work/maia/maia_datasets/samples/${GEO}/${DATASET}/${SMEAR}"
 OUTPUT_DIR=$(dirname "${BASH_SOURCE[0]}")/../output
-PKL_DIR=${OUTPUT_DIR}/${GEO}_background100_digi_${SMEAR}
+PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
+
 mkdir -p ${PKL_DIR}
 echo "Output directory: ${PKL_DIR}"
 
-for IT in $(seq 10 19); do
+for IT in $(seq 1 9); do
 
-    echo "Running iteration ${IT} ..."
+    INPUT=${DATA_DIR}/${DATASET}_digi_${IT}.slcio
+
+    echo "Running ${INPUT} ..."
     maia_doublets \
-    -i ${DATA_DIR}/neutrinoGun_digi_${IT}.slcio \
+    -i ${INPUT} \
     --geo ${GEO} \
     --digi \
     --smear ${SMEAR} \
     --fast-mds \
+    --dataset ${DATASET} \
     --cutflow ${PKL_DIR}/cutflow_${IT}.ndjson \
     --write-mcps ${PKL_DIR}/mcps_${IT}.pkl \
     --write-hits ${PKL_DIR}/hits_${IT}.pkl \
