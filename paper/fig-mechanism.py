@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import multiprocessing as mp
 
 MIN_PT = 0.2 # GeV
 MIN_T = -10 # ns
@@ -16,12 +17,14 @@ MAX_Z = 4000 # mm
 MIN_R = 0
 MAX_R = 1900 # mm
 MCPARTICLE = "MCParticle"
-N_BIB_FILES = 5
+GEN_STATUS = 1
+N_BIB_FILES = 50
 BIB = [
     f"/ceph/users/atuna/work/maia/maia_datasets/productions/bib.2026_08_14_17h50m00s/BIB10TeV/sim_{muon}/BIB_sim_{i+1}.slcio"
     for i in range(N_BIB_FILES)
     for muon in ["mp", "mm"]
 ]
+MAX_PROC = 20
 
 
 PKL = "fig-mechanism.pkl"
@@ -32,7 +35,6 @@ def main():
         df = pd.read_pickle(PKL)
     else:
         df = get_mcparticles(BIB)
-        df = post_process(df)
         df.to_pickle(PKL)
 
     print(df)
@@ -40,34 +42,40 @@ def main():
         plot(df, pdf)
 
 
-def get_mcparticles(bib) -> pd.DataFrame:
+def get_mcparticles(fpaths: list[str]) -> pd.DataFrame:
+    dfs = []
+    with mp.Pool(processes=MAX_PROC) as pool:
+        dfs = pool.map(get_mcparticles_one_file, fpaths)
+    return pd.concat(dfs, ignore_index=True)
+
+
+def get_mcparticles_one_file(fpath: str) -> pd.DataFrame:
     """
     https://github.com/MuonColliderSoft/LCIO/blob/master/src/cpp/include/IMPL/MCParticleImpl.h
     """
     import pyLCIO
-    all_data = []
-    for i_fpath, fpath in enumerate(bib):
-        print(f"Processing file {i_fpath + 1}/{len(bib)}")
-        reader = pyLCIO.IOIMPL.LCFactory.getInstance().createLCReader()
-        reader.open(fpath)
-        for event in reader:
-            for mcparticle in event.getCollection(MCPARTICLE):
-                all_data.append({
-                    "pdg": mcparticle.getPDG(),
-                    "t": mcparticle.getTime(),
-                    "x": mcparticle.getVertex()[0],
-                    "y": mcparticle.getVertex()[1],
-                    "z": mcparticle.getVertex()[2],
-                    "px": mcparticle.getMomentum()[0],
-                    "py": mcparticle.getMomentum()[1],
-                    "pz": mcparticle.getMomentum()[2],
-                    "gen_status": mcparticle.getGeneratorStatus(),
-                    "sim_status": mcparticle.getSimulatorStatus(),
-                    "nparents": len(mcparticle.getParents()),
-                    "nchildren": len(mcparticle.getDaughters()),
-                })
-        reader.close()
-    return pd.DataFrame(all_data)
+    print(f"Processing file {fpath}")
+    rows = []
+    reader = pyLCIO.IOIMPL.LCFactory.getInstance().createLCReader()
+    reader.open(fpath)
+    for event in reader:
+        for mcp in event.getCollection(MCPARTICLE):
+            rows.append({
+                "pdg": mcp.getPDG(),
+                "t": mcp.getTime(),
+                "x": mcp.getVertex()[0],
+                "y": mcp.getVertex()[1],
+                "z": mcp.getVertex()[2],
+                "px": mcp.getMomentum()[0],
+                "py": mcp.getMomentum()[1],
+                "pz": mcp.getMomentum()[2],
+                "gen_status": mcp.getGeneratorStatus(),
+                "sim_status": mcp.getSimulatorStatus(),
+                "nparents": len(mcp.getParents()),
+                "nchildren": len(mcp.getDaughters()),
+            })
+    reader.close()
+    return post_process(pd.DataFrame(rows))
 
 
 def post_process(df: pd.DataFrame) -> pd.DataFrame:
@@ -76,6 +84,7 @@ def post_process(df: pd.DataFrame) -> pd.DataFrame:
     df["p"] = (df["px"]**2 + df["py"]**2 + df["pz"]**2)**0.5
     df = df[df["pt"] > MIN_PT]
     df = df[(df["t"] > MIN_T) & (df["t"] < MAX_T)]
+    df = df[df["gen_status"] == GEN_STATUS]
     return df
 
 
@@ -106,12 +115,6 @@ def plot(df: pd.DataFrame, pdf: PdfPages):
     ax.set_xlim(MIN_Z, MAX_Z)
     ax.set_ylim(MIN_R, MAX_R)
     ax.set_aspect("equal")  # otherwise arrow angles look distorted
-
-
-    # ax.set_title("Mechanism")
-    # ax.set_xlabel("z [mm]")
-    # ax.set_ylabel("r [mm]")
-    # ax.scatter(df["z"], df["r"], c=df["rz"], cmap="viridis", s=1)
     pdf.savefig(fig)
     plt.close(fig)
 
