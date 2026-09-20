@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.ticker import MaxNLocator
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 import multiprocessing as mp
 
 MIN_PT = 1.0 # GeV
@@ -30,6 +32,8 @@ TTBAR = [
 ]
 MAX_PROC = 20
 B_FIELD = 5 # T
+SPEED_OF_LIGHT = 299.792458 # mm/ns
+K_CONSTANT = 0.299792458e-3  # GeV / (T * mm) per unit charge
 T_STEP = 3 # ns
 T_STEPS = 3
 
@@ -109,6 +113,7 @@ def get_mcparticles_one_file(fpath: str, events_of_interest: list[int] = [0]) ->
         for mcp in event.getCollection(MCPARTICLE):
             rows.append({
                 "pdg": mcp.getPDG(),
+                "m": mcp.getMass(),
                 "q": mcp.getCharge(),
                 "t": mcp.getTime(),
                 "x": mcp.getVertex()[0],
@@ -131,6 +136,7 @@ def post_process(df: pd.DataFrame) -> pd.DataFrame:
     df["r"] = (df["x"]**2 + df["y"]**2)**0.5
     df["pt"] = (df["px"]**2 + df["py"]**2)**0.5
     df["p"] = (df["px"]**2 + df["py"]**2 + df["pz"]**2)**0.5
+    df["beta"] = df["p"] / np.sqrt(df["p"]**2 + df["m"]**2)
     df = df[df["pt"] > MIN_PT]
     df = df[(df["t"] > MIN_T) & (df["t"] < MAX_T)]
     df = df[df["gen_status"] == GEN_STATUS]
@@ -140,10 +146,12 @@ def post_process(df: pd.DataFrame) -> pd.DataFrame:
 def plot(df: pd.DataFrame, pdf: PdfPages):
     plot_pt(df, pdf)
     plot_t(df, pdf)
+    # plot_rz(df, pdf)
+    # plot_xy(df, pdf)
+    plot_xyz(df, pdf)
 
-    # one vector for each particle (z vs r)
-    # vector points in the direction of the particle's momentum
-    df["rz"] = np.arctan2(df["r"], df["z"])
+
+def plot_rz(df: pd.DataFrame, pdf: PdfPages):
 
     length = 200.0
     x, y, z, r = (df[c].to_numpy() for c in ("x", "y", "z", "r"))
@@ -189,6 +197,60 @@ def plot(df: pd.DataFrame, pdf: PdfPages):
     ax.set_aspect("equal")  # otherwise arrow angles look distorted
     pdf.savefig(fig)
     plt.close(fig)
+
+
+def plot_xy(df: pd.DataFrame, pdf: PdfPages):
+    pass
+
+
+def plot_xyz(df: pd.DataFrame, pdf: PdfPages):
+
+    is_signal = df["is_bib"] == False
+    x, y, z = (df[col].to_numpy() for col in ("x", "y", "z"))
+    px, py, pz = (df[col].to_numpy() for col in ("px", "py", "pz"))
+    q, beta = (df[col].to_numpy() for col in ("q", "beta"))
+    trace_x, trace_y, trace_z = propagate_helix(x, y, z, px, py, pz, q, beta)
+    segs = np.stack([trace_z, trace_x, trace_y], axis=-1)  # (N, n_steps, 3); beam axis horizontal
+
+    fig = plt.figure(figsize=(6, 4.5))
+    ax = fig.add_subplot(projection="3d")
+    ax.computed_zorder = False  # respect zorder so signal draws on top
+
+    for mask, color, lw, alpha, zo, label in [
+            (~is_signal, "0.6",     0.4, 0.5, 1, "Background"),
+            ( is_signal, "#d62728", 1.2, 1.0, 2, "Signal")]:
+        lc = Line3DCollection(segs[mask], colors=color, linewidths=lw, alpha=alpha,
+                              zorder=zo, label=label)
+        lc.set_rasterized(True)  # small PDF, vector text
+        ax.add_collection3d(lc)
+
+    ax.set(xlabel="z [mm]", ylabel="x [mm]", zlabel="y [mm]")
+    # for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+    #     axis.set_major_locator(MaxNLocator(5))  # avoid crowded tick labels
+    ax.set_box_aspect(np.ptp(segs.reshape(-1, 3), axis=0), zoom=0.85)  # true proportions
+    ax.view_init(elev=20, azim=-60)
+    ax.legend(loc="upper left", frameon=False)
+    # fig.savefig(fname, dpi=300, bbox_inches="tight")
+    pdf.savefig(fig)
+    plt.close(fig)
+
+
+def propagate_helix(x, y, z, px, py, pz, q, beta, B=B_FIELD, t_max=MAX_T, n_steps=T_STEPS):
+    """Units: mm, GeV, ns; B along +z. Returns X, Y, Z of shape (N, n_steps)."""
+    p  = np.sqrt(px**2 + py**2 + pz**2)
+    pt = np.hypot(px, py)
+    s = np.linspace(0, 1, n_steps)[None, :] * (beta * SPEED_OF_LIGHT * t_max)[:, None]
+    phi0 = np.arctan2(py, px)[:, None]
+    w = (-q * K_CONSTANT * B / p)[:, None] # signed d(phi)/ds
+    ws = w * s
+    small = np.abs(ws[:, -1:]) < 1e-6 # neutrals / stiff tracks -> straight line
+    w_safe = np.where(small, 1.0, w)
+    fx = np.where(small, s * np.cos(phi0),  (np.sin(phi0 + ws) - np.sin(phi0)) / w_safe)
+    fy = np.where(small, s * np.sin(phi0), -(np.cos(phi0 + ws) - np.cos(phi0)) / w_safe)
+    trace_x = x[:, None] + (pt / p)[:, None] * fx
+    trace_y = y[:, None] + (pt / p)[:, None] * fy
+    trace_z = z[:, None] + (pz / p)[:, None] * s
+    return trace_x, trace_y, trace_z
 
 
 def plot_pt(df: pd.DataFrame, pdf: PdfPages):
