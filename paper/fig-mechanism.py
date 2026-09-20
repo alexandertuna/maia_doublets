@@ -11,31 +11,37 @@ from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 import multiprocessing as mp
 
-MIN_PT = 1.0 # GeV
-MIN_T = -10 # ns
-MAX_T = 20 # ns
-MIN_Z = -4000 # mm
-MAX_Z = 4000 # mm
+MIN_PT = 0.5 # GeV
+MIN_T = -25 # ns
+MAX_T = 25 # ns
+MAX_T_HELIX = 0.5 # ns
+N_STEPS = 10
+MIN_Z = -3.8 # m
+MAX_Z = 3.8 # m
 MIN_R = 0
-MAX_R = 1900 # mm
+MAX_R = 0.9 # m
+MM_TO_M = 1e-3
 MCPARTICLE = "MCParticle"
 GEN_STATUS = 1
-N_BIB_FILES = 20
+N_PARENTS = 0
+N_BIB_FILES = 1666
 BIB = [
     f"/ceph/users/atuna/work/maia/maia_datasets/productions/bib.2026_08_14_17h50m00s/BIB10TeV/sim_{muon}/BIB_sim_{i+1}.slcio"
     for i in range(N_BIB_FILES)
     for muon in ["mp", "mm"]
 ]
 TTBAR = [
-    "/ceph/users/atuna/work/maia/maia_noodling/experiments/simulate_ttbar.2026_07_08_10h14m00s/ttbar_sim/ttbar_sim_10000.slcio", # event 1 is quite central
-    # "/ceph/users/atuna/work/maia/maia_datasets/productions/ttbar.2026_09_19_13h43m00s/ttbar_sim_1.slcio",
+    # "/ceph/users/atuna/work/maia/maia_noodling/experiments/simulate_ttbar.2026_07_08_10h14m00s/ttbar_sim/ttbar_sim_10000.slcio", # event 1 is quite central
+    "/ceph/users/atuna/work/maia/maia_datasets/productions/ttbar.2026_09_19_13h43m00s/ttbar_sim_10000.slcio",
 ]
-MAX_PROC = 20
+MAX_PROC = 40
 B_FIELD = 5 # T
 SPEED_OF_LIGHT = 299.792458 # mm/ns
 K_CONSTANT = 0.299792458e-3  # GeV / (T * mm) per unit charge
 T_STEP = 3 # ns
 T_STEPS = 3
+SIGNAL_EVENT_OF_INTEREST = 5
+BIB_EVENT_OF_INTEREST = 0
 
 
 PKL = "fig-mechanism.pkl"
@@ -60,18 +66,6 @@ def main():
         plot(df, pdf)
 
 
-def check_total_z_momentum(fpaths: list[str]):
-    info = []
-    for fpath in fpaths:
-        for event in range(10):
-            df = get_mcparticles_one_file(fpath, events_of_interest=[event])
-            num, mean, std = len(df), df["pz"].mean(), df["pz"].std()
-            info.append([fpath, event, mean, std])
-
-    for fpath, event, mean, std in info:
-        print(f"File {os.path.basename(fpath)} event {event} num pz: {num:6d}, mean pz: {mean:6.1f}, std pz: {std:6.1f}")
-
-
 def is_bib_file(fpath: str) -> bool:
     bname = os.path.basename(fpath)
     if "BIB" in bname:
@@ -85,31 +79,32 @@ def get_mcparticles(fpaths: list[str]) -> pd.DataFrame:
     dfs = []
     with mp.Pool(processes=MAX_PROC) as pool:
         dfs = pool.map(get_mcparticles_one_file, fpaths)
+    print(f"Concatenating {len(dfs)} files ...")
     return pd.concat(dfs, ignore_index=True)
 
 
-def get_mcparticles_one_file(fpath: str, events_of_interest: list[int] = [0]) -> pd.DataFrame:
+def get_mcparticles_one_file(fpath: str, event_of_interest: int = None) -> pd.DataFrame:
     """
     https://github.com/MuonColliderSoft/LCIO/blob/master/src/cpp/include/IMPL/MCParticleImpl.h
     """
     import pyLCIO
     is_bib = is_bib_file(fpath)
+    if event_of_interest is None:
+        eoi = SIGNAL_EVENT_OF_INTEREST if not is_bib else BIB_EVENT_OF_INTEREST
+    else:
+        eoi = event_of_interest
 
-    # \HACK
-    if not is_bib:
-        events_of_interest = [1]
-    # /HACK
-
-    print(f"Processing file {fpath}, is_bib={is_bib}")
+    print(f"Processing file {fpath}, is_bib={is_bib}, event_of_interest={eoi}")
     rows = []
     reader = pyLCIO.IOIMPL.LCFactory.getInstance().createLCReader()
     reader.open(fpath)
+
+    # EVENT::LCEvent* evt = lcReader->readEvent(targetRun, targetEvent);
+
+    reader.skipNEvents(eoi)
     for i_event, event in enumerate(reader):
-        if i_event not in events_of_interest:
-            print(f"Skipping event {i_event} of {os.path.basename(fpath)}")
-            if i_event > max(events_of_interest):
-                break
-            continue
+        if i_event > 0:
+            break
         for mcp in event.getCollection(MCPARTICLE):
             rows.append({
                 "pdg": mcp.getPDG(),
@@ -144,7 +139,7 @@ def post_process(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def plot(df: pd.DataFrame, pdf: PdfPages):
-    plot_pt(df, pdf)
+    # plot_pt(df, pdf)
     plot_t(df, pdf)
     # plot_rz(df, pdf)
     # plot_xy(df, pdf)
@@ -210,32 +205,51 @@ def plot_xyz(df: pd.DataFrame, pdf: PdfPages):
     px, py, pz = (df[col].to_numpy() for col in ("px", "py", "pz"))
     q, beta = (df[col].to_numpy() for col in ("q", "beta"))
     trace_x, trace_y, trace_z = propagate_helix(x, y, z, px, py, pz, q, beta)
+    trace_x *= MM_TO_M
+    trace_y *= MM_TO_M
+    trace_z *= MM_TO_M
+
     segs = np.stack([trace_z, trace_x, trace_y], axis=-1)  # (N, n_steps, 3); beam axis horizontal
 
-    fig = plt.figure(figsize=(6, 4.5))
+    fig = plt.figure(figsize=(12, 4))
     ax = fig.add_subplot(projection="3d")
     ax.computed_zorder = False  # respect zorder so signal draws on top
 
     for mask, color, lw, alpha, zo, label in [
-            (~is_signal, "0.6",     0.4, 0.5, 1, "Background"),
-            ( is_signal, "#d62728", 1.2, 1.0, 2, "Signal")]:
-        lc = Line3DCollection(segs[mask], colors=color, linewidths=lw, alpha=alpha,
-                              zorder=zo, label=label)
+            ( is_signal, "#d62728", 0.3, 0.3, 1, "Signal"),
+            (~is_signal, "#000000", 0.3, 0.3, 2, "Background"),
+        ]:
+        lc = Line3DCollection(segs[mask],
+                              colors=color,
+                              linewidths=lw, alpha=alpha,
+                              zorder=zo,
+                              label=label,
+                              )
         lc.set_rasterized(True)  # small PDF, vector text
         ax.add_collection3d(lc)
 
-    ax.set(xlabel="z [mm]", ylabel="x [mm]", zlabel="y [mm]")
-    # for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
-    #     axis.set_major_locator(MaxNLocator(5))  # avoid crowded tick labels
-    ax.set_box_aspect(np.ptp(segs.reshape(-1, 3), axis=0), zoom=0.85)  # true proportions
-    ax.view_init(elev=20, azim=-60)
-    ax.legend(loc="upper left", frameon=False)
-    # fig.savefig(fname, dpi=300, bbox_inches="tight")
-    pdf.savefig(fig)
+    ax.set(xlabel="z [m]", ylabel="x [m]", zlabel="y [m]")
+    physical_xlim, physical_ylim, physical_zlim = (-MAX_R, MAX_R), (-MAX_R, MAX_R), (MIN_Z, MAX_Z)
+    ax.set_xlim(*physical_zlim)
+    ax.set_ylim(*physical_xlim)
+    ax.set_zlim(*physical_ylim)
+    ax.set_box_aspect((np.ptp(physical_zlim), np.ptp(physical_xlim), np.ptp(physical_ylim)), zoom=1.5)
+
+    ax.grid(True, alpha=0.3, linewidth=0.5)
+    for axis in (ax.xaxis,
+                 ax.yaxis,
+                 ax.zaxis):
+        axis.pane.fill = False
+        axis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 1)
+
+    fig.subplots_adjust(left=0, right=0.95, bottom=0, top=1)
+    ax.view_init(elev=25, azim=-85)
+    # ax.legend(loc="upper left", frameon=False)
+    pdf.savefig(fig, dpi=1000)
     plt.close(fig)
 
 
-def propagate_helix(x, y, z, px, py, pz, q, beta, B=B_FIELD, t_max=MAX_T, n_steps=T_STEPS):
+def propagate_helix(x, y, z, px, py, pz, q, beta, B=B_FIELD, t_max=MAX_T_HELIX, n_steps=N_STEPS):
     """Units: mm, GeV, ns; B along +z. Returns X, Y, Z of shape (N, n_steps)."""
     p  = np.sqrt(px**2 + py**2 + pz**2)
     pt = np.hypot(px, py)
@@ -251,6 +265,21 @@ def propagate_helix(x, y, z, px, py, pz, q, beta, B=B_FIELD, t_max=MAX_T, n_step
     trace_y = y[:, None] + (pt / p)[:, None] * fy
     trace_z = z[:, None] + (pz / p)[:, None] * s
     return trace_x, trace_y, trace_z
+
+
+def check_total_z_momentum(fpaths: list[str]):
+    """
+    This is helpful for picking a more-central event
+    """
+    info = []
+    for fpath in fpaths:
+        for event in range(10):
+            df = get_mcparticles_one_file(fpath, event_of_interest=event)
+            num, mean, std = len(df), df["pz"].mean(), df["pz"].std()
+            info.append([fpath, event, num, mean, std])
+
+    for fpath, event, num, mean, std in info:
+        print(f"File {os.path.basename(fpath)} event {event} num: {num:6d}, mean pz: {mean:6.1f}, std pz: {std:6.1f}")
 
 
 def plot_pt(df: pd.DataFrame, pdf: PdfPages):
@@ -275,15 +304,18 @@ def plot_pt(df: pd.DataFrame, pdf: PdfPages):
     pdf.savefig(fig)
     plt.close(fig)
 
+
 def plot_t(df: pd.DataFrame, pdf: PdfPages):
-    fig, ax = plt.subplots()
-    ax.set_xlabel("t [ns]")
-    ax.set_ylabel("Counts")
-    bins = np.linspace(-50, 100, 150)
-    ax.hist(df["t"], bins=bins)
-    ax.semilogy()
-    pdf.savefig(fig)
-    plt.close(fig)
+    for is_bib in (True, False):
+        fig, ax = plt.subplots()
+        ax.set_xlabel("t [ns]")
+        ax.set_ylabel("Counts")
+        bins = np.linspace(-25, 25, 200)
+        ax.hist(df[df["is_bib"] == is_bib]["t"], bins=bins)
+        ax.semilogy()
+        ax.set_title("BIB" if is_bib else "Non-BIB")
+        pdf.savefig(fig)
+        plt.close(fig)
 
 if __name__ == "__main__":
     main()
