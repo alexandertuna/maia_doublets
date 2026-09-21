@@ -4,6 +4,7 @@ Equal spaced detector aka v07
 import style
 import os
 import re
+import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -25,7 +26,8 @@ MCPARTICLE = "MCParticle"
 GEN_STATUS = 1
 N_PARENTS = 0
 # N_BIB_FILES = 1666
-N_BIB_FILES = 833
+# N_BIB_FILES = 833
+N_BIB_FILES = 304
 # N_BIB_FILES = 6665
 BIB = [
     f"/ceph/users/atuna/work/maia/maia_datasets/productions/bib.2026_08_14_17h50m00s/BIB10TeV/sim_{muon}/BIB_sim_{i+1}.slcio"
@@ -56,7 +58,6 @@ def main():
     # return
 
     df = get_or_load_mcparticles()
-    # return 
     df = downsample_bib(df)
     df = remove_off_screen_mcparticles(df)
 
@@ -110,11 +111,14 @@ def remove_off_screen_mcparticles(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_mcparticles(fpaths: list[str]) -> pd.DataFrame:
-    dfs = []
     chunks = [fpaths[i:i+N_FILES_PER_WORKER] for i in range(0, len(fpaths), N_FILES_PER_WORKER)]
     indexs = range(len((chunks)))
-    with mp.Pool(processes=MAX_PROC) as pool:
-        dfs = pool.starmap(get_mcparticles_worker, zip(chunks, indexs))
+    with mp.Pool() as pool:
+        _ = pool.starmap(get_mcparticles_worker, zip(chunks, indexs))
+
+    print(f"Reading pickled dataframes from {PKL}.* ...")
+    dfs = [pd.read_pickle(f) for f in glob.glob(f"{PKL}.*")]
+
     print(f"Concatenating {len(dfs)} dfs ...")
     return pd.concat(dfs, ignore_index=True)
 
@@ -186,6 +190,7 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
     if index is not None:
         print(f"Saving DataFrame to {PKL}.{index}")
         df.to_pickle(f"{PKL}.{index:04}")
+        return
 
     return df
 
@@ -208,7 +213,8 @@ def plot(df: pd.DataFrame, pdf: PdfPages):
     plot_t(df, pdf)
     plot_rz(df, pdf)
     # plot_xy(df, pdf)
-    plot_xyz(df, pdf)
+    plot_xyz(df=df, t_max=0.5, pdf=pdf)
+    plot_xyz(df=df, t_max=5.0, pdf=pdf)
 
 
 def plot_rz(df: pd.DataFrame, pdf: PdfPages):
@@ -265,13 +271,13 @@ def plot_xy(df: pd.DataFrame, pdf: PdfPages):
     pass
 
 
-def plot_xyz(df: pd.DataFrame, pdf: PdfPages):
+def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
 
     is_signal = df["is_bib"] == False
     x, y, z = (df[col].to_numpy() for col in ("x", "y", "z"))
     px, py, pz = (df[col].to_numpy() for col in ("px", "py", "pz"))
     q, beta = (df[col].to_numpy() for col in ("q", "beta"))
-    trace_x, trace_y, trace_z = propagate_helix(x, y, z, px, py, pz, q, beta)
+    trace_x, trace_y, trace_z = propagate_helix(x, y, z, px, py, pz, q, beta, t_max=t_max)
     trace_x *= MM_TO_M
     trace_y *= MM_TO_M
     trace_z *= MM_TO_M
