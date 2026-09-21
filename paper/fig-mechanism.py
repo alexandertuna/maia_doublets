@@ -17,7 +17,8 @@ from concurrent.futures import ProcessPoolExecutor
 MIN_PT = 0.5 # GeV
 MIN_T = -25 # ns
 MAX_T = 25 # ns
-MAX_T_HELIX = 0.5 # ns
+PROPAGATE_A_BIT = 0.3 # ns
+PROPAGATE_A_LOT = 3.0 # ns
 N_STEPS = 10
 MIN_Z = -2.1 # m
 MAX_Z = 2.1 # m
@@ -26,6 +27,7 @@ MM_TO_M = 1e-3
 MCPARTICLE = "MCParticle"
 GEN_STATUS = 1
 N_PARENTS = 0
+N_BIB_FILES_FULL = 1666
 # N_BIB_FILES = 1666
 # N_BIB_FILES = 833
 # N_BIB_FILES = 304
@@ -36,7 +38,6 @@ BIB = [
     for muon in ["mp", "mm"]
 ]
 TTBAR = [
-    # "/ceph/users/atuna/work/maia/maia_noodling/experiments/simulate_ttbar.2026_07_08_10h14m00s/ttbar_sim/ttbar_sim_10000.slcio", # event 1 is quite central
     "/ceph/users/atuna/work/maia/maia_datasets/productions/ttbar.2026_09_19_13h43m00s/ttbar_sim_10000.slcio",
 ]
 PARALLEL = True
@@ -50,7 +51,7 @@ T_STEPS = 3
 SIGNAL_EVENT_OF_INTEREST = 5
 BIB_EVENT_OF_INTEREST = 0
 DOWNSAMPLE_BIB = 0.25
-
+DPI = 1000
 
 PKL = "fig-mechanism.pkl"
 
@@ -94,7 +95,6 @@ def is_bib_file(fpath: str) -> bool:
 
 def downsample_bib(df: pd.DataFrame) -> pd.DataFrame:
     if DOWNSAMPLE_BIB < 1.0:
-        print(df[df["is_bib"]].keys())
         n_files = len(df[df["is_bib"]][["bib_num"]].drop_duplicates())
         print(f"Downsampling {n_files} BIB files by {DOWNSAMPLE_BIB} ...")
         df = pd.concat([
@@ -163,6 +163,7 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
             eoi = event_of_interest
         print(f"Processing {fpath}, is_bib={is_bib}, event_of_interest={eoi}, bib_num={bib_num}")
 
+        counter = 0
         reader.open(fpath)
 
         # EVENT::LCEvent* evt = lcReader->readEvent(targetRun, targetEvent);
@@ -200,11 +201,16 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
                     "is_mm": is_mm,
                     "bib_num": bib_num,
                 })
+                counter += 1
+
+        print(f"Processing {fpath}, is_bib={is_bib}, event_of_interest={eoi}, bib_num={bib_num}, counter={counter}")
         reader.close()
 
-    print(f"Processing {fpath}, is_bib={is_bib}, event_of_interest={eoi}, bib_num={bib_num} post-processing")
+    # post-processing
     df = post_process(pd.DataFrame(rows))
 
+    # For big data processing,
+    # save data to disk instead of holding it in memory
     if index is not None:
         print(f"Saving DataFrame to {PKL}.{index}")
         df.to_pickle(f"{PKL}.{index:04}")
@@ -231,8 +237,8 @@ def plot(df: pd.DataFrame, pdf: PdfPages):
     # plot_t(df, pdf)
     # plot_rz(df, pdf)
     # plot_xy(df, pdf)
-    plot_xyz(df=df, t_max=0.5, pdf=pdf)
-    # plot_xyz(df=df, t_max=5.0, pdf=pdf)
+    plot_xyz(df=df, t_max=PROPAGATE_A_BIT, pdf=pdf)
+    plot_xyz(df=df, t_max=PROPAGATE_A_LOT, pdf=pdf)
 
 
 def plot_rz(df: pd.DataFrame, pdf: PdfPages):
@@ -304,18 +310,19 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
 
     segs = np.stack([trace_z, trace_x, trace_y], axis=-1)  # (N, n_steps, 3); beam axis horizontal
 
-    fig = plt.figure(figsize=(12, 4))
+    fig = plt.figure(figsize=(6, 4))
     ax = fig.add_subplot(projection="3d")
     ax.computed_zorder = False  # respect zorder so signal draws on top
 
     for mask, color, lw, alpha, zo, label in [
-            ( is_signal, "red", 0.3, 0.3, 1, "Signal"),
-            (~is_signal, "blue", 0.3, 0.3, 2, "Background"),
+            ( is_signal, "red", 0.2, 0.1, 1, "Signal"),
+            (~is_signal, "blue", 0.2, 0.1, 2, "Background"),
         ]:
         print(f"Drawing lines for {label} ...")
         lc = Line3DCollection(segs[mask],
                               colors=color,
-                              linewidths=lw, alpha=alpha,
+                              linewidths=lw,
+                              alpha=alpha,
                               zorder=zo,
                               label=label,
                               )
@@ -332,26 +339,55 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
     ax.set_box_aspect((np.ptp(physical_zlim), np.ptp(physical_xlim), np.ptp(physical_ylim)), zoom=1.2)
 
     # draw beamline as black line from z = MIN_Z to z = MAX_Z
-    ax.plot([MIN_Z, MAX_Z], [0, 0], [0, 0], color="black", linewidth=1, zorder=0, clip_on=False)
+    ax.plot([MIN_Z, MAX_Z], [0, 0], [0, 0], color="black", linewidth=0.5, alpha=0.5, zorder=0, clip_on=False)
 
-    ax.grid(True, alpha=0.3, linewidth=0.5)
-    for axis in (ax.xaxis,
-                 ax.yaxis,
-                 ax.zaxis):
+
+    # add text: legend
+    kwargs = dict(rotation=-4, fontsize=12, transform=ax.transAxes)
+    ax.text2D(0.40, 0.22 if t_max > 1 else 0.28, f"Collision", **kwargs, color="red")
+    ax.text2D(0.08, 0.28 if t_max > 1 else 0.35, f"Beam background", **kwargs, color="blue")
+
+    # add text: minimum PT threshold, propagation time, bib scaling
+    # angle text by 10 degrees
+    rotation = -4
+    fontsize = 10
+    kwargs = dict(rotation=rotation, fontsize=fontsize, transform=ax.transAxes)
+    bib_scaling = N_BIB_FILES / N_BIB_FILES_FULL * DOWNSAMPLE_BIB
+    ax.text2D(0.08, 0.830, r"$p_{T} >$" + f"{MIN_PT} GeV", **kwargs)
+    ax.text2D(0.44, 0.805, r"$\Delta t =$" + f"{t_max} ns", **kwargs)
+    if bib_scaling < 1.0:
+        ax.text2D(0.80, 0.780, f"BIB scaling: {bib_scaling:.1f}", **kwargs)
+
+    # manage the grid and axes
+    ax.grid(True, linewidth=0.1)
+    for axis in (
+        ax.xaxis,
+        ax.yaxis,
+        ax.zaxis,
+    ):
+        axis.set_tick_params(pad=-5 if axis == ax.xaxis else 0)
+        axis.labelpad = -5
+        axis.set_major_locator(MaxNLocator(5 if axis == ax.xaxis else 3))
+        axis.label.set_size(10)
+        axis.set_tick_params(labelsize=10)
         axis.pane.fill = False
-        axis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 1)
+        axis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 0.3)
 
     print("Adjusting figure layout and view ...")
     fig.subplots_adjust(left=0, right=0.95, bottom=0, top=1)
     ax.view_init(elev=25, azim=-80)
     # ax.legend(loc="upper left", frameon=False)
 
+    print("Saving figure to PNG ...")
+    tag = "early" if t_max < 1 else "later"
+    fig.savefig(f"fig-mechanism-{tag}.png", dpi=DPI)
+
     print("Saving figure to PDF ...")
-    pdf.savefig(fig, dpi=1000)
+    pdf.savefig(fig, dpi=DPI)
     plt.close(fig)
 
 
-def propagate_helix(x, y, z, px, py, pz, q, beta, B=B_FIELD, t_max=MAX_T_HELIX, n_steps=N_STEPS):
+def propagate_helix(x, y, z, px, py, pz, q, beta, t_max, B=B_FIELD, n_steps=N_STEPS):
     """Units: mm, GeV, ns; B along +z. Returns X, Y, Z of shape (N, n_steps)."""
     p  = np.sqrt(px**2 + py**2 + pz**2)
     pt = np.hypot(px, py)
