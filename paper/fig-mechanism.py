@@ -12,6 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
 
 MIN_PT = 0.5 # GeV
 MIN_T = -25 # ns
@@ -27,8 +28,8 @@ GEN_STATUS = 1
 N_PARENTS = 0
 # N_BIB_FILES = 1666
 # N_BIB_FILES = 833
-N_BIB_FILES = 304
-# N_BIB_FILES = 6665
+# N_BIB_FILES = 304
+N_BIB_FILES = 6665
 BIB = [
     f"/ceph/users/atuna/work/maia/maia_datasets/productions/bib.2026_08_14_17h50m00s/BIB10TeV/sim_{muon}/BIB_sim_{i+1}.slcio"
     for i in range(N_BIB_FILES)
@@ -38,7 +39,8 @@ TTBAR = [
     # "/ceph/users/atuna/work/maia/maia_noodling/experiments/simulate_ttbar.2026_07_08_10h14m00s/ttbar_sim/ttbar_sim_10000.slcio", # event 1 is quite central
     "/ceph/users/atuna/work/maia/maia_datasets/productions/ttbar.2026_09_19_13h43m00s/ttbar_sim_10000.slcio",
 ]
-MAX_PROC = 10
+PARALLEL = True
+MAX_WORKERS = 10
 N_FILES_PER_WORKER = 100
 B_FIELD = 5 # T
 SPEED_OF_LIGHT = 299.792458 # mm/ns
@@ -47,7 +49,7 @@ T_STEP = 3 # ns
 T_STEPS = 3
 SIGNAL_EVENT_OF_INTEREST = 5
 BIB_EVENT_OF_INTEREST = 0
-DOWNSAMPLE_BIB = 0.1
+DOWNSAMPLE_BIB = 0.25
 
 
 PKL = "fig-mechanism.pkl"
@@ -92,7 +94,9 @@ def is_bib_file(fpath: str) -> bool:
 
 def downsample_bib(df: pd.DataFrame) -> pd.DataFrame:
     if DOWNSAMPLE_BIB < 1.0:
-        print(f"Downsampling BIB by {DOWNSAMPLE_BIB} ...")
+        print(df[df["is_bib"]].keys())
+        n_files = len(df[df["is_bib"]][["bib_num"]].drop_duplicates())
+        print(f"Downsampling {n_files} BIB files by {DOWNSAMPLE_BIB} ...")
         df = pd.concat([
             df[df["is_bib"]].sample(frac=DOWNSAMPLE_BIB, random_state=42),
             df[~df["is_bib"]],
@@ -112,9 +116,15 @@ def remove_off_screen_mcparticles(df: pd.DataFrame) -> pd.DataFrame:
 
 def get_mcparticles(fpaths: list[str]) -> pd.DataFrame:
     chunks = [fpaths[i:i+N_FILES_PER_WORKER] for i in range(0, len(fpaths), N_FILES_PER_WORKER)]
-    indexs = range(len((chunks)))
-    with mp.Pool() as pool:
-        _ = pool.starmap(get_mcparticles_worker, zip(chunks, indexs))
+
+    if PARALLEL:
+        with ProcessPoolExecutor(max_workers=MAX_WORKERS) as pool:
+            futures = [pool.submit(get_mcparticles_worker, chunk, index) for index, chunk in enumerate(chunks)]
+            for future in futures:
+                _ = future.result()
+    else:
+        for index, chunk in enumerate(chunks):
+            _ = get_mcparticles_worker(chunk, index)
 
     print(f"Reading pickled dataframes from {PKL}.* ...")
     dfs = [pd.read_pickle(f) for f in glob.glob(f"{PKL}.*")]
@@ -127,12 +137,14 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
     """
     https://github.com/MuonColliderSoft/LCIO/blob/master/src/cpp/include/IMPL/MCParticleImpl.h
     """
+    import pyLCIO
+
     if len(fpaths) == 0:
         raise ValueError("No file paths provided to get_mcparticles_worker.")
-    import pyLCIO
     
-
     rows = []
+    reader = pyLCIO.IOIMPL.LCFactory.getInstance().createLCReader()
+
     for fpath in fpaths:
 
         if not os.path.exists(fpath):
@@ -142,16 +154,15 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
         # filename parsing
         is_bib = is_bib_file(fpath)
         is_mm = "sim_mm" in fpath
-        bib_number = int(re.search(r"BIB_sim_(\d+)\.slcio", fpath).group(1)) if is_bib else 0
+        bib_num = int(re.search(r"BIB_sim_(\d+)\.slcio", fpath).group(1)) if is_bib else 0
 
         # choosing an event
         if event_of_interest is None:
             eoi = SIGNAL_EVENT_OF_INTEREST if not is_bib else BIB_EVENT_OF_INTEREST
         else:
             eoi = event_of_interest
-        print(f"Processing {fpath}, is_bib={is_bib}, event_of_interest={eoi}")
+        print(f"Processing {fpath}, is_bib={is_bib}, event_of_interest={eoi}, bib_num={bib_num}")
 
-        reader = pyLCIO.IOIMPL.LCFactory.getInstance().createLCReader()
         reader.open(fpath)
 
         # EVENT::LCEvent* evt = lcReader->readEvent(targetRun, targetEvent);
@@ -159,8 +170,13 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
         for i_event, event in enumerate(reader):
             if i_event > 0:
                 break
-            for mcp in event.getCollection(MCPARTICLE):
+            mcps = event.getCollection(MCPARTICLE)
+            if not mcps:
+                raise ValueError(f"No MCParticles found in {fpath}, is_bib={is_bib}, event_of_interest={eoi}, bib_num={bib_num}")
+            for mcp in mcps:
                 # save memory
+                if not mcp:
+                    raise ValueError(f"Invalid MCParticle in {fpath}, is_bib={is_bib}, event_of_interest={eoi}, bib_num={bib_num}")
                 if mcp.getGeneratorStatus() != GEN_STATUS:
                     continue
                 if (mcp.getMomentum()[0]**2 + mcp.getMomentum()[1]**2) < MIN_PT**2:
@@ -182,11 +198,13 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
                     "nchildren": len(mcp.getDaughters()),
                     "is_bib": is_bib,
                     "is_mm": is_mm,
-                    "bib_number": bib_number,
+                    "bib_num": bib_num,
                 })
         reader.close()
 
+    print(f"Processing {fpath}, is_bib={is_bib}, event_of_interest={eoi}, bib_num={bib_num} post-processing")
     df = post_process(pd.DataFrame(rows))
+
     if index is not None:
         print(f"Saving DataFrame to {PKL}.{index}")
         df.to_pickle(f"{PKL}.{index:04}")
@@ -203,18 +221,18 @@ def post_process(df: pd.DataFrame) -> pd.DataFrame:
     # downscope column datatypes
     for col in ("m", "t", "x", "y", "z", "r", "px", "py", "pz", "pt", "p", "beta"):
         df[col] = df[col].astype(np.float32)
-    for col in ("pdg", "nparents", "nchildren", "bib_number"):
+    for col in ("pdg", "nparents", "nchildren", "bib_num"):
         df[col] = df[col].astype(np.int32)
     return df
 
 
 def plot(df: pd.DataFrame, pdf: PdfPages):
     # plot_pt(df, pdf)
-    plot_t(df, pdf)
-    plot_rz(df, pdf)
+    # plot_t(df, pdf)
+    # plot_rz(df, pdf)
     # plot_xy(df, pdf)
     plot_xyz(df=df, t_max=0.5, pdf=pdf)
-    plot_xyz(df=df, t_max=5.0, pdf=pdf)
+    # plot_xyz(df=df, t_max=5.0, pdf=pdf)
 
 
 def plot_rz(df: pd.DataFrame, pdf: PdfPages):
@@ -274,6 +292,8 @@ def plot_xy(df: pd.DataFrame, pdf: PdfPages):
 def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
 
     is_signal = df["is_bib"] == False
+
+    print("Propagating helices ...")
     x, y, z = (df[col].to_numpy() for col in ("x", "y", "z"))
     px, py, pz = (df[col].to_numpy() for col in ("px", "py", "pz"))
     q, beta = (df[col].to_numpy() for col in ("q", "beta"))
@@ -292,6 +312,7 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
             ( is_signal, "red", 0.3, 0.3, 1, "Signal"),
             (~is_signal, "blue", 0.3, 0.3, 2, "Background"),
         ]:
+        print(f"Drawing lines for {label} ...")
         lc = Line3DCollection(segs[mask],
                               colors=color,
                               linewidths=lw, alpha=alpha,
@@ -302,6 +323,7 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
         lc.set_rasterized(True)  # small PDF, vector text
         ax.add_collection3d(lc)
 
+    print("Drawing 3D figure ...")
     ax.set(xlabel="z [m]", ylabel="x [m]", zlabel="y [m]")
     physical_xlim, physical_ylim, physical_zlim = (-MAX_R, MAX_R), (-MAX_R, MAX_R), (MIN_Z, MAX_Z)
     ax.set_xlim(*physical_zlim)
@@ -319,9 +341,12 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
         axis.pane.fill = False
         axis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 1)
 
+    print("Adjusting figure layout and view ...")
     fig.subplots_adjust(left=0, right=0.95, bottom=0, top=1)
     ax.view_init(elev=25, azim=-80)
     # ax.legend(loc="upper left", frameon=False)
+
+    print("Saving figure to PDF ...")
     pdf.savefig(fig, dpi=1000)
     plt.close(fig)
 
