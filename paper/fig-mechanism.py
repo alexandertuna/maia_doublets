@@ -3,6 +3,7 @@ Equal spaced detector aka v07
 """
 import style
 import os
+import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,15 +17,16 @@ MIN_T = -25 # ns
 MAX_T = 25 # ns
 MAX_T_HELIX = 0.5 # ns
 N_STEPS = 10
-MIN_Z = -3.8 # m
-MAX_Z = 3.8 # m
-MIN_R = 0
+MIN_Z = -2.1 # m
+MAX_Z = 2.1 # m
 MAX_R = 0.9 # m
 MM_TO_M = 1e-3
 MCPARTICLE = "MCParticle"
 GEN_STATUS = 1
 N_PARENTS = 0
-N_BIB_FILES = 1666
+# N_BIB_FILES = 1666
+N_BIB_FILES = 833
+# N_BIB_FILES = 6665
 BIB = [
     f"/ceph/users/atuna/work/maia/maia_datasets/productions/bib.2026_08_14_17h50m00s/BIB10TeV/sim_{muon}/BIB_sim_{i+1}.slcio"
     for i in range(N_BIB_FILES)
@@ -34,7 +36,8 @@ TTBAR = [
     # "/ceph/users/atuna/work/maia/maia_noodling/experiments/simulate_ttbar.2026_07_08_10h14m00s/ttbar_sim/ttbar_sim_10000.slcio", # event 1 is quite central
     "/ceph/users/atuna/work/maia/maia_datasets/productions/ttbar.2026_09_19_13h43m00s/ttbar_sim_10000.slcio",
 ]
-MAX_PROC = 40
+MAX_PROC = 10
+N_FILES_PER_WORKER = 100
 B_FIELD = 5 # T
 SPEED_OF_LIGHT = 299.792458 # mm/ns
 K_CONSTANT = 0.299792458e-3  # GeV / (T * mm) per unit charge
@@ -42,6 +45,7 @@ T_STEP = 3 # ns
 T_STEPS = 3
 SIGNAL_EVENT_OF_INTEREST = 5
 BIB_EVENT_OF_INTEREST = 0
+DOWNSAMPLE_BIB = 0.1
 
 
 PKL = "fig-mechanism.pkl"
@@ -51,11 +55,10 @@ def main():
     # check_total_z_momentum(TTBAR)
     # return
 
-    if os.path.exists(PKL):
-        df = pd.read_pickle(PKL)
-    else:
-        df = get_mcparticles(BIB + TTBAR)
-        df.to_pickle(PKL)
+    df = get_or_load_mcparticles()
+    # return 
+    df = downsample_bib(df)
+    df = remove_off_screen_mcparticles(df)
 
     print(df)
     print("Number of particles:", len(df))
@@ -64,6 +67,17 @@ def main():
 
     with PdfPages("fig-mechanism.pdf") as pdf:
         plot(df, pdf)
+
+
+def get_or_load_mcparticles() -> pd.DataFrame:
+    if os.path.exists(PKL):
+        print(f"Loading {PKL} ...")
+        df = pd.read_pickle(PKL)
+    else:
+        df = get_mcparticles(BIB + TTBAR)
+        print(f"Writing to {PKL} ...")
+        df.to_pickle(PKL)
+    return df
 
 
 def is_bib_file(fpath: str) -> bool:
@@ -75,56 +89,105 @@ def is_bib_file(fpath: str) -> bool:
     raise ValueError(f"Unknown file type: {fpath}")
 
 
+def downsample_bib(df: pd.DataFrame) -> pd.DataFrame:
+    if DOWNSAMPLE_BIB < 1.0:
+        print(f"Downsampling BIB by {DOWNSAMPLE_BIB} ...")
+        df = pd.concat([
+            df[df["is_bib"]].sample(frac=DOWNSAMPLE_BIB, random_state=42),
+            df[~df["is_bib"]],
+        ], ignore_index=True)
+    return df
+
+
+def remove_off_screen_mcparticles(df: pd.DataFrame) -> pd.DataFrame:
+    min_z = MIN_Z / MM_TO_M
+    max_z = MAX_Z / MM_TO_M
+    max_r = MAX_R / MM_TO_M
+    df = df[df["r"] < max_r]
+    df = df[(df["z"] > min_z) & (df["z"] < max_z)]
+    df = df[(df["t"] > MIN_T) & (df["t"] < MAX_T)]
+    return df
+
+
 def get_mcparticles(fpaths: list[str]) -> pd.DataFrame:
     dfs = []
+    chunks = [fpaths[i:i+N_FILES_PER_WORKER] for i in range(0, len(fpaths), N_FILES_PER_WORKER)]
+    indexs = range(len((chunks)))
     with mp.Pool(processes=MAX_PROC) as pool:
-        dfs = pool.map(get_mcparticles_one_file, fpaths)
-    print(f"Concatenating {len(dfs)} files ...")
+        dfs = pool.starmap(get_mcparticles_worker, zip(chunks, indexs))
+    print(f"Concatenating {len(dfs)} dfs ...")
     return pd.concat(dfs, ignore_index=True)
 
 
-def get_mcparticles_one_file(fpath: str, event_of_interest: int = None) -> pd.DataFrame:
+def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_interest: int = None) -> pd.DataFrame:
     """
     https://github.com/MuonColliderSoft/LCIO/blob/master/src/cpp/include/IMPL/MCParticleImpl.h
     """
+    if len(fpaths) == 0:
+        raise ValueError("No file paths provided to get_mcparticles_worker.")
     import pyLCIO
-    is_bib = is_bib_file(fpath)
-    if event_of_interest is None:
-        eoi = SIGNAL_EVENT_OF_INTEREST if not is_bib else BIB_EVENT_OF_INTEREST
-    else:
-        eoi = event_of_interest
+    
 
-    print(f"Processing file {fpath}, is_bib={is_bib}, event_of_interest={eoi}")
     rows = []
-    reader = pyLCIO.IOIMPL.LCFactory.getInstance().createLCReader()
-    reader.open(fpath)
+    for fpath in fpaths:
 
-    # EVENT::LCEvent* evt = lcReader->readEvent(targetRun, targetEvent);
+        if not os.path.exists(fpath):
+            print(f"File {fpath} does not exist, skipping.")
+            continue
 
-    reader.skipNEvents(eoi)
-    for i_event, event in enumerate(reader):
-        if i_event > 0:
-            break
-        for mcp in event.getCollection(MCPARTICLE):
-            rows.append({
-                "pdg": mcp.getPDG(),
-                "m": mcp.getMass(),
-                "q": mcp.getCharge(),
-                "t": mcp.getTime(),
-                "x": mcp.getVertex()[0],
-                "y": mcp.getVertex()[1],
-                "z": mcp.getVertex()[2],
-                "px": mcp.getMomentum()[0],
-                "py": mcp.getMomentum()[1],
-                "pz": mcp.getMomentum()[2],
-                "gen_status": mcp.getGeneratorStatus(),
-                "sim_status": mcp.getSimulatorStatus(),
-                "nparents": len(mcp.getParents()),
-                "nchildren": len(mcp.getDaughters()),
-                "is_bib": is_bib,
-            })
-    reader.close()
-    return post_process(pd.DataFrame(rows))
+        # filename parsing
+        is_bib = is_bib_file(fpath)
+        is_mm = "sim_mm" in fpath
+        bib_number = int(re.search(r"BIB_sim_(\d+)\.slcio", fpath).group(1)) if is_bib else 0
+
+        # choosing an event
+        if event_of_interest is None:
+            eoi = SIGNAL_EVENT_OF_INTEREST if not is_bib else BIB_EVENT_OF_INTEREST
+        else:
+            eoi = event_of_interest
+        print(f"Processing {fpath}, is_bib={is_bib}, event_of_interest={eoi}")
+
+        reader = pyLCIO.IOIMPL.LCFactory.getInstance().createLCReader()
+        reader.open(fpath)
+
+        # EVENT::LCEvent* evt = lcReader->readEvent(targetRun, targetEvent);
+        reader.skipNEvents(eoi)
+        for i_event, event in enumerate(reader):
+            if i_event > 0:
+                break
+            for mcp in event.getCollection(MCPARTICLE):
+                # save memory
+                if mcp.getGeneratorStatus() != GEN_STATUS:
+                    continue
+                if (mcp.getMomentum()[0]**2 + mcp.getMomentum()[1]**2) < MIN_PT**2:
+                    continue
+                rows.append({
+                    "pdg": mcp.getPDG(),
+                    "m": mcp.getMass(),
+                    "q": mcp.getCharge(),
+                    "t": mcp.getTime(),
+                    "x": mcp.getVertex()[0],
+                    "y": mcp.getVertex()[1],
+                    "z": mcp.getVertex()[2],
+                    "px": mcp.getMomentum()[0],
+                    "py": mcp.getMomentum()[1],
+                    "pz": mcp.getMomentum()[2],
+                    "gen_status": mcp.getGeneratorStatus(),
+                    "sim_status": mcp.getSimulatorStatus(),
+                    "nparents": len(mcp.getParents()),
+                    "nchildren": len(mcp.getDaughters()),
+                    "is_bib": is_bib,
+                    "is_mm": is_mm,
+                    "bib_number": bib_number,
+                })
+        reader.close()
+
+    df = post_process(pd.DataFrame(rows))
+    if index is not None:
+        print(f"Saving DataFrame to {PKL}.{index}")
+        df.to_pickle(f"{PKL}.{index:04}")
+
+    return df
 
 
 def post_process(df: pd.DataFrame) -> pd.DataFrame:
@@ -132,21 +195,25 @@ def post_process(df: pd.DataFrame) -> pd.DataFrame:
     df["pt"] = (df["px"]**2 + df["py"]**2)**0.5
     df["p"] = (df["px"]**2 + df["py"]**2 + df["pz"]**2)**0.5
     df["beta"] = df["p"] / np.sqrt(df["p"]**2 + df["m"]**2)
-    df = df[df["pt"] > MIN_PT]
-    df = df[(df["t"] > MIN_T) & (df["t"] < MAX_T)]
-    df = df[df["gen_status"] == GEN_STATUS]
+    # downscope column datatypes
+    for col in ("m", "t", "x", "y", "z", "r", "px", "py", "pz", "pt", "p", "beta"):
+        df[col] = df[col].astype(np.float32)
+    for col in ("pdg", "nparents", "nchildren", "bib_number"):
+        df[col] = df[col].astype(np.int32)
     return df
 
 
 def plot(df: pd.DataFrame, pdf: PdfPages):
     # plot_pt(df, pdf)
     plot_t(df, pdf)
-    # plot_rz(df, pdf)
+    plot_rz(df, pdf)
     # plot_xy(df, pdf)
     plot_xyz(df, pdf)
 
 
 def plot_rz(df: pd.DataFrame, pdf: PdfPages):
+
+    print("Starting plot_rz...")
 
     length = 200.0
     x, y, z, r = (df[c].to_numpy() for c in ("x", "y", "z", "r"))
@@ -160,36 +227,36 @@ def plot_rz(df: pd.DataFrame, pdf: PdfPages):
     sig_mask = df["is_bib"] == False
     bkg_mask = df["is_bib"] == True
 
-    sig_trajs = []
-    for mcp in df[sig_mask].itertuples():
-        step_x, step_y, step_z, step_r = mcp.x, mcp.y, mcp.z, mcp.r
-        if mcp.is_bib:
-            continue
-        traj = []
-        for _ in range(T_STEPS):
-            step_x, step_y, step_z = step_x + px * T_STEP, step_y + py * T_STEP, step_z + pz * T_STEP
-            step_r = (step_x**2 + step_y**2)**0.5
-            traj.append((step_z, step_r))
-        sig_trajs.append(traj)
+    # sig_trajs = []
+    # for mcp in df[sig_mask].itertuples():
+    #     step_x, step_y, step_z, step_r = mcp.x, mcp.y, mcp.z, mcp.r
+    #     if mcp.is_bib:
+    #         continue
+    #     traj = []
+    #     for _ in range(T_STEPS):
+    #         step_x, step_y, step_z = step_x + px * T_STEP, step_y + py * T_STEP, step_z + pz * T_STEP
+    #         step_r = (step_x**2 + step_y**2)**0.5
+    #         traj.append((step_z, step_r))
+    #     sig_trajs.append(traj)
 
     fig, ax = plt.subplots()
-    ax.quiver(z[bkg_mask], r[bkg_mask], u[bkg_mask], v[bkg_mask],
-              angles="xy", scale_units="xy", scale=1,  # arrow length = data units
-              width=0.003)
+    # ax.quiver(z[bkg_mask], r[bkg_mask], u[bkg_mask], v[bkg_mask],
+    #           angles="xy", scale_units="xy", scale=1,  # arrow length = data units
+    #           width=0.003)
 
     print("Drawing BIB ...")
     ax.scatter(z[bkg_mask], r[bkg_mask], s=2, color="black", zorder=3)
     ax.scatter(z[sig_mask], r[sig_mask], s=2, color="red", zorder=3)
     print("Drawing ttbar ...")
-    for i_traj, traj in enumerate(sig_trajs):
-        traj = np.array(traj)
-        print(f"Trajectory {i_traj}:")
-        ax.plot(traj[:, 0], traj[:, 1], color="red", linewidth=0.5, zorder=2)
+    # for i_traj, traj in enumerate(sig_trajs):
+    #     traj = np.array(traj)
+    #     print(f"Trajectory {i_traj}:")
+    #     ax.plot(traj[:, 0], traj[:, 1], color="red", linewidth=0.5, zorder=2)
     ax.set_xlabel("z [mm]")
     ax.set_ylabel("r [mm]")
     ax.set_xlim(MIN_Z, MAX_Z)
-    ax.set_ylim(MIN_R, MAX_R)
-    ax.set_aspect("equal")  # otherwise arrow angles look distorted
+    ax.set_ylim(0, MAX_R)
+    # ax.set_aspect("equal")  # otherwise arrow angles look distorted
     pdf.savefig(fig)
     plt.close(fig)
 
@@ -216,8 +283,8 @@ def plot_xyz(df: pd.DataFrame, pdf: PdfPages):
     ax.computed_zorder = False  # respect zorder so signal draws on top
 
     for mask, color, lw, alpha, zo, label in [
-            ( is_signal, "#d62728", 0.3, 0.3, 1, "Signal"),
-            (~is_signal, "#000000", 0.3, 0.3, 2, "Background"),
+            ( is_signal, "red", 0.3, 0.3, 1, "Signal"),
+            (~is_signal, "blue", 0.3, 0.3, 2, "Background"),
         ]:
         lc = Line3DCollection(segs[mask],
                               colors=color,
@@ -225,6 +292,7 @@ def plot_xyz(df: pd.DataFrame, pdf: PdfPages):
                               zorder=zo,
                               label=label,
                               )
+        lc.set_clip_on(False)
         lc.set_rasterized(True)  # small PDF, vector text
         ax.add_collection3d(lc)
 
@@ -233,7 +301,10 @@ def plot_xyz(df: pd.DataFrame, pdf: PdfPages):
     ax.set_xlim(*physical_zlim)
     ax.set_ylim(*physical_xlim)
     ax.set_zlim(*physical_ylim)
-    ax.set_box_aspect((np.ptp(physical_zlim), np.ptp(physical_xlim), np.ptp(physical_ylim)), zoom=1.5)
+    ax.set_box_aspect((np.ptp(physical_zlim), np.ptp(physical_xlim), np.ptp(physical_ylim)), zoom=1.2)
+
+    # draw beamline as black line from z = MIN_Z to z = MAX_Z
+    ax.plot([MIN_Z, MAX_Z], [0, 0], [0, 0], color="black", linewidth=1, zorder=0, clip_on=False)
 
     ax.grid(True, alpha=0.3, linewidth=0.5)
     for axis in (ax.xaxis,
@@ -243,7 +314,7 @@ def plot_xyz(df: pd.DataFrame, pdf: PdfPages):
         axis._axinfo['grid']['color'] = (0.9, 0.9, 0.9, 1)
 
     fig.subplots_adjust(left=0, right=0.95, bottom=0, top=1)
-    ax.view_init(elev=25, azim=-85)
+    ax.view_init(elev=25, azim=-80)
     # ax.legend(loc="upper left", frameon=False)
     pdf.savefig(fig, dpi=1000)
     plt.close(fig)
