@@ -9,6 +9,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+NEUTRINOGUNS = {
+    10: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun10_digi_10um",
+    20: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun20_digi_10um",
+    30: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun30_digi_10um",
+    40: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun40_digi_10um",
+    50: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun50_digi_10um",
+    70: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun70_digi_10um",
+    80: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun80_digi_10um",
+    100: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun_digi_10um",
+}
+PERCENTAGES = sorted(NEUTRINOGUNS.keys())
+MAX_FILES = 10
 OBJECTS = [
     "hits",
     "mds",
@@ -16,6 +28,13 @@ OBJECTS = [
     "t4s",
     # "t8s",
 ]
+NICKNAME = {
+    "hits": "Hits",
+    "mds": "MDs",
+    "t2s": "T2s",
+    "t4s": "T4s",
+    "t8s": "T8s",
+}
 OKAY = {
     "hits": None,
     "mds": "md_ok",
@@ -23,14 +42,20 @@ OKAY = {
     "t4s": "t4_ok",
     "t8s": "t8_ok",
 }
-NEUTRINOGUNS = {
-    # 10: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun10_digi_10um",
-    20: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun20_digi_10um",
-    50: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun50_digi_10um",
-    100: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun_digi_10um",
+COLOR = {
+    "hits": "red",
+    "mds": "blue",
+    "t2s": "green",
+    "t4s": "orange",
+    "t8s": "purple",
 }
-PERCENTAGES = sorted(NEUTRINOGUNS.keys())
-MAX_FILES = 10
+POWER_LAW_COORDS = {
+    "hits": (0.06, 0.92),
+    "mds": (0.14, 0.72),
+    "t2s": (0.22, 0.47),
+    "t4s": (0.60, 0.16),
+    "t8s": (0.50, 0.50),
+}
 
 
 def main():
@@ -72,18 +97,27 @@ class ScalingPlot:
         for fpath in fpaths:
             print(f"Loading {fpath} ...")
             df = pd.read_pickle(fpath)
-            total += (df[okay].sum() if okay is not None else len(df))
+            total += (df[okay].sum() if (okay is not None and len(df) > 0) else len(df))
         return total / len(fpaths)
 
 
     def plot(self, pdf):
         fig, ax = plt.subplots()
         for obj in OBJECTS:
-            y = [self.data[percentage][obj] for percentage in PERCENTAGES]
-            ax.plot(PERCENTAGES, y, label=obj)
+            yields = [self.data[percentage][obj] for percentage in PERCENTAGES]
+            ax.plot(PERCENTAGES, yields, label=obj, marker="o", linestyle="None", color=COLOR[obj])
+
+            # fit to power law
+            text_x, text_y = POWER_LAW_COORDS[obj]
+            name = NICKNAME[obj]
+            coeffs = np.polyfit(np.log(PERCENTAGES), np.log(yields), 1)
+            fit = np.exp(coeffs[1]) * np.array(PERCENTAGES) ** coeffs[0]
+            ax.plot(PERCENTAGES, fit, linestyle="--", color=COLOR[obj])
+            kwargs = dict(color=COLOR[obj], transform=ax.transAxes)
+            ax.text(text_x, text_y, f"{name}: $y = x^{{{coeffs[0]:.1f}}}$", **kwargs)
+
         ax.set_xlabel("BIB percentage")
         ax.set_ylabel("Average multiplicity")
-        ax.legend()
 
         # lin x, lin y
         pdf.savefig(fig)
