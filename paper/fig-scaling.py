@@ -15,8 +15,10 @@ NEUTRINOGUNS = {
     30: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun30_digi_10um",
     40: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun40_digi_10um",
     50: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun50_digi_10um",
+    60: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun60_digi_10um",
     70: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun70_digi_10um",
     80: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun80_digi_10um",
+    90: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun90_digi_10um",
     100: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun_digi_10um",
 }
 PERCENTAGES = sorted(NEUTRINOGUNS.keys())
@@ -50,10 +52,10 @@ COLOR = {
     "t8s": "purple",
 }
 POWER_LAW_COORDS = {
-    "hits": (0.06, 0.92),
-    "mds": (0.14, 0.72),
-    "t2s": (0.22, 0.47),
-    "t4s": (0.60, 0.16),
+    "hits": (0.16, 0.81),
+    "mds": (0.19, 0.59),
+    "t2s": (0.25, 0.35),
+    "t4s": (0.60, 0.26),
     "t8s": (0.50, 0.50),
 }
 
@@ -104,20 +106,24 @@ class ScalingPlot:
     def plot(self, pdf):
         fig, ax = plt.subplots()
         for obj in OBJECTS:
-            yields = [self.data[percentage][obj] for percentage in PERCENTAGES]
-            ax.plot(PERCENTAGES, yields, label=obj, marker="o", linestyle="None", color=COLOR[obj])
+            yields = np.array([self.data[percentage][obj] for percentage in PERCENTAGES])
+            percentages = np.array(PERCENTAGES)
+            ax.plot(percentages, yields, label=obj, marker="o", linestyle="None", color=COLOR[obj])
 
             # fit to power law
+            mask = yields > 0
             text_x, text_y = POWER_LAW_COORDS[obj]
             name = NICKNAME[obj]
-            coeffs = np.polyfit(np.log(PERCENTAGES), np.log(yields), 1)
-            fit = np.exp(coeffs[1]) * np.array(PERCENTAGES) ** coeffs[0]
-            ax.plot(PERCENTAGES, fit, linestyle="--", color=COLOR[obj])
+            coeffs = np.polyfit(np.log(percentages[mask]), np.log(yields[mask]), 1)
+            fit = np.exp(coeffs[1]) * percentages ** coeffs[0]
+            ax.plot(percentages[mask], fit[mask], linestyle="--", color=COLOR[obj])
             kwargs = dict(color=COLOR[obj], transform=ax.transAxes)
             ax.text(text_x, text_y, f"{name}: $y = x^{{{coeffs[0]:.1f}}}$", **kwargs)
 
+        padding = 10
+        ax.set_xlim([min(percentages)-padding, max(percentages)+padding])
         ax.set_xlabel("BIB percentage")
-        ax.set_ylabel("Average multiplicity")
+        ax.set_ylabel("Average multiplicity per event", labelpad=20)
 
         # lin x, lin y
         pdf.savefig(fig)
