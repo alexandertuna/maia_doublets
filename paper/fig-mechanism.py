@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
-import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 
 MIN_PT = 0.5 # GeV
