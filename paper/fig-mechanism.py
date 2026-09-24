@@ -1,5 +1,10 @@
 """
-Equal spaced detector aka v07
+This script makes plots of MCParticle location in the detector,
+  to demonstrate ttbar arises from a collision point and BIB arises in the nozzles.
+
+The detectors arent really involved, but its easier to use slcio files
+  where the detectors have been considered during simulation.
+  We use equal spaced detector, aka v07, but any detector would be fine.
 """
 import style
 import os

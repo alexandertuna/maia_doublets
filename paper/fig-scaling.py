@@ -1,5 +1,7 @@
 """
-Plot of neutrinoGun object multiplicity as a function of BIB percentage
+Plot of neutrinoGun object multiplicity as a function of BIB percentage.
+
+Data is stored on /ceph at UCSD UAF
 """
 import style
 
