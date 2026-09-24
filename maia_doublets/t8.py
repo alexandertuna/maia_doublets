@@ -53,6 +53,9 @@ class T8Maker:
     def filter_t4s(self):
         # only consider "good" t4s
         logger.info("Filtering T4s for T8s ...")
+        if len(self.t4s) == 0:
+            logger.warning("No T4s available for T8 making!")
+            return
         self.t4s = self.t4s[ self.t4s["t4_ok"] ]
         memory = self.t4s.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"Memory usage after filtering T4s: {memory:.1f} MB")
@@ -61,6 +64,9 @@ class T8Maker:
     def sort_t4s(self):
         # sort T4s intuitively
         logger.info("Sorting T4s ...")
+        if len(self.t4s) == 0:
+            logger.warning("No T4s available for sorting!")
+            return
         cols = [
             "file",
             "i_event",
@@ -75,6 +81,11 @@ class T8Maker:
         """
         Todo: add description of this T8-making algorithm
         """
+        if len(self.t4s) == 0:
+            logger.warning("No T4s available for making T8s!")
+            self.df = pd.DataFrame()
+            self.cutflow = pd.DataFrame()
+            return
 
         # split t4s into global doublelayer once, up front
         logger.info(f"Splitting T4s ...")

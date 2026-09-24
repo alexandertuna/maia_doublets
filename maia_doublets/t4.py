@@ -104,6 +104,13 @@ class T4Maker:
             all_t4s.append(t4s)
             all_cutflows.append(cutflow)
 
+        # check if any T4s were made
+        if not all_t4s:
+            logger.warning("No T4s were made!")
+            self.df = pd.DataFrame()
+            self.cutflow = pd.DataFrame()
+            return
+
         # merge dataframes
         logger.info(f"Merging {len(all_t4s)} groups of T4s ...")
         self.df = pd.concat(all_t4s, ignore_index=True)
