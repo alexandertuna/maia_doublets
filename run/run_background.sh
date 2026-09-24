@@ -4,7 +4,7 @@
 #
 GEO="v06"
 SMEAR="10um"
-DATASET="neutrinoGun20"
+DATASET="neutrinoGun60"
 
 DATA_DIR="/ceph/users/atuna/work/maia/maia_datasets/samples/${GEO}/${DATASET}/${SMEAR}"
 OUTPUT_DIR=$(dirname "${BASH_SOURCE[0]}")/../output
@@ -13,7 +13,7 @@ PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
 mkdir -p ${PKL_DIR}
 echo "Output directory: ${PKL_DIR}"
 
-for IT in $(seq 1 9); do
+for IT in $(seq 0 9); do
 
     INPUT=${DATA_DIR}/${DATASET}_digi_${IT}.slcio
 
