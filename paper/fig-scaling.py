@@ -126,16 +126,16 @@ class ScalingPlot:
         ax.set_ylabel("Average multiplicity per event", labelpad=20)
 
         # lin x, lin y
-        pdf.savefig(fig)
+        # pdf.savefig(fig)
 
         # lin x, log y
         ax.semilogy()
         pdf.savefig(fig)
 
         # log x, log y
-        ax.semilogx()
-        ax.semilogy()
-        pdf.savefig(fig)
+        # ax.semilogx()
+        # ax.semilogy()
+        # pdf.savefig(fig)
 
         # fin
         plt.close(fig)
