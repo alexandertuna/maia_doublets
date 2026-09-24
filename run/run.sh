@@ -9,31 +9,31 @@ mkdir -p ${OUTPUT_DIR}
 # maia_doublets --geo v01 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
 # maia_doublets --geo v05 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
 # maia_doublets --geo v06 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
-maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
+# maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
 
 # How to make plots
-# GEO="v07"
-# SMEAR="10um"
-# DATASET="muonGun_pT_2p0_2p1"
-# PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
-# mkdir -p ${PKL_DIR}
-# maia_doublets \
-#     --geo ${GEO} \
-#     --dataset ${DATASET} \
-#     --digi \
-#     --smear ${SMEAR} \
-#     --write-hits ${PKL_DIR}/hits.pkl \
-#     --write-mcps ${PKL_DIR}/mcps.pkl \
-#     --write-mds ${PKL_DIR}/mds.pkl \
-#     --write-t2s ${PKL_DIR}/t2s.pkl \
-#     --write-t4s ${PKL_DIR}/t4s.pkl \
-#     --write-t8s ${PKL_DIR}/t8s.pkl \
-#     --plot
+GEO="v06"
+SMEAR="10um"
+DATASET="muonGun_pT_2p0_2p1"
+PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
+mkdir -p ${PKL_DIR}
+maia_doublets \
+    --write-hits ${PKL_DIR}/hits.pkl \
+    --write-mcps ${PKL_DIR}/mcps.pkl \
+    --write-mds ${PKL_DIR}/mds.pkl \
+    --write-t2s ${PKL_DIR}/t2s.pkl \
+    --write-t4s ${PKL_DIR}/t4s.pkl \
+    --write-t8s ${PKL_DIR}/t8s.pkl \
+    --digi \
+    --smear ${SMEAR} \
+    --geo ${GEO} \
+    --dataset ${DATASET}
+    # --plot \
 
 # How to write background MDs to disk without cuts
 #   and without stressing the memory by writing all layers at once
-GEO="v07"
-SMEAR="10um"
+GEO="v06"
+SMEAR="20um"
 DATASET="neutrinoGun10"
 PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
 mkdir -p ${PKL_DIR}
@@ -55,7 +55,7 @@ CMD="maia_doublets \
 
 # How to find the overall efficiency
 # maia_doublets --geo v05 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
-# maia_doublets --geo v06 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
+# maia_doublets --geo v06 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s # --plot
 # maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
 
 # How to plot the 0-10 GeV pionGun sample
@@ -65,35 +65,15 @@ CMD="maia_doublets \
 # How to plot the 0-10 GeV muonGun sample
 # maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_0_10/10um/muonGun_pT_0_10_digi_3*" --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
 
-# How to pickle the 0-10 GeV muonGun sample
-# GEO="v01"
-# SMEAR="10um"
-# PKL_DIR=${OUTPUT_DIR}/${GEO}_muonGun_pT_0_10_digi_${SMEAR}
-# maia_doublets \
-#     --geo ${GEO} \
-#     -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_0_10/10um/muonGun_pT_0_10_digi_3*" \
-#     --digi \
-#     --smear ${SMEAR} \
-#     --write-hits ${PKL_DIR}/hits.pkl \
-#     --write-mcps ${PKL_DIR}/mcps.pkl \
-#     --write-mds ${PKL_DIR}/mds.pkl \
-#     --write-t2s ${PKL_DIR}/t2s.pkl \
-#     --write-t4s ${PKL_DIR}/t4s.pkl \
-#     --write-t8s ${PKL_DIR}/t8s.pkl \
-#     --cut-mds \
-#     --cut-t2s \
-#     --cut-t4s \
-#     --cut-t8s
-
-
 # How to run background neutrinoGun
 # GEO="v06"
 # SMEAR="10um"
-# PKL_DIR=${OUTPUT_DIR}/${GEO}_neutrinoGun_digi_${SMEAR}
+# DATASET="neutrinoGun"
+# PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
 # mkdir -p ${PKL_DIR}
 # maia_doublets \
 #   --geo ${GEO} \
-#   --dataset neutrinoGun \
+#   --dataset ${DATASET} \
 #   --digi \
 #   --smear ${SMEAR} \
 #   --cutflow ${PKL_DIR}/cutflow.ndjson \
