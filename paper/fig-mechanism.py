@@ -53,6 +53,9 @@ DOWNSAMPLE_BIB = 0.25
 DPI = 1000
 
 PKL = "fig-mechanism.pkl"
+PDF_EARLY = "fig-mechanism-early.pdf"
+PDF_LATER = "fig-mechanism-later.pdf"
+PDF_OTHER = "fig-mechanism-other.pdf"
 
 def main():
 
@@ -68,8 +71,7 @@ def main():
     print("Number of BIB particles:", df["is_bib"].sum())
     print("Number of ttbar particles:", (~df["is_bib"]).sum())
 
-    with PdfPages("fig-mechanism.pdf") as pdf:
-        plot(df, pdf)
+    plot(df)
 
 
 def get_or_load_mcparticles() -> pd.DataFrame:
@@ -231,13 +233,16 @@ def post_process(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def plot(df: pd.DataFrame, pdf: PdfPages):
-    # plot_pt(df, pdf)
-    # plot_t(df, pdf)
-    # plot_rz(df, pdf)
-    # plot_xy(df, pdf)
-    plot_xyz(df=df, t_max=PROPAGATE_A_BIT, pdf=pdf)
-    plot_xyz(df=df, t_max=PROPAGATE_A_LOT, pdf=pdf)
+def plot(df: pd.DataFrame):
+    with PdfPages(PDF_EARLY) as pdf:
+        plot_xyz(df=df, t_max=PROPAGATE_A_BIT, pdf=pdf)
+    with PdfPages(PDF_LATER) as pdf:
+        plot_xyz(df=df, t_max=PROPAGATE_A_LOT, pdf=pdf)
+    with PdfPages(PDF_OTHER) as pdf:
+        plot_pt(df, pdf)
+        plot_t(df, pdf)
+        # plot_rz(df, pdf)
+        # plot_xy(df, pdf)
 
 
 def plot_rz(df: pd.DataFrame, pdf: PdfPages):
