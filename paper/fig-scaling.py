@@ -120,7 +120,7 @@ class ScalingPlot:
             fit = np.exp(coeffs[1]) * percentages ** coeffs[0]
             ax.plot(percentages[mask], fit[mask], linestyle="--", color=COLOR[obj])
             kwargs = dict(color=COLOR[obj], transform=ax.transAxes)
-            ax.text(text_x, text_y, f"{name}: $y \\sim x^{{{coeffs[0]:.1f}}}$", **kwargs)
+            ax.text(text_x, text_y, f"{name}: $N \\propto f^{{{coeffs[0]:.1f}}}$", **kwargs)
 
         padding = 10
         ax.set_xlim([min(percentages)-padding, max(percentages)+padding])
