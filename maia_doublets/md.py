@@ -125,7 +125,12 @@ class MDMaker:
         if isnull.any():
             if np.any(isnull != (mds["hit_x_upper"] == mds["hit_x_lower"])):
                 raise ValueError(f"Found NaN in {feature}, but not all are due to infinite slope")
-            mds[feature] = mds[feature].fillna(mds["hit_x_lower"])
+            mds[feature] = mds[feature].fillna(np.abs(mds["hit_x_lower"]))
+
+        if (mds[feature] < 0).any():
+            msg = f"Found negative values in {feature}"
+            logger.error(msg)
+            raise ValueError(msg)
 
         # announce any nans
         for feature in ["md_dr", "md_dz"]:
