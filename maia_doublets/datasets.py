@@ -257,31 +257,13 @@ filepaths["muonGun_pT_2p0_2p1"] = {
         "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/muonGun_pT_2p0_2p1/50um/muonGun_pT_2p0_2p1_digi_309.slcio",
     ],
     ("v07", "digi", "00um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_300.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_301.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_302.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_303.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_304.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_305.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_306.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_307.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_308.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_309.slcio",
+        f"/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_{IT}.slcio" for IT in range(300, 400)
     ],
     ("v07", "digi", "10um"): [
         f"/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_{IT}.slcio" for IT in range(300, 400)
     ],
     ("v07", "digi", "20um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_300.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_301.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_302.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_303.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_304.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_305.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_306.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_307.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_308.slcio",
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_309.slcio",
+        f"/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_{IT}.slcio" for IT in range(300, 400)
     ],
     ("v07", "digi", "30um"): [
         "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/muonGun_pT_2p0_2p1/30um/muonGun_pT_2p0_2p1_digi_300.slcio",
@@ -351,13 +333,13 @@ filepaths["neutrinoGun10"] = {
         "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/neutrinoGun_n5_p15_0.10/10um/neutrinoGun_digi_0.slcio",
     ],
     ("v06", "digi", "00um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/00um/neutrinoGun_digi_0.slcio",
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/00um/neutrinoGun10_digi_0.slcio",
     ],
     ("v06", "digi", "10um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/10um/neutrinoGun_digi_0.slcio",
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/10um/neutrinoGun10_digi_0.slcio",
     ],
     ("v06", "digi", "20um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/20um/neutrinoGun_digi_0.slcio",
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/20um/neutrinoGun10_digi_0.slcio",
     ],
     ("v07", "digi", "00um"): [
         "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/00um/neutrinoGun_digi_0.slcio",
