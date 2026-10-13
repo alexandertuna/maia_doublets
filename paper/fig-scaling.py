@@ -22,6 +22,8 @@ NEUTRINOGUNS = {
     80: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun80_digi_10um",
     90: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun90_digi_10um",
     100: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun_digi_10um",
+    110: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun110_digi_10um",
+    120: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun120_digi_10um",
 }
 PERCENTAGES = sorted(NEUTRINOGUNS.keys())
 MAX_FILES = 10
@@ -57,7 +59,7 @@ POWER_LAW_COORDS = {
     "hits": (0.16, 0.81),
     "mds": (0.19, 0.59),
     "t2s": (0.25, 0.35),
-    "t4s": (0.60, 0.26),
+    "t4s": (0.50, 0.26),
     "t8s": (0.50, 0.50),
 }
 
@@ -122,8 +124,8 @@ class ScalingPlot:
             kwargs = dict(color=COLOR[obj], transform=ax.transAxes)
             ax.text(text_x, text_y, f"{name}: $N \\propto f^{{{coeffs[0]:.1f}}}$", **kwargs)
 
-        padding = 10
-        ax.set_xlim([min(percentages)-padding, max(percentages)+padding])
+        padding_lo, padding_hi = 10, 9
+        ax.set_xlim([min(percentages) - padding_lo, max(percentages) + padding_hi])
         ax.set_xlabel("Percentage of BIB considered")
         ax.set_ylabel("Average multiplicity per event", labelpad=20)
 
