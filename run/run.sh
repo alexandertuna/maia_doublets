@@ -12,46 +12,50 @@ mkdir -p ${OUTPUT_DIR}
 # maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
 
 # How to make plots
-GEO="v06"
-SMEAR="10um"
-DATASET="muonGun_pT_2p0_2p1"
-PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
-mkdir -p ${PKL_DIR}
-maia_doublets \
-    --write-hits ${PKL_DIR}/hits.pkl \
-    --write-mcps ${PKL_DIR}/mcps.pkl \
-    --write-mds ${PKL_DIR}/mds.pkl \
-    --write-t2s ${PKL_DIR}/t2s.pkl \
-    --write-t4s ${PKL_DIR}/t4s.pkl \
-    --write-t8s ${PKL_DIR}/t8s.pkl \
-    --digi \
-    --smear ${SMEAR} \
-    --geo ${GEO} \
-    --dataset ${DATASET}
-    # --plot \
+# for GEO in v07; do
+#     for SMEAR in 00um 20um; do
+#         DATASET="muonGun_pT_2p0_2p1"
+#         PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
+#         mkdir -p ${PKL_DIR}
+#         maia_doublets \
+#             --write-hits ${PKL_DIR}/hits.pkl \
+#             --write-mcps ${PKL_DIR}/mcps.pkl \
+#             --write-mds ${PKL_DIR}/mds.pkl \
+#             --write-t2s ${PKL_DIR}/t2s.pkl \
+#             --write-t4s ${PKL_DIR}/t4s.pkl \
+#             --write-t8s ${PKL_DIR}/t8s.pkl \
+#             --digi \
+#             --smear ${SMEAR} \
+#             --geo ${GEO} \
+#             --dataset ${DATASET}
+#             # --plot \
+#     done
+# done
 
 # How to write background MDs to disk without cuts
 #   and without stressing the memory by writing all layers at once
-GEO="v06"
-SMEAR="20um"
-DATASET="neutrinoGun10"
-PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
-mkdir -p ${PKL_DIR}
-CMD="maia_doublets \
-    --geo ${GEO} \
-    --dataset ${DATASET} \
-    --digi \
-    --smear ${SMEAR} \
-    --no-cuts \
-    --stop-after-mds"
-# time ${CMD} --write-mds ${PKL_DIR}/mds_ITB0_ITB1.pkl --layers ITB0 ITB1
-# time ${CMD} --write-mds ${PKL_DIR}/mds_ITB2_ITB3.pkl --layers ITB2 ITB3
-# time ${CMD} --write-mds ${PKL_DIR}/mds_ITB4_ITB5.pkl --layers ITB4 ITB5
-# time ${CMD} --write-mds ${PKL_DIR}/mds_ITB6_ITB7.pkl --layers ITB6 ITB7
-# time ${CMD} --write-mds ${PKL_DIR}/mds_OTB0_OTB1.pkl --layers OTB0 OTB1
-# time ${CMD} --write-mds ${PKL_DIR}/mds_OTB2_OTB3.pkl --layers OTB2 OTB3
-# time ${CMD} --write-mds ${PKL_DIR}/mds_OTB4_OTB5.pkl --layers OTB4 OTB5
-# time ${CMD} --write-mds ${PKL_DIR}/mds_OTB6_OTB7.pkl --layers OTB6 OTB7
+for GEO in v06; do
+    for SMEAR in 10um; do
+        DATASET="neutrinoGun10"
+        PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
+        mkdir -p ${PKL_DIR}
+        CMD="maia_doublets \
+            --geo ${GEO} \
+            --dataset ${DATASET} \
+            --digi \
+            --smear ${SMEAR} \
+            --no-cuts \
+            --stop-after-mds"
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_ITB0_ITB1.pkl --layers ITB0 ITB1
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_ITB2_ITB3.pkl --layers ITB2 ITB3
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_ITB4_ITB5.pkl --layers ITB4 ITB5
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_ITB6_ITB7.pkl --layers ITB6 ITB7
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_OTB0_OTB1.pkl --layers OTB0 OTB1
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_OTB2_OTB3.pkl --layers OTB2 OTB3
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_OTB4_OTB5.pkl --layers OTB4 OTB5
+        # time ${CMD} --write-mds ${PKL_DIR}/mds_OTB6_OTB7.pkl --layers OTB6 OTB7
+    done
+done
 
 # How to find the overall efficiency
 # maia_doublets --geo v05 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
