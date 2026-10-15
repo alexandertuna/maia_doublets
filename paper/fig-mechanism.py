@@ -188,6 +188,8 @@ def get_mcparticles_worker(fpaths: list[str], index: int = None, event_of_intere
                     continue
                 if (mcp.getMomentum()[0]**2 + mcp.getMomentum()[1]**2) < MIN_PT**2:
                     continue
+                if mcp.getCharge() == 0:
+                    continue
                 rows.append({
                     "pdg": mcp.getPDG(),
                     "m": mcp.getMass(),
@@ -324,8 +326,10 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
     ax.computed_zorder = False  # respect zorder so signal draws on top
 
     for mask, color, lw, alpha, zo, label in [
-            ( is_signal, "red", 0.2, 0.1, 1, "Signal"),
-            (~is_signal, "blue", 0.2, 0.1, 2, "Background"),
+            # ( is_signal, "red", 0.2, 0.1, 1, "Signal"),
+            # (~is_signal, "blue", 0.2, 0.1, 2, "Background"),
+            ( is_signal, "red", 0.4, 0.4, 1, "Signal"),
+            (~is_signal, "blue", 0.4, 0.4, 2, "Background"),
         ]:
         print(f"Drawing lines for {label} ...")
         lc = Line3DCollection(segs[mask],
@@ -350,7 +354,6 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
     # draw beamline as black line from z = MIN_Z to z = MAX_Z
     ax.plot([MIN_Z, MAX_Z], [0, 0], [0, 0], color="black", linewidth=0.5, alpha=0.5, zorder=0, clip_on=False)
 
-
     # add text: legend
     kwargs = dict(rotation=-4, fontsize=12, transform=ax.transAxes)
     ax.text2D(0.40, 0.22 if t_max > 1 else 0.28, f"Collision", **kwargs, color="red")
@@ -362,8 +365,10 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
     fontsize = 10
     kwargs = dict(rotation=rotation, fontsize=fontsize, transform=ax.transAxes)
     bib_scaling = N_BIB_FILES / N_BIB_FILES_FULL * DOWNSAMPLE_BIB
-    ax.text2D(0.08, 0.830, r"$p_{T} >$" + f"{MIN_PT} GeV", **kwargs)
-    ax.text2D(0.44, 0.805, r"$\Delta t =$" + f"{t_max} ns", **kwargs)
+    # ax.text2D(0.08, 0.830, r"$p_{T} >$" + f"{MIN_PT} GeV", **kwargs)
+    # ax.text2D(0.44, 0.805, r"$\Delta t =$" + f"{t_max} ns", **kwargs)
+    ax.text2D(0.08, 0.822, r"$q \neq 0$, $p_{T} >$" + f"{MIN_PT} GeV", **kwargs)
+    ax.text2D(0.75, 0.785, r"$\Delta t =$" + f"{t_max} ns", **kwargs)
     if bib_scaling < 1.0:
         ax.text2D(0.80, 0.780, f"BIB scaling: {bib_scaling:.1f}", **kwargs)
 
