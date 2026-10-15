@@ -312,7 +312,7 @@ def plot_xyz(df: pd.DataFrame, t_max: float, pdf: PdfPages):
 
     # center signal vertices in z
     # I accidentally generated with a big z-smear
-    df["z"][is_signal] -= np.median(df["z"][is_signal])
+    df.loc[is_signal, "z"] -= np.median(df.loc[is_signal, "z"])
 
     print("Propagating helices ...")
     x, y, z = (df[col].to_numpy() for col in ("x", "y", "z"))
