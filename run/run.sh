@@ -12,8 +12,8 @@ mkdir -p ${OUTPUT_DIR}
 # maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --calibrate
 
 # How to make plots
-# for GEO in v07; do
-#     for SMEAR in 00um 20um; do
+# for GEO in v06 v07; do
+#     for SMEAR in 50um; do
 #         DATASET="muonGun_pT_2p0_2p1"
 #         PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
 #         mkdir -p ${PKL_DIR}
@@ -34,8 +34,8 @@ mkdir -p ${OUTPUT_DIR}
 
 # How to write background MDs to disk without cuts
 #   and without stressing the memory by writing all layers at once
-for GEO in v06; do
-    for SMEAR in 10um; do
+for GEO in v07; do
+    for SMEAR in 50um; do
         DATASET="neutrinoGun10"
         PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
         mkdir -p ${PKL_DIR}
@@ -70,22 +70,22 @@ done
 # maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_0_10/10um/muonGun_pT_0_10_digi_3*" --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
 
 # How to run background neutrinoGun
-# GEO="v06"
-# SMEAR="10um"
-# DATASET="neutrinoGun"
-# PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
-# mkdir -p ${PKL_DIR}
-# maia_doublets \
-#   --geo ${GEO} \
-#   --dataset ${DATASET} \
-#   --digi \
-#   --smear ${SMEAR} \
-#   --cutflow ${PKL_DIR}/cutflow.ndjson \
-#   --write-mcps ${PKL_DIR}/mcps.pkl \
-#   --write-hits ${PKL_DIR}/hits.pkl \
-#   --write-mds ${PKL_DIR}/mds.pkl \
-#   --write-t2s ${PKL_DIR}/t2s.pkl \
-#   --write-t4s ${PKL_DIR}/t4s.pkl \
-#   --write-t8s ${PKL_DIR}/t8s.pkl \
-#   --fast-mds --plot
+GEO="v06"
+SMEAR="10um"
+DATASET="neutrinoGun"
+PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
+mkdir -p ${PKL_DIR}
+maia_doublets \
+  --geo ${GEO} \
+  --dataset ${DATASET} \
+  --digi \
+  --smear ${SMEAR} \
+  --cutflow ${PKL_DIR}/cutflow.ndjson \
+  --write-mcps ${PKL_DIR}/mcps.pkl \
+  --write-hits ${PKL_DIR}/hits.pkl \
+  --write-mds ${PKL_DIR}/mds.pkl \
+  --write-t2s ${PKL_DIR}/t2s.pkl \
+  --write-t4s ${PKL_DIR}/t4s.pkl \
+  --write-t8s ${PKL_DIR}/t8s.pkl \
+  --fast-mds --plot
 
