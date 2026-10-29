@@ -7,14 +7,14 @@ This is how I run the code:
 cd run/
 
 # Create a virtual environment (once)
-python -m venv env
+python -m venv env_ubuntu24
 
 # Activate the environment (on each login)
-source env/bin/activate
+source env_ubuntu24/bin/activate
 
 # pip install the repo
 pip install -e ..
 
 # Run!
-maia_doublet -h
+maia_doublets -h
 ```
