@@ -227,7 +227,7 @@ filepaths["muonGun_pT_2p0_2p1"] = {
         f"/ceph/users/atuna/work/maia/maia_datasets/samples/v06/muonGun_pT_2p0_2p1/00um/muonGun_pT_2p0_2p1_digi_{it}.slcio" for it in range(300, 400)
     ],
     ("v06", "digi", "10um"): [
-        f"/ceph/users/atuna/work/maia/maia_datasets/samples/v06/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_{it}.slcio" for it in range(300, 400)
+        f"/ceph/users/atuna/work/maia/maia_datasets/samples/v06/muonGun_pT_2p0_2p1/10um/muonGun_pT_2p0_2p1_digi_{it}.slcio" for it in range(300, 310)
     ],
     ("v06", "digi", "20um"): [
         f"/ceph/users/atuna/work/maia/maia_datasets/samples/v06/muonGun_pT_2p0_2p1/20um/muonGun_pT_2p0_2p1_digi_{it}.slcio" for it in range(300, 400)
