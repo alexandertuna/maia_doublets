@@ -5,6 +5,7 @@
 Alex owns this repo and this physics result. These rules take priority over speed:
 
 1. **Ask before editing anything in the repo.** Describe the change (file, what, why) and wait for a yes. This includes code, `run/run.sh`, calibration JSONs, paper scripts, and docs. One approval covers one change, not later ones.
+   Exception: Claude may create and edit its own new, untracked files in the repo that it plans to propose for git; Alex reviews them in place.
 2. **The scratchpad is fair game.** Exploratory scripts, quick checks, and throwaway plots go in the session scratchpad directory, never in the repo. Give the full absolute path of anything written there.
 3. **Show exactly what you ran.** For every command or script you run, show the exact command line (and the script contents, or its path, if it is new), plus the key output. Alex should be able to copy-paste it and reproduce the result.
 4. **Keep Alex in the loop and explain your reasoning.** Say what you are about to do and why before doing it; say what you found and what you think it means afterwards. Flag assumptions, uncertainties, and anything surprising in the numbers. Explain physics or code reasoning rather than just giving conclusions; Alex enjoys learning.
@@ -30,9 +31,10 @@ Everything runs inside the MuColl apptainer image (see `README.md`):
 
 ```bash
 apptainer run /cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-ubuntu24:v2.9.8-amd64
-setup_mucoll
-source run/env_ubuntu24/bin/activate   # venv with `pip install -e .`
+source run/env.sh   # MuColl stack + venv (run/env_ubuntu24, with `pip install -e .`)
 ```
+
+`run/env.sh` sources the stack's `setup.sh` directly, so unlike the `setup_mucoll` alias it also works under `apptainer exec`.
 
 The package installs a CLI entry point `maia_doublets` (`maia_doublets/main.py:main`).
 
@@ -47,7 +49,8 @@ hits (`slcio.py`, `HitMaker`) → mini-doublets, MDs (`md.py`) → T2 (`t2.py`, 
 - `constants.py`: detector system IDs, collection names, units, physics constants (B = 5 T).
 - Signal vs background is inferred from input filenames (`muonGun`/`pionGun` → signal). Background runs apply all cuts by default; signal runs apply only the cuts requested with `--cut-mds/--cut-t2s/--cut-t4s/--cut-t8s`. `--no-cuts` disables all.
 - Intermediate DataFrames can be cached with `--write-*`/`--read-*` pickles; outputs conventionally go to `output/{geo}_{dataset}_digi_{smear}/`.
-- `run/run.sh` is a scratch log of commands Alex has run (mostly commented out). It is a good reference for typical invocations.
+- `run/run_*.sh`: one simple script per task (`calibrate`, `plot_signal`, `plot_background`, `mds`, `efficiency`), with defaults set by `MAIA_DETECTOR` (v06), `MAIA_RESOLUTION` (10um), and `MAIA_DATASET` (per task). See `run/README.md`. Keep these recipe-like: no argument parsing.
+- `run/run.sh` is Alex's scratch log of commands (mostly commented out), and `run/run_background.sh` runs background files one at a time for the BIB-scaling study.
 - `maia_doublets/demos/`: standalone studies and checks. `paper/`: figure scripts for the paper (`python fig-*.py` → `fig-*.pdf`), sharing `style.py`.
 
 Example (efficiency with all cuts, v07, 10 µm smearing):

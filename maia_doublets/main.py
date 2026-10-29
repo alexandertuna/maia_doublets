@@ -2,7 +2,6 @@
 Steering file for counting doublets in a LST-friendly MAIA detector
 """
 import argparse
-from glob import glob
 import ndjson
 import os
 import pandas as pd
@@ -186,6 +185,8 @@ def check_options(ops: argparse.Namespace) -> None:
         raise ValueError("Output file for --write-t2s must end with .pkl")
     if ops.write_t4s and not ops.write_t4s.endswith(".pkl"):
         raise ValueError("Output file for --write-t4s must end with .pkl")
+    if not ops.calibrate and not os.path.isfile(calib_json(ops)):
+        raise FileNotFoundError(f"Calibration file not found: {calib_json(ops)} (use --calib-dir, or --calibrate to create it)")
 
 
 def cutflow_path(df_path: str) -> str:
@@ -407,8 +408,7 @@ def calib_json(ops: argparse.Namespace) -> str:
 
 
 def guess_calib_dir() -> str:
-    calib_guess = glob("../*/calibs/") or [""]
-    return calib_guess[0]
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "calibs")
 
 
 def options():
