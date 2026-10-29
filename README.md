@@ -19,6 +19,17 @@ apptainer> setup_mucoll
 apptainer> source env_ubuntu24/bin/activate
 ```
 
+# Datasets
+
+## `neutrinoGunN`
+
+`neutrinoGunN` is a neutrinoGun sample overlaid with N percent of the nominal BIB.
+For example, `neutrinoGun10` has 10% BIB and `neutrinoGun120` has 120% BIB ("overdrive").
+
+In the [maia_datasets](https://github.com/alexandertuna/maia_datasets) productions, this is
+set by `--overlayMixNumberBackground`, at roughly 16.7 BIB events per percent
+(e.g. 167 for 10%, 500 for 30%, 1999 for 120%).
+
 # Code conventions
 
 There are a few conventions used throughout the code which can be helpful to know.
