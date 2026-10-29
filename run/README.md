@@ -9,8 +9,8 @@ cd run/
 # Create a virtual environment (once)
 python -m venv env_ubuntu24
 
-# Activate the environment (on each login)
-source env_ubuntu24/bin/activate
+# Set up the MuColl stack and activate the environment (on each login)
+source env.sh
 
 # pip install the repo
 pip install -e ..

@@ -13,10 +13,17 @@ apptainer> pip install -e ../
 ```
 
 ```bash
-# Run this at the start of each new login session
+# Run this at the start of each new login session, from the top of the repo
 apptainer run /cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-ubuntu24:v2.9.8-amd64
-apptainer> setup_mucoll
-apptainer> source env_ubuntu24/bin/activate
+apptainer> source run/env.sh
+```
+
+`run/env.sh` does the same as `setup_mucoll` plus activating the venv.
+Unlike `setup_mucoll`, it also works non-interactively, e.g. in a script run with `apptainer exec`:
+
+```bash
+apptainer exec /cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-ubuntu24:v2.9.8-amd64 \
+  bash -c "source run/env.sh && maia_doublets -h"
 ```
 
 # Datasets
@@ -25,6 +32,7 @@ apptainer> source env_ubuntu24/bin/activate
 
 `neutrinoGunN` is a neutrinoGun sample overlaid with N percent of the nominal BIB.
 For example, `neutrinoGun10` has 10% BIB and `neutrinoGun120` has 120% BIB ("overdrive").
+The bare `neutrinoGun` (no N) has 100% BIB, i.e. the nominal amount.
 
 In the [maia_datasets](https://github.com/alexandertuna/maia_datasets) productions, this is
 set by `--overlayMixNumberBackground`, at roughly 16.7 BIB events per percent
