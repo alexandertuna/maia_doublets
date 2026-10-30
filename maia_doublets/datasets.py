@@ -327,13 +327,13 @@ filepaths["neutrinoGun10"] = {
         "/ceph/users/atuna/work/maia/maia_datasets/samples/v06/neutrinoGun10/50um/neutrinoGun10_digi_0.slcio",
     ],
     ("v07", "digi", "00um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/00um/neutrinoGun_digi_0.slcio",
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/00um/neutrinoGun10_digi_0.slcio",
     ],
     ("v07", "digi", "10um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/10um/neutrinoGun_digi_0.slcio",
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/10um/neutrinoGun10_digi_0.slcio",
     ],
     ("v07", "digi", "20um"): [
-        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/20um/neutrinoGun_digi_0.slcio",
+        "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/20um/neutrinoGun10_digi_0.slcio",
     ],
     ("v07", "digi", "50um"): [
         "/ceph/users/atuna/work/maia/maia_datasets/samples/v07/neutrinoGun10/50um/neutrinoGun10_digi_0.slcio",
