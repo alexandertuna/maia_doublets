@@ -221,5 +221,6 @@ __marimo__/
 /output/
 *.pkl
 *.pdf
+*.png
 *.slcio
 *.root
