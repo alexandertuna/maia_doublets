@@ -19,6 +19,7 @@ constexpr int N_DOUBLELAYERS_PER_SYSTEM = N_LAYERS_PER_SYSTEM / 2;
 constexpr int N_GDOUBLELAYERS = 2 * N_DOUBLELAYERS_PER_SYSTEM;  // IT and OT: IT is 0-3, OT is 4-7
 
 // Hits per object
+constexpr int N_LAYERS_IN_MD = 2;
 constexpr int N_LAYERS_IN_T2 = 4;
 constexpr int N_LAYERS_IN_T4 = 8;
 constexpr int N_LAYERS_IN_T8 = 16;
