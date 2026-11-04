@@ -10,7 +10,7 @@ validated against it object by object.
 | Stage | C++ | Python | Validated |
 |---|---|---|---|
 | Hits | `DoubleLayerTrackingProc::readHits` | `slcio.py` | yes |
-| MDs | `MiniDoublets.cc` | `md.py` | yes |
+| MDs | `MDs.cc` | `md.py` | yes |
 | T2 | `T2s.cc` | `t2.py` | yes |
 | T4 | `T4s.cc` | `t4.py` | yes |
 | T8 | `T8s.cc` | `t8.py` | yes |
@@ -30,7 +30,7 @@ Validation (10 µm, no time window, as in Python):
 - `include/Geometry.h`, `src/Geometry.cc`: lines to the origin, circles, the s-z fit
 - `include/Pairing.h`: pairs objects in neighbouring (phi, eta) slices (the Python merges)
 - `include/Calib.h`, `src/Calib.cc`: reads the cut thresholds from `maia_doublets/calibs/*.json`
-- `include/MiniDoublets.h`, `src/MiniDoublets.cc`: MD making
+- `include/MDs.h`, `src/MDs.cc`: MD making
 - `include/Stages.h`, `src/T2s.cc`, `src/T4s.cc`, `src/T8s.cc`: T2, T4, T8 making
 - `include/DoubleLayerTrackingProc.h`, `src/DoubleLayerTrackingProc.cc`: the Marlin processor
 - `steer_doublets.py`: k4run steering

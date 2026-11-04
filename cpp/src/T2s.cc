@@ -5,7 +5,7 @@
 namespace doublets {
 
 std::vector<T2> makeT2s(const std::vector<Hit>& hits,
-                        const std::vector<MiniDoublet>& mds,
+                        const std::vector<MD>& mds,
                         const Calib& calib,
                         bool apply_cuts) {
   std::vector<T2> t2s;
@@ -19,15 +19,15 @@ std::vector<T2> makeT2s(const std::vector<Hit>& hits,
     if (lowers.empty() || uppers.empty()) {
       continue;
     }
-    const MiniDoublet& first = mds[lowers.front()];
+    const MD& first = mds[lowers.front()];
     const float dz_cut = calib.get("t2_dz", first.system, first.doublelayer);
     const float dr_cut = calib.get("t2_dr", first.system, first.doublelayer);
     const float chi2_xy_cut = calib.get("t2_chi2_xy", first.system, first.doublelayer);
     const float chi2_sz_cut = calib.get("t2_chi2_sz", first.system, first.doublelayer);
 
     forEachNeighbouringPair(mds, lowers, uppers, T2_GRID.n_phi, [&](int lower, int upper) {
-      const MiniDoublet& lo = mds[lower];
-      const MiniDoublet& up = mds[upper];
+      const MD& lo = mds[lower];
+      const MD& up = mds[upper];
 
       T2 t2;
       t2.lower = lower;

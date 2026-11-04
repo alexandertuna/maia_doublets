@@ -15,7 +15,7 @@ namespace doublets {
 
 // T2: MDs in gdoublelayers (0, 1), (2, 3), (4, 5), (6, 7). See maia_doublets/t2.py.
 std::vector<T2> makeT2s(const std::vector<Hit>& hits,
-                        const std::vector<MiniDoublet>& mds,
+                        const std::vector<MD>& mds,
                         const Calib& calib,
                         bool apply_cuts);
 

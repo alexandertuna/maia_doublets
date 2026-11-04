@@ -1,6 +1,6 @@
 #include "DoubleLayerTrackingProc.h"
 
-#include "MiniDoublets.h"
+#include "MDs.h"
 #include "Stages.h"
 
 #include <EVENT/LCCollection.h>
@@ -144,9 +144,7 @@ void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
   _cpuReadHits += cpuSeconds() - start;
 
   start = cpuSeconds();
-  const std::vector<doublets::MiniDoublet> mds = doublets::makeMiniDoublets(hits,
-                                                                            *_calib,
-                                                                            _applyCuts);
+  const std::vector<doublets::MD> mds = doublets::makeMDs(hits, *_calib, _applyCuts);
   _mds.cpu += cpuSeconds() - start;
 
   start = cpuSeconds();
@@ -169,7 +167,7 @@ void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
                          << t8s.size() << " T8s" << std::endl;
 
   if (!_dumpDir.empty()) {
-    for (const doublets::MiniDoublet& md : mds) {
+    for (const doublets::MD& md : mds) {
       const int indices[doublets::N_LAYERS_IN_MD] = {md.lower, md.upper};
       writeHits(_dumpMDs, _nEvents, md.gdoublelayer, hits, indices, doublets::N_LAYERS_IN_MD);
       _dumpMDs << "," << md.dr << "," << md.dz << "," << md.ok << "\n";

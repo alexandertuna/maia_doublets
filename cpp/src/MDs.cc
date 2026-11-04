@@ -1,4 +1,4 @@
-#include "MiniDoublets.h"
+#include "MDs.h"
 
 #include "Geometry.h"
 
@@ -98,10 +98,10 @@ DoubleModules groupHitsIntoDoubleModules(const std::vector<Hit>& hits) {
 }
 
 // Fill everything about an MD except dr, dz, and the ok flag
-MiniDoublet buildMiniDoublet(const std::vector<Hit>& hits, int lower, int upper) {
+MD buildMD(const std::vector<Hit>& hits, int lower, int upper) {
   const Hit& lo = hits[lower];
   const Hit& up = hits[upper];
-  MiniDoublet md;
+  MD md;
   md.lower = lower;
   md.upper = upper;
   md.system = lo.system;
@@ -124,10 +124,8 @@ MiniDoublet buildMiniDoublet(const std::vector<Hit>& hits, int lower, int upper)
 
 }  // namespace
 
-std::vector<MiniDoublet> makeMiniDoublets(const std::vector<Hit>& hits,
-                                          const Calib& calib,
-                                          bool apply_cuts) {
-  std::vector<MiniDoublet> mds;
+std::vector<MD> makeMDs(const std::vector<Hit>& hits, const Calib& calib, bool apply_cuts) {
+  std::vector<MD> mds;
 
   const DoubleModules grouped = groupHitsIntoDoubleModules(hits);
   const std::vector<SortedHit>& sorted = grouped.sorted;
@@ -157,7 +155,7 @@ std::vector<MiniDoublet> makeMiniDoublets(const std::vector<Hit>& hits,
         return;
       }
 
-      MiniDoublet md = buildMiniDoublet(hits, lo.index, up.index);
+      MD md = buildMD(hits, lo.index, up.index);
       md.dr = dr;
       md.dz = dz;
       md.ok = std::abs(md.dr) < dr_cut && std::abs(md.dz) < dz_cut;

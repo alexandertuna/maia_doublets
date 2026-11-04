@@ -39,7 +39,7 @@ struct Hit {
 //   phi_slice, eta_slice: (phi, eta) grid used to pair it into the next stage
 //   ok: passed this stage's cuts
 
-struct MiniDoublet {
+struct MD {
   int lower, upper;  // indices into the event's hit vector
   int system, doublelayer, gdoublelayer, module, sensor;
   float dr, dz;

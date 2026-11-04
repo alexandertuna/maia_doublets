@@ -18,7 +18,7 @@ find_package(nlohmann_json REQUIRED)
 add_library(MaiaDoublets SHARED
   src/Calib.cc
   src/Geometry.cc
-  src/MiniDoublets.cc
+  src/MDs.cc
   src/T2s.cc
   src/T4s.cc
   src/T8s.cc
