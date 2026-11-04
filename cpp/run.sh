@@ -17,10 +17,10 @@ source env.sh
 
 GEO=${MAIA_DETECTOR:-v06}
 SMEAR=${MAIA_RESOLUTION:-10um}
-DATASET=${MAIA_DATASET:-neutrinoGun10}
+DATASET=${MAIA_DATASET:-neutrinoGun}
 FILE=${MAIA_FILE:-0}
 EVENTS=${MAIA_EVENTS:-1}
-WINDOW=${MAIA_TIME_WINDOW:-maia}
+WINDOW=${MAIA_TIME_WINDOW:-none}
 
 # File names differ between datasets (e.g. neutrinoGun10 has neutrinoGun_digi_0.slcio)
 DATA_DIR=/ceph/users/atuna/work/maia/maia_datasets/samples/${GEO}/${DATASET}/${SMEAR}
