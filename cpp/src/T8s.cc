@@ -35,20 +35,13 @@ std::vector<T8> makeT8s(const std::vector<Hit>& hits,
     t8.dr = distanceToOrigin(lo.x, lo.y, up.x, up.y);
     t8.dz = zAtOrigin(lo.r, lo.z, up.r, up.z);
 
-    // circle through the first, middle, and last hits, and how far the other 13 are from it
+    // circle through the first, middle, and last hits, and how far all 16 are from it
+    // (the three that define it contribute only rounding)
     const int first = 0, middle = N_LAYERS_IN_T4, last = N_LAYERS_IN_T8 - 1;
     const Circle circle = circleThrough(hits[t8.hits[first]],
                                         hits[t8.hits[middle]],
                                         hits[t8.hits[last]]);
-    constexpr int N_OTHERS = N_LAYERS_IN_T8 - 3;
-    int others[N_OTHERS];
-    int n_others = 0;
-    for (int i = 0; i < N_LAYERS_IN_T8; ++i) {
-      if (i != first && i != middle && i != last) {
-        others[n_others++] = t8.hits[i];
-      }
-    }
-    t8.chi2_xy = chi2XY(hits, others, N_OTHERS, circle);
+    t8.chi2_xy = chi2XY(hits, t8.hits, N_LAYERS_IN_T8, circle);
     t8.chi2_sz = chi2SZ(hits, t8.hits, N_LAYERS_IN_T8, circle);
 
     t8.ok = std::abs(t8.dz) < dz_cut &&

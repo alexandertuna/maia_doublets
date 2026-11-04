@@ -231,7 +231,6 @@ class T8Maker:
         # find the circle (radius, x_center, y_center) formed from three hits of interest
         BAD_CHI2 = 1e6
         i0, i1, i2 = 0, 8, 15
-        ixs = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14]
         circle_d = 2 * (new[f"t8_x_{i0}"] * (new[f"t8_y_{i1}"] - new[f"t8_y_{i2}"]) +
                         new[f"t8_x_{i1}"] * (new[f"t8_y_{i2}"] - new[f"t8_y_{i0}"]) +
                         new[f"t8_x_{i2}"] * (new[f"t8_y_{i0}"] - new[f"t8_y_{i1}"]))
@@ -248,9 +247,10 @@ class T8Maker:
         if np.any(~circle_ok):
             logger.warning(f"Found {np.sum(~circle_ok)} invalid circles with circle_d = 0")
 
-        # calculate the average diff
+        # calculate the average diff, over all hits as for T4s
+        # (the three that define the circle contribute only rounding)
         diff2s = []
-        for ix in ixs:
+        for ix in range(N_LAYERS_IN_T8):
             circle_diff = np.sqrt((new[f"t8_x_{ix}"] - circle_x)**2 + (new[f"t8_y_{ix}"] - circle_y)**2) - circle_r
             diff2s.append(np.where(circle_ok, circle_diff**2, BAD_CHI2))
         new[f"t8_chi2_xy"] = np.sum(diff2s, axis=0)
