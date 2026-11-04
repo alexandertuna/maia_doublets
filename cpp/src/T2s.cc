@@ -4,11 +4,16 @@
 
 namespace doublets {
 
-std::vector<T2> makeT2s(const std::vector<Hit>& hits, const std::vector<MiniDoublet>& mds, const Calib& calib,
+std::vector<T2> makeT2s(const std::vector<Hit>& hits,
+                        const std::vector<MiniDoublet>& mds,
+                        const Calib& calib,
                         bool apply_cuts) {
   std::vector<T2> t2s;
 
-  for (auto [lower_gdl, upper_gdl] : {std::pair(0, 1), std::pair(2, 3), std::pair(4, 5), std::pair(6, 7)}) {
+  for (auto [lower_gdl, upper_gdl] : {std::pair(0, 1),
+                                      std::pair(2, 3),
+                                      std::pair(4, 5),
+                                      std::pair(6, 7)}) {
     const std::vector<int> lowers = okInGDoubleLayer(mds, lower_gdl);
     const std::vector<int> uppers = okInGDoubleLayer(mds, upper_gdl);
     if (lowers.empty() || uppers.empty()) {
@@ -72,8 +77,11 @@ std::vector<T2> makeT2s(const std::vector<Hit>& hits, const std::vector<MiniDoub
       t2.phi_slice = phiSlice(t2.phi, T4_GRID);
       t2.eta_slice = etaSlice(t2.eta, T4_GRID);
 
-      t2.ok = std::abs(t2.dz) < dz_cut && std::abs(t2.dr) < dr_cut && std::abs(t2.dphi) < PI / 2 &&
-              t2.chi2_xy < chi2_xy_cut && t2.chi2_sz < chi2_sz_cut;
+      t2.ok = std::abs(t2.dz) < dz_cut &&
+              std::abs(t2.dr) < dr_cut &&
+              std::abs(t2.dphi) < PI / 2 &&
+              t2.chi2_xy < chi2_xy_cut &&
+              t2.chi2_sz < chi2_sz_cut;
       if (t2.ok || !apply_cuts) {
         t2s.push_back(t2);
       }

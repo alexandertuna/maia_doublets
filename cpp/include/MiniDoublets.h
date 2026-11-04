@@ -12,6 +12,8 @@ namespace doublets {
 //
 // With apply_cuts, only MDs passing the dr and dz cuts are returned. Without,
 // every pair is returned with its `ok` flag set (for validation against Python).
-std::vector<MiniDoublet> makeMiniDoublets(const std::vector<Hit>& hits, const Calib& calib, bool apply_cuts);
+std::vector<MiniDoublet> makeMiniDoublets(const std::vector<Hit>& hits,
+                                          const Calib& calib,
+                                          bool apply_cuts);
 
 }  // namespace doublets

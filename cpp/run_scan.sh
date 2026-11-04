@@ -61,7 +61,11 @@ run_job() {
   if ( ulimit -v 134217728
        /usr/bin/time -v -o ${NAME}.time \
          apptainer exec ${CONTAINER} env \
-           MAIA_DETECTOR=${GEO} MAIA_RESOLUTION=${SMEAR} MAIA_DATASET=${DATASET} MAIA_FILE=${FILE} MAIA_TIME_WINDOW=${WINDOW} \
+           MAIA_DETECTOR=${GEO} \
+           MAIA_RESOLUTION=${SMEAR} \
+           MAIA_DATASET=${DATASET} \
+           MAIA_FILE=${FILE} \
+           MAIA_TIME_WINDOW=${WINDOW} \
            ./run.sh > /dev/null 2>&1 ); then
     echo "$(date '+%F %T') done  ${GEO} $1" | tee -a ${SCAN_LOG}
   else

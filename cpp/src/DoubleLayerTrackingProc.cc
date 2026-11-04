@@ -39,7 +39,11 @@ void writeHeader(std::ofstream& out, int n_hits, const std::string& features) {
   out << std::setprecision(9);  // enough digits to round-trip a float
 }
 
-void writeHits(std::ofstream& out, int i_event, int gdoublelayer, const std::vector<Hit>& hits, const int* indices,
+void writeHits(std::ofstream& out,
+               int i_event,
+               int gdoublelayer,
+               const std::vector<Hit>& hits,
+               const int* indices,
                int n_hits) {
   out << i_event << "," << gdoublelayer;
   for (int i = 0; i < n_hits; ++i) {
@@ -61,15 +65,23 @@ void DoubleLayerTrackingProc::StageSummary::count(const std::vector<Object>& obj
 DoubleLayerTrackingProc::DoubleLayerTrackingProc() : marlin::Processor("DoubleLayerTrackingProc") {
   _description = "maia_doublets track finding on IT/OT barrel double layers";
 
-  registerInputCollections(LCIO::TRACKERHITPLANE, "TrackerHitCollectionNames", "IT/OT barrel hit collections",
-                           _hitCollections, std::vector<std::string>{"IBTrackerHits", "OBTrackerHits"});
-  registerProcessorParameter("CalibFile", "Cut thresholds, maia_doublets/calibs/*.json", _calibFile,
+  registerInputCollections(LCIO::TRACKERHITPLANE,
+                           "TrackerHitCollectionNames",
+                           "IT/OT barrel hit collections",
+                           _hitCollections,
+                           std::vector<std::string>{"IBTrackerHits", "OBTrackerHits"});
+  registerProcessorParameter("CalibFile",
+                             "Cut thresholds, maia_doublets/calibs/*.json",
+                             _calibFile,
                              std::string(""));
   registerProcessorParameter("TimeMin", "Drop hits with time below this [ns]", _timeMin, _timeMin);
   registerProcessorParameter("TimeMax", "Drop hits with time above this [ns]", _timeMax, _timeMax);
   registerProcessorParameter("ApplyCuts", "Keep only objects that pass the cuts", _applyCuts, true);
-  registerProcessorParameter("DumpDir", "If set, write every object to {mds,t2s,t4s,t8s}.csv here (for validation)",
-                             _dumpDir, std::string(""));
+  registerProcessorParameter("DumpDir",
+                             "If set, write every object to {mds,t2s,t4s,t8s}.csv here "
+                             "(for validation)",
+                             _dumpDir,
+                             std::string(""));
 }
 
 void DoubleLayerTrackingProc::init() {
@@ -148,8 +160,12 @@ void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
   const std::vector<T8> t8s = makeT8s(hits, t4s, *_calib, _applyCuts);
   _t8s.cpu += cpuSeconds() - start;
 
-  streamlog_out(MESSAGE) << "event " << _nEvents << ": " << hits.size() << " hits, " << mds.size() << " MDs, "
-                         << t2s.size() << " T2s, " << t4s.size() << " T4s, " << t8s.size() << " T8s" << std::endl;
+  streamlog_out(MESSAGE) << "event " << _nEvents << ": "
+                         << hits.size() << " hits, "
+                         << mds.size() << " MDs, "
+                         << t2s.size() << " T2s, "
+                         << t4s.size() << " T4s, "
+                         << t8s.size() << " T8s" << std::endl;
 
   if (!_dumpDir.empty()) {
     for (const MiniDoublet& md : mds) {
@@ -159,15 +175,27 @@ void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
     }
     for (const T2& t2 : t2s) {
       writeHits(_dumpT2s, _nEvents, t2.gdoublelayer, hits, t2.hits, N_LAYERS_IN_T2);
-      _dumpT2s << "," << t2.dr << "," << t2.dz << "," << t2.chi2_xy << "," << t2.chi2_sz << "," << t2.ok << "\n";
+      _dumpT2s << "," << t2.dr
+               << "," << t2.dz
+               << "," << t2.chi2_xy
+               << "," << t2.chi2_sz
+               << "," << t2.ok << "\n";
     }
     for (const T4& t4 : t4s) {
       writeHits(_dumpT4s, _nEvents, t4.gdoublelayer, hits, t4.hits, N_LAYERS_IN_T4);
-      _dumpT4s << "," << t4.dr << "," << t4.dz << "," << t4.chi2_xy << "," << t4.chi2_sz << "," << t4.ok << "\n";
+      _dumpT4s << "," << t4.dr
+               << "," << t4.dz
+               << "," << t4.chi2_xy
+               << "," << t4.chi2_sz
+               << "," << t4.ok << "\n";
     }
     for (const T8& t8 : t8s) {
       writeHits(_dumpT8s, _nEvents, t8.gdoublelayer, hits, t8.hits, N_LAYERS_IN_T8);
-      _dumpT8s << "," << t8.dr << "," << t8.dz << "," << t8.chi2_xy << "," << t8.chi2_sz << "," << t8.ok << "\n";
+      _dumpT8s << "," << t8.dr
+               << "," << t8.dz
+               << "," << t8.chi2_xy
+               << "," << t8.chi2_sz
+               << "," << t8.ok << "\n";
     }
   }
 
@@ -179,18 +207,22 @@ void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
   ++_nEvents;
 }
 
-void DoubleLayerTrackingProc::printSummary(const std::string& name, const StageSummary& summary) const {
+void DoubleLayerTrackingProc::printSummary(const std::string& name,
+                                           const StageSummary& summary) const {
   long all = 0, ok = 0;
   for (int gdl = 0; gdl < N_GDOUBLELAYERS; ++gdl) {
     all += summary.all[gdl];
     ok += summary.ok[gdl];
   }
-  streamlog_out(MESSAGE) << "  " << name << ": " << summary.cpu << " s CPU, " << all << " made, " << ok
-                         << " passing cuts" << std::endl;
+  streamlog_out(MESSAGE) << "  " << name << ": "
+                         << summary.cpu << " s CPU, "
+                         << all << " made, "
+                         << ok << " passing cuts" << std::endl;
   for (int gdl = 0; gdl < N_GDOUBLELAYERS; ++gdl) {
     if (summary.all[gdl] > 0) {
-      streamlog_out(MESSAGE) << "    gdoublelayer " << gdl << ": " << summary.all[gdl] << " made, " << summary.ok[gdl]
-                             << " passing cuts" << std::endl;
+      streamlog_out(MESSAGE) << "    gdoublelayer " << gdl << ": "
+                             << summary.all[gdl] << " made, "
+                             << summary.ok[gdl] << " passing cuts" << std::endl;
     }
   }
 }
@@ -202,7 +234,8 @@ void DoubleLayerTrackingProc::end() {
     }
   }
   streamlog_out(MESSAGE) << "Summary over " << _nEvents << " events:" << std::endl
-                         << "  hits: " << _cpuReadHits << " s CPU, " << _nHits << " read" << std::endl;
+                         << "  hits: " << _cpuReadHits << " s CPU, "
+                         << _nHits << " read" << std::endl;
   printSummary("MDs", _mds);
   printSummary("T2s", _t2s);
   printSummary("T4s", _t4s);

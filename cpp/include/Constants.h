@@ -40,8 +40,17 @@ struct SliceGrid {
   int n_phi;
   int n_eta;
 };
-constexpr SliceGrid T2_GRID{int(2 * DETECTOR_MAX_PHI / MAX_T2_DPHI), int(2 * DETECTOR_MAX_ETA / MAX_T2_DETA)};
-constexpr SliceGrid T4_GRID{int(2 * DETECTOR_MAX_PHI / MAX_T4_DPHI), int(2 * DETECTOR_MAX_ETA / MAX_T4_DETA)};
-constexpr SliceGrid T8_GRID{int(2 * DETECTOR_MAX_PHI / MAX_T8_DPHI), int(2 * DETECTOR_MAX_ETA / MAX_T8_DETA)};
+constexpr SliceGrid T2_GRID{
+    int(2 * DETECTOR_MAX_PHI / MAX_T2_DPHI),
+    int(2 * DETECTOR_MAX_ETA / MAX_T2_DETA),
+};
+constexpr SliceGrid T4_GRID{
+    int(2 * DETECTOR_MAX_PHI / MAX_T4_DPHI),
+    int(2 * DETECTOR_MAX_ETA / MAX_T4_DETA),
+};
+constexpr SliceGrid T8_GRID{
+    int(2 * DETECTOR_MAX_PHI / MAX_T8_DPHI),
+    int(2 * DETECTOR_MAX_ETA / MAX_T8_DETA),
+};
 
 }  // namespace doublets

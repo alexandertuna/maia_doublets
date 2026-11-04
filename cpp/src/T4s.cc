@@ -4,7 +4,9 @@
 
 namespace doublets {
 
-std::vector<T4> makeT4s(const std::vector<Hit>& hits, const std::vector<T2>& t2s, const Calib& calib,
+std::vector<T4> makeT4s(const std::vector<Hit>& hits,
+                        const std::vector<T2>& t2s,
+                        const Calib& calib,
                         bool apply_cuts) {
   std::vector<T4> t4s;
 
@@ -69,8 +71,11 @@ std::vector<T4> makeT4s(const std::vector<Hit>& hits, const std::vector<T2>& t2s
       t4.phi_slice = phiSlice(t4.phi, T8_GRID);
       t4.eta_slice = etaSlice(t4.eta, T8_GRID);
 
-      t4.ok = std::abs(t4.dphi) < PI / 2 && std::abs(t4.dz) < dz_cut && std::abs(t4.dr) < dr_cut &&
-              t4.chi2_xy < chi2_xy_cut && t4.chi2_sz < chi2_sz_cut;
+      t4.ok = std::abs(t4.dphi) < PI / 2 &&
+              std::abs(t4.dz) < dz_cut &&
+              std::abs(t4.dr) < dr_cut &&
+              t4.chi2_xy < chi2_xy_cut &&
+              t4.chi2_sz < chi2_sz_cut;
       if (t4.ok || !apply_cuts) {
         t4s.push_back(t4);
       }
