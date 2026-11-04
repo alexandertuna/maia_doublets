@@ -10,8 +10,6 @@
 #include <ctime>
 #include <iomanip>
 
-using namespace doublets;
-
 DoubleLayerTrackingProc aDoubleLayerTrackingProc;
 
 namespace {
@@ -42,12 +40,12 @@ void writeHeader(std::ofstream& out, int n_hits, const std::string& features) {
 void writeHits(std::ofstream& out,
                int i_event,
                int gdoublelayer,
-               const std::vector<Hit>& hits,
+               const std::vector<doublets::Hit>& hits,
                const int* indices,
                int n_hits) {
   out << i_event << "," << gdoublelayer;
   for (int i = 0; i < n_hits; ++i) {
-    const Hit& h = hits[indices[i]];
+    const doublets::Hit& h = hits[indices[i]];
     out << "," << h.x << "," << h.y << "," << h.z;
   }
 }
@@ -86,21 +84,21 @@ DoubleLayerTrackingProc::DoubleLayerTrackingProc() : marlin::Processor("DoubleLa
 
 void DoubleLayerTrackingProc::init() {
   printParameters();
-  _calib = std::make_unique<Calib>(_calibFile);
+  _calib = std::make_unique<doublets::Calib>(_calibFile);
   if (!_dumpDir.empty()) {
     _dumpMDs.open(_dumpDir + "/mds.csv");
     _dumpT2s.open(_dumpDir + "/t2s.csv");
     _dumpT4s.open(_dumpDir + "/t4s.csv");
     _dumpT8s.open(_dumpDir + "/t8s.csv");
-    writeHeader(_dumpMDs, N_LAYERS_IN_MD, "dr,dz");
-    writeHeader(_dumpT2s, N_LAYERS_IN_T2, "dr,dz,chi2_xy,chi2_sz");
-    writeHeader(_dumpT4s, N_LAYERS_IN_T4, "dr,dz,chi2_xy,chi2_sz");
-    writeHeader(_dumpT8s, N_LAYERS_IN_T8, "dr,dz,chi2_xy,chi2_sz");
+    writeHeader(_dumpMDs, doublets::N_LAYERS_IN_MD, "dr,dz");
+    writeHeader(_dumpT2s, doublets::N_LAYERS_IN_T2, "dr,dz,chi2_xy,chi2_sz");
+    writeHeader(_dumpT4s, doublets::N_LAYERS_IN_T4, "dr,dz,chi2_xy,chi2_sz");
+    writeHeader(_dumpT8s, doublets::N_LAYERS_IN_T8, "dr,dz,chi2_xy,chi2_sz");
   }
 }
 
-std::vector<Hit> DoubleLayerTrackingProc::readHits(LCEvent* evt) const {
-  std::vector<Hit> hits;
+std::vector<doublets::Hit> DoubleLayerTrackingProc::readHits(LCEvent* evt) const {
+  std::vector<doublets::Hit> hits;
   size_t n_hits = 0;
   for (const std::string& name : _hitCollections) {
     n_hits += evt->getCollection(name)->getNumberOfElements();
@@ -116,15 +114,16 @@ std::vector<Hit> DoubleLayerTrackingProc::readHits(LCEvent* evt) const {
       const unsigned int cellid = lcio->getCellID0();
       const double* pos = lcio->getPosition();
 
-      Hit hit;
+      doublets::Hit hit;
       hit.system = decodeSystem(cellid);
       hit.layer = decodeLayer(cellid);
       hit.module = decodeModule(cellid);
       hit.sensor = decodeSensor(cellid);
-      if (hit.system != INNER_TRACKER_BARREL && hit.system != OUTER_TRACKER_BARREL) {
+      if (hit.system != doublets::INNER_TRACKER_BARREL &&
+          hit.system != doublets::OUTER_TRACKER_BARREL) {
         continue;
       }
-      if (hit.layer >= N_LAYERS_PER_SYSTEM) {
+      if (hit.layer >= doublets::N_LAYERS_PER_SYSTEM) {
         continue;
       }
       // Like Python: r from the double-precision position, then everything as float
@@ -141,23 +140,25 @@ std::vector<Hit> DoubleLayerTrackingProc::readHits(LCEvent* evt) const {
 
 void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
   double start = cpuSeconds();
-  const std::vector<Hit> hits = readHits(evt);
+  const std::vector<doublets::Hit> hits = readHits(evt);
   _cpuReadHits += cpuSeconds() - start;
 
   start = cpuSeconds();
-  const std::vector<MiniDoublet> mds = makeMiniDoublets(hits, *_calib, _applyCuts);
+  const std::vector<doublets::MiniDoublet> mds = doublets::makeMiniDoublets(hits,
+                                                                            *_calib,
+                                                                            _applyCuts);
   _mds.cpu += cpuSeconds() - start;
 
   start = cpuSeconds();
-  const std::vector<T2> t2s = makeT2s(hits, mds, *_calib, _applyCuts);
+  const std::vector<doublets::T2> t2s = doublets::makeT2s(hits, mds, *_calib, _applyCuts);
   _t2s.cpu += cpuSeconds() - start;
 
   start = cpuSeconds();
-  const std::vector<T4> t4s = makeT4s(hits, t2s, *_calib, _applyCuts);
+  const std::vector<doublets::T4> t4s = doublets::makeT4s(hits, t2s, *_calib, _applyCuts);
   _t4s.cpu += cpuSeconds() - start;
 
   start = cpuSeconds();
-  const std::vector<T8> t8s = makeT8s(hits, t4s, *_calib, _applyCuts);
+  const std::vector<doublets::T8> t8s = doublets::makeT8s(hits, t4s, *_calib, _applyCuts);
   _t8s.cpu += cpuSeconds() - start;
 
   streamlog_out(MESSAGE) << "event " << _nEvents << ": "
@@ -168,29 +169,29 @@ void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
                          << t8s.size() << " T8s" << std::endl;
 
   if (!_dumpDir.empty()) {
-    for (const MiniDoublet& md : mds) {
-      const int indices[N_LAYERS_IN_MD] = {md.lower, md.upper};
-      writeHits(_dumpMDs, _nEvents, md.gdoublelayer, hits, indices, N_LAYERS_IN_MD);
+    for (const doublets::MiniDoublet& md : mds) {
+      const int indices[doublets::N_LAYERS_IN_MD] = {md.lower, md.upper};
+      writeHits(_dumpMDs, _nEvents, md.gdoublelayer, hits, indices, doublets::N_LAYERS_IN_MD);
       _dumpMDs << "," << md.dr << "," << md.dz << "," << md.ok << "\n";
     }
-    for (const T2& t2 : t2s) {
-      writeHits(_dumpT2s, _nEvents, t2.gdoublelayer, hits, t2.hits, N_LAYERS_IN_T2);
+    for (const doublets::T2& t2 : t2s) {
+      writeHits(_dumpT2s, _nEvents, t2.gdoublelayer, hits, t2.hits, doublets::N_LAYERS_IN_T2);
       _dumpT2s << "," << t2.dr
                << "," << t2.dz
                << "," << t2.chi2_xy
                << "," << t2.chi2_sz
                << "," << t2.ok << "\n";
     }
-    for (const T4& t4 : t4s) {
-      writeHits(_dumpT4s, _nEvents, t4.gdoublelayer, hits, t4.hits, N_LAYERS_IN_T4);
+    for (const doublets::T4& t4 : t4s) {
+      writeHits(_dumpT4s, _nEvents, t4.gdoublelayer, hits, t4.hits, doublets::N_LAYERS_IN_T4);
       _dumpT4s << "," << t4.dr
                << "," << t4.dz
                << "," << t4.chi2_xy
                << "," << t4.chi2_sz
                << "," << t4.ok << "\n";
     }
-    for (const T8& t8 : t8s) {
-      writeHits(_dumpT8s, _nEvents, t8.gdoublelayer, hits, t8.hits, N_LAYERS_IN_T8);
+    for (const doublets::T8& t8 : t8s) {
+      writeHits(_dumpT8s, _nEvents, t8.gdoublelayer, hits, t8.hits, doublets::N_LAYERS_IN_T8);
       _dumpT8s << "," << t8.dr
                << "," << t8.dz
                << "," << t8.chi2_xy
@@ -210,7 +211,7 @@ void DoubleLayerTrackingProc::processEvent(LCEvent* evt) {
 void DoubleLayerTrackingProc::printSummary(const std::string& name,
                                            const StageSummary& summary) const {
   long all = 0, ok = 0;
-  for (int gdl = 0; gdl < N_GDOUBLELAYERS; ++gdl) {
+  for (int gdl = 0; gdl < doublets::N_GDOUBLELAYERS; ++gdl) {
     all += summary.all[gdl];
     ok += summary.ok[gdl];
   }
@@ -218,7 +219,7 @@ void DoubleLayerTrackingProc::printSummary(const std::string& name,
                          << summary.cpu << " s CPU, "
                          << all << " made, "
                          << ok << " passing cuts" << std::endl;
-  for (int gdl = 0; gdl < N_GDOUBLELAYERS; ++gdl) {
+  for (int gdl = 0; gdl < doublets::N_GDOUBLELAYERS; ++gdl) {
     if (summary.all[gdl] > 0) {
       streamlog_out(MESSAGE) << "    gdoublelayer " << gdl << ": "
                              << summary.all[gdl] << " made, "
