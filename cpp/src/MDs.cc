@@ -104,8 +104,6 @@ MD buildMD(const std::vector<Hit>& hits, int lower, int upper) {
   MD md;
   md.lower = lower;
   md.upper = upper;
-  md.system = lo.system;
-  md.doublelayer = lo.doublelayer();
   md.gdoublelayer = lo.gdoublelayer();
   md.module = lo.module;
   md.sensor = lo.sensor;
@@ -135,8 +133,8 @@ std::vector<MD> makeMDs(const std::vector<Hit>& hits, const Calib& calib, bool a
       continue;
     }
     const Hit& first = hits[sorted[double_module.begin].index];
-    const float dr_cut = calib.get("md_dr", first.system, first.doublelayer());
-    const float dz_cut = calib.get("md_dz", first.system, first.doublelayer());
+    const float dr_cut = calib.get("md_dr", first.gdoublelayer());
+    const float dz_cut = calib.get("md_dz", first.gdoublelayer());
 
     auto add = [&](int lower, int upper) {
       const SortedHit& lo = sorted[lower];

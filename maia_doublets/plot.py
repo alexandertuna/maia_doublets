@@ -40,6 +40,7 @@ from maia_doublets.constants import DOUBLET_REQS, NO_MCP
 from maia_doublets.constants import T2_REQS, T2_REQ_DR_POS, T2_REQ_DZ_POS, T2_REQ_XY_CHI2, T2_REQ_SZ_CHI2, T2_REQ_ALL
 from maia_doublets.constants import MIN_COSTHETA, MIN_PT_FRACTION, MAX_TIME
 from maia_doublets.constants import N_T2_PHI_SLICES
+from maia_doublets.constants import LAYER_OFFSET
 
 
 class Plotter:
@@ -181,9 +182,9 @@ class Plotter:
         logger.info(f"* {'MDs from same MCP':<30} :: {same_mcp.sum():>10}")
 
         # part 2b: mds with dr and dz cuts
-        doublelayer = self.mds["md_doublelayer"]
-        dl_0 = doublelayer == 0
-        dl_1 = doublelayer == 1
+        gdoublelayer = self.mds["md_gdoublelayer"]
+        dl_0 = gdoublelayer.isin([0, 4]) # layers 0 and 1, IT or OT
+        dl_1 = gdoublelayer.isin([1, 5]) # layers 2 and 3, IT or OT
         baseline_cuts = (
             (self.mds["i_mcp"] >= 0) &
             (np.abs(self.mds["mcp_pdg"]).isin(PARTICLES_OF_INTEREST)) &
@@ -223,8 +224,8 @@ class Plotter:
     def plot_numbers_for_comparison_background(self, pdf: PdfPages):
         layers = [0, 1]
         # layers = [2, 3]
-        dl = layers[0] // 2
         sy = OUTER_TRACKER_BARREL
+        gdl = (layers[0] + LAYER_OFFSET[sy]) // 2
 
         # part 1: hits
         mask = np.ones(len(self.hits), dtype=bool)
@@ -260,7 +261,7 @@ class Plotter:
         mask = np.ones(len(self.mds), dtype=bool)
         for [req, label] in [
             [self.mds["md_system"] == sy, "MDs in OTB"],
-            [self.mds["md_doublelayer"] == dl, f"MDs in layers {layers}"],
+            [self.mds["md_gdoublelayer"] == gdl, f"MDs in layers {layers}"],
             # [self.mds["md_sensor"] == 20, "z-sensor 20"],
             # [self.mds["md_module"] == 0, "phi-module 0"],
             [self.mds["md_ok_dz"], f"MDs with |dz| cut"],
@@ -276,7 +277,7 @@ class Plotter:
             mask = np.ones(len(self.t2s), dtype=bool)
             for [req, label] in [
                 [self.t2s["t2_system"] == sy, "T2 in OTB"],
-                [self.t2s["t2_doublelayer"] == dl, f"T2 starting on layer {dl}"],
+                [self.t2s["t2_gdoublelayer"] == gdl, f"T2 starting on layers {layers}"],
                 [self.t2s["t2_ok_dz"], f"T2 with |dz| cut"],
                 [self.t2s["t2_ok_dr"], f"T2 with |dr| cut"],
                 [self.t2s["t2_ok_chi2_xy"], f"T2 with |chi2_xy| cut"],
@@ -854,7 +855,7 @@ class Plotter:
             "mcp_phi"
         ]):
 
-            for (gdl, group) in self.mds[baseline].groupby("md_doublelayer"):
+            for (gdl, group) in self.mds[baseline].groupby("md_gdoublelayer"):
 
                 logger.info(f"Plotting md quality efficiency vs {kin}, gdl {gdl} ...")
                 if len(group) == 0:

@@ -44,9 +44,11 @@ There are a few conventions used throughout the code which can be helpful to kno
 
 ## Double-layer index
 
-Double-layer (dl) refers to layer mod 2, and is used frequently throughout the code.
+Double-layer (dl) refers to layer // 2 within a system (IT or OT).
 
 Double-layer starts from zero in the inner tracker and zero in the outer tracker.
+
+It is only used for hits, to group them into double modules for making MDs (`hit_layer_div_2`).
 
 ## Global double-layer index
 
@@ -54,11 +56,14 @@ Global double-layer (gdl) refers to the double-layer index when ignoring the par
 
 Put another way: global double-layer starts from zero in the inner tracker and four in the outer tracker.
 
-## Objects are referenced by their innermost double-layer
+Every object (MD, T2, T4, T8) and every calibration constant is indexed by global double-layer,
+e.g. `md_gdoublelayer` and `{"md_dz": {"0": ..., ..., "7": ...}}`.
 
-For example, a T2 which includes hits from double-layer 0 and 1 will have a "double-layer" of 0.
+## Objects are referenced by their innermost global double-layer
 
-The implication is a T2 with double-layer 0 naturally includes double-layer 1, since it's a T2.
+For example, a T2 which includes hits from global double-layer 4 and 5 will have a `t2_gdoublelayer` of 4.
+
+The implication is a T2 with global double-layer 4 naturally includes global double-layer 5, since it's a T2.
 
 ## MCParticle index
 
@@ -84,5 +89,5 @@ Keep this in mind when applying the `--cut-xx` flags.
 
 This is a non-exhaustive list of things which I should address:
 
-- Mixing global double layer with system, layer, double-layer
+- Group hits into MDs by global double layer instead of (system, `hit_layer_div_2`)
 - Using double-layers at all? Is that silly?

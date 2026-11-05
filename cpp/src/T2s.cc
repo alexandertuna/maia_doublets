@@ -19,11 +19,10 @@ std::vector<T2> makeT2s(const std::vector<Hit>& hits,
     if (lowers.empty() || uppers.empty()) {
       continue;
     }
-    const MD& first = mds[lowers.front()];
-    const float dz_cut = calib.get("t2_dz", first.system, first.doublelayer);
-    const float dr_cut = calib.get("t2_dr", first.system, first.doublelayer);
-    const float chi2_xy_cut = calib.get("t2_chi2_xy", first.system, first.doublelayer);
-    const float chi2_sz_cut = calib.get("t2_chi2_sz", first.system, first.doublelayer);
+    const float dz_cut = calib.get("t2_dz", lower_gdl);
+    const float dr_cut = calib.get("t2_dr", lower_gdl);
+    const float chi2_xy_cut = calib.get("t2_chi2_xy", lower_gdl);
+    const float chi2_sz_cut = calib.get("t2_chi2_sz", lower_gdl);
 
     forEachNeighbouringPair(mds, lowers, uppers, T2_GRID.n_phi, [&](int lower, int upper) {
       const MD& lo = mds[lower];
@@ -36,8 +35,6 @@ std::vector<T2> makeT2s(const std::vector<Hit>& hits,
       t2.hits[1] = lo.upper;
       t2.hits[2] = up.lower;
       t2.hits[3] = up.upper;
-      t2.system = lo.system;
-      t2.doublelayer = lo.doublelayer;
       t2.gdoublelayer = lo.gdoublelayer;
 
       // With cuts, each is applied as soon as it is known, cheapest first: most pairs fail.

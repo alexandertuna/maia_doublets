@@ -21,8 +21,8 @@ class MDMaker:
     ):
         self.signal = signal
         self.cut_mds = cut_mds
-        self.MD_DZ_CUT = calibs.get("md_dz", np.zeros((10, 10)))
-        self.MD_DR_CUT = calibs.get("md_dr", np.zeros((10, 10)))
+        self.MD_DZ_CUT = calibs.get("md_dz", np.zeros(10))
+        self.MD_DR_CUT = calibs.get("md_dr", np.zeros(10))
         self.md_cols = [
             "file",
             "i_event", # the event
@@ -79,10 +79,9 @@ class MDMaker:
         # announcements
         logger.info(f"Total mds: {len(mds)}")
         logger.info(f"Total mds size: {mds.memory_usage(deep=True).sum() * BYTE_TO_MB:.1f} MB")
-        counts = mds.groupby(["md_system",
-                                   "md_doublelayer"]).size()
-        for (system, doublelayer), total in counts.items():
-            logger.info(f"n(mds) for system {system}, doublelayer {doublelayer}: {total}")
+        counts = mds.groupby("md_gdoublelayer").size()
+        for gdl, total in counts.items():
+            logger.info(f"n(mds) for gdl {gdl}: {total}")
 
         return mds, cutflow
 
@@ -145,10 +144,9 @@ class MDMaker:
         mask = {}
 
         # record some cut results
-        sy = mds["hit_system"]
-        dl = mds["hit_layer_div_2"]
-        mds["md_ok_dr"] = np.abs(mds["md_dr"]) < self.MD_DR_CUT[sy, dl]
-        mds["md_ok_dz"] = np.abs(mds["md_dz"]) < self.MD_DZ_CUT[sy, dl]
+        gdl = mds["hit_glayer_lower"] // 2
+        mds["md_ok_dr"] = np.abs(mds["md_dr"]) < self.MD_DR_CUT[gdl]
+        mds["md_ok_dz"] = np.abs(mds["md_dz"]) < self.MD_DZ_CUT[gdl]
         mds["md_ok"] = mds["md_ok_dr"] & mds["md_ok_dz"]
 
         # remove as desired
@@ -161,11 +159,10 @@ class MDMaker:
         # rename some columns
         rename = {
             "hit_system": "md_system",
-            "hit_layer_div_2": "md_doublelayer",
             "hit_sensor": "md_sensor",
             "hit_module": "md_module",
         }
-        mds = mds.rename(columns=rename)
+        mds = mds.rename(columns=rename).drop(columns=["hit_layer_div_2"])
         mds["md_glayer"] = mds["hit_glayer_lower"]
         mds["md_gdoublelayer"] = mds["hit_glayer_lower"] // 2
 
@@ -262,9 +259,8 @@ class MDMaker:
         n_up = len(upper)
         n_full = n_lo * n_up
 
-        system = int(lower["hit_system"].iloc[0])
-        doublelayer = int(lower["hit_layer_div_2"].iloc[0])
-        dz_cut = float(self.MD_DZ_CUT[system, doublelayer])
+        gdl = int(lower["hit_glayer"].iloc[0]) // 2
+        dz_cut = float(self.MD_DZ_CUT[gdl])
 
         z_lo = lower["hit_z"].to_numpy(np.float64)
         r_lo = lower["hit_r"].to_numpy(np.float64)

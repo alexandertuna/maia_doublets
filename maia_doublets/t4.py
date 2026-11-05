@@ -67,7 +67,7 @@ class T4Maker:
             "file",
             "i_event",
             "t2_system",
-            "t2_doublelayer",
+            "t2_gdoublelayer",
         ]
         self.t2s = self.t2s.sort_values(by=cols).reset_index(drop=True)
 
@@ -155,8 +155,7 @@ class T4Maker:
 
     def consolidate_t4_features(self, t4s: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
 
-        # the doublelayer
-        t4s["t4_doublelayer"] = t4s["t2_doublelayer_lower"]
+        # the global doublelayer
         t4s["t4_gdoublelayer"] = t4s["t2_gdoublelayer_lower"]
 
         # rz projection
@@ -294,8 +293,6 @@ class T4Maker:
             "t2_system": "t4_system",
             "t2_system_lower": "t4_system_lower",
             "t2_system_upper": "t4_system_upper",
-            "t2_doublelayer_lower": "t4_doublelayer_lower",
-            "t2_doublelayer_upper": "t4_doublelayer_upper",
             "t2_gdoublelayer_lower": "t4_gdoublelayer_lower",
             "t2_gdoublelayer_upper": "t4_gdoublelayer_upper",
             "t2_module_lower": "t4_module_lower",

@@ -61,9 +61,9 @@ maia_doublets --geo v07 --dataset muonGun_pT_2p0_2p1 --digi --smear 10um --cut-m
 
 ## Code conventions (from README)
 
-- **dl** (double-layer) = layer // 2 within a system; starts at 0 in both IT and OT.
-- **gdl** (global double-layer) ignores the system: IT is 0–3, OT starts at 4.
-- Objects are labeled by their **innermost** double-layer (a T2 spanning dl 0 and 1 has dl 0).
+- **dl** (double-layer) = layer // 2 within a system; starts at 0 in both IT and OT. Only hits use it (`hit_layer_div_2`, to group them into double modules for MDs).
+- **gdl** (global double-layer) ignores the system: IT is 0–3, OT starts at 4. Every object and every calibration constant is indexed by gdl (`md_gdoublelayer`, ...).
+- Objects are labeled by their **innermost** gdl (a T2 spanning gdl 4 and 5 has gdl 4).
 - **`i_mcp`**: truth-matched MCParticle index; `0xffffffff` (`NO_MCP`) means the hits do not share one truth particle.
 - **`xx_ok`**: the object passed all selection cuts (e.g. `t4_ok`).
 - Code style: pandas DataFrames throughout, `logging` for output, type hints on function signatures. Match the surrounding code.

@@ -27,10 +27,10 @@ class T2Maker:
         memory = mds.memory_usage(deep=True).sum() * BYTE_TO_MB
         logger.info(f"Making t2s with mds memory {memory:.1f} MB ...")
 
-        self.T2_DZ_CUT = calibs.get("t2_dz", np.zeros((10, 10)))
-        self.T2_DR_CUT = calibs.get("t2_dr", np.zeros((10, 10)))
-        self.T2_CHI2_XY_CUT = calibs.get("t2_chi2_xy", np.zeros((10, 10)))
-        self.T2_CHI2_SZ_CUT = calibs.get("t2_chi2_sz", np.zeros((10, 10)))
+        self.T2_DZ_CUT = calibs.get("t2_dz", np.zeros(10))
+        self.T2_DR_CUT = calibs.get("t2_dr", np.zeros(10))
+        self.T2_CHI2_XY_CUT = calibs.get("t2_chi2_xy", np.zeros(10))
+        self.T2_CHI2_SZ_CUT = calibs.get("t2_chi2_sz", np.zeros(10))
 
         self.merge_keys = [
             "file",
@@ -54,13 +54,13 @@ class T2Maker:
 
 
     def sort_mds(self):
-        # sort mds by file, event, system, doublelayer, sensor, module
+        # sort mds by file, event, system, gdoublelayer, sensor, module
         logger.info("Sorting MDs for T2s ...")
         cols = [
             "file",
             "i_event",
             "md_system",
-            "md_doublelayer",
+            "md_gdoublelayer",
             "md_sensor",
             "md_module",
         ]
@@ -135,10 +135,9 @@ class T2Maker:
                 # cut some t2s early to save computations
                 if self.cut_t2s:
                     t2s = self.add_basic_t2_features(t2s)
-                    sy = t2s["t2_system"]
-                    dl = t2s["t2_doublelayer"]
-                    t2s["t2_ok_dz"] = np.abs(t2s["t2_dz"]) < self.T2_DZ_CUT[sy, dl]
-                    t2s["t2_ok_dr"] = np.abs(t2s["t2_dr"]) < self.T2_DR_CUT[sy, dl]
+                    gdl = t2s["t2_gdoublelayer"]
+                    t2s["t2_ok_dz"] = np.abs(t2s["t2_dz"]) < self.T2_DZ_CUT[gdl]
+                    t2s["t2_ok_dr"] = np.abs(t2s["t2_dr"]) < self.T2_DR_CUT[gdl]
                     t2s = t2s[t2s["t2_ok_dz"] & t2s["t2_ok_dr"]]
 
                 cands.append(t2s)
@@ -158,8 +157,6 @@ class T2Maker:
 
     def rename_t2_columns_after_merge(self, t2s: pd.DataFrame) -> pd.DataFrame:
         rename = {
-            "md_doublelayer_lower": "t2_doublelayer_lower",
-            "md_doublelayer_upper": "t2_doublelayer_upper",
             "md_glayer_lower": "t2_glayer_lower",
             "md_glayer_upper": "t2_glayer_upper",
             "md_module_lower": "t2_module_lower",
@@ -180,9 +177,9 @@ class T2Maker:
 
     def add_basic_t2_features(self, t2s: pd.DataFrame) -> pd.DataFrame:
 
-        # the system and doublelayer
+        # the system and global doublelayer
         t2s["t2_system"] = t2s["t2_system_lower"].astype(np.uint8)
-        t2s["t2_doublelayer"] = t2s["t2_doublelayer_lower"].astype(np.uint8)
+        t2s["t2_gdoublelayer"] = (t2s["t2_glayer_lower"] // 2).astype(np.uint8)
 
         # rz projection
         slope_rz = np.divide(t2s["md_z_upper"] - t2s["md_z_lower"],
@@ -316,7 +313,6 @@ class T2Maker:
         t2s["t2_module"] = t2s["t2_module_lower"]
         t2s["t2_sensor"] = t2s["t2_sensor_lower"]
         t2s["t2_glayer"] = t2s["t2_glayer_lower"]
-        t2s["t2_gdoublelayer"] = t2s["t2_glayer"] // 2
 
         # and drop other cols
         dropcols = ["i_mcp_lower", "i_mcp_upper"]
@@ -330,13 +326,12 @@ class T2Maker:
         cutflow = {"all": len(t2s)}
 
         # record some cut results
-        sy = t2s["t2_system"]
-        dl = t2s["t2_doublelayer"]
-        t2s["t2_ok_dz"] = np.abs(t2s["t2_dz"]) < self.T2_DZ_CUT[sy, dl] # NB: these two cuts are special
-        t2s["t2_ok_dr"] = np.abs(t2s["t2_dr"]) < self.T2_DR_CUT[sy, dl] # because theyre already defined above
+        gdl = t2s["t2_gdoublelayer"]
+        t2s["t2_ok_dz"] = np.abs(t2s["t2_dz"]) < self.T2_DZ_CUT[gdl] # NB: these two cuts are special
+        t2s["t2_ok_dr"] = np.abs(t2s["t2_dr"]) < self.T2_DR_CUT[gdl] # because theyre already defined above
         new["t2_ok_dphi"] = np.abs(new["t2_dphi"]) < np.pi / 2.0
-        new["t2_ok_chi2_xy"] = np.abs(new["t2_chi2_xy"]) < self.T2_CHI2_XY_CUT[sy, dl]
-        new["t2_ok_chi2_sz"] = np.abs(new["t2_chi2_sz"]) < self.T2_CHI2_SZ_CUT[sy, dl]
+        new["t2_ok_chi2_xy"] = np.abs(new["t2_chi2_xy"]) < self.T2_CHI2_XY_CUT[gdl]
+        new["t2_ok_chi2_sz"] = np.abs(new["t2_chi2_sz"]) < self.T2_CHI2_SZ_CUT[gdl]
         new["t2_ok"] = (
             t2s["t2_ok_dz"] &
             t2s["t2_ok_dr"] &

@@ -269,40 +269,19 @@ def color(detector: str, smear: str) -> str:
         raise ValueError(f"Unknown detector: {detector}")
 
 
-def convert_system_layer_to_global(system, layer):
-    offsets = {
-        3: 0,
-        5: 4,
-    }
-    return offsets[system] + layer
-
-
 def interpret_calib_data(calib: dict, lo: float, hi: float, row_len: int) -> tuple[list, list]:
     global_doublelayers = []
     calib_values = []
     for key, value in calib.items():
-        if (isinstance(value, float) or
-            isinstance(value, int)):
-            value = float(value)
-            global_doublelayer = int(key)
-            for gdl in np.linspace(global_doublelayer - lo,
-                                  global_doublelayer + hi,
-                                  row_len):
-                global_doublelayers.append(gdl)
-                calib_values.append(value)
-
-        elif isinstance(value, dict):
-            system = int(key)
-            for doublelayer_str, calib_value in value.items():
-                doublelayer = int(doublelayer_str)
-                global_doublelayer = convert_system_layer_to_global(system, doublelayer)
-                for gdl in np.linspace(global_doublelayer - lo,
-                                       global_doublelayer + hi,
-                                       row_len):
-                    global_doublelayers.append(gdl)
-                    calib_values.append(calib_value)
-        else:
+        if not isinstance(value, (float, int)):
             raise ValueError(f"Unknown type for value: {type(value)}")
+        value = float(value)
+        global_doublelayer = int(key)
+        for gdl in np.linspace(global_doublelayer - lo,
+                               global_doublelayer + hi,
+                               row_len):
+            global_doublelayers.append(gdl)
+            calib_values.append(value)
 
     return global_doublelayers, calib_values
 

@@ -2,9 +2,10 @@
 
 // The objects of the track finding chain: hits -> mini-doublets (MDs) -> T2 -> T4 -> T8.
 // Conventions follow the Python code (see the repo README):
-//   doublelayer  = layer / 2, within a system
 //   gdoublelayer = global doublelayer: IT is 0-3, OT is 4-7
-//   objects are labelled by their innermost doublelayer
+//   objects are labelled by their innermost gdoublelayer
+// Only hits know their system and doublelayer (layer / 2, within a system), to group them
+// into double modules and to compute their gdoublelayer.
 
 #include "Constants.h"
 
@@ -41,7 +42,7 @@ struct Hit {
 
 struct MD {
   int lower, upper;  // indices into the event's hit vector
-  int system, doublelayer, gdoublelayer, module, sensor;
+  int gdoublelayer, module, sensor;
   float dr, dz;
   float x, y, z, r, phi, eta;
   int phi_slice, eta_slice;
@@ -52,7 +53,7 @@ struct MD {
 struct T2 {
   int lower, upper;  // indices into the event's MD vector
   int hits[N_LAYERS_IN_T2];  // indices into the event's hit vector, inside out
-  int system, doublelayer, gdoublelayer;
+  int gdoublelayer;
   float dr, dz;
   float x, y, z, r, phi, eta;
   int phi_slice, eta_slice;

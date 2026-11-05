@@ -29,12 +29,10 @@ class CalibConstants:
         for feature, calib in self.calib_dict.items():
             if not feature.startswith("md_"):
                 continue
-            n_systems = max(int(system) for system in calib.keys()) + 1
-            n_doublelayers = max(int(dl) for dl_dict in calib.values() for dl in dl_dict.keys()) + 1
-            calib_array = np.zeros((n_systems, n_doublelayers))
-            for system, doublelayer_dict in calib.items():
-                for doublelayer, interval in doublelayer_dict.items():
-                    calib_array[int(system), int(doublelayer)] = interval
+            n_gdls = max(int(gdl) for gdl in calib.keys()) + 1
+            calib_array = np.zeros(n_gdls)
+            for gdl, interval in calib.items():
+                calib_array[int(gdl)] = interval
             self.calibs[feature] = calib_array
 
 
@@ -42,12 +40,10 @@ class CalibConstants:
         for feature, calib in self.calib_dict.items():
             if not feature.startswith("t2_"):
                 continue
-            n_systems = max(int(system) for system in calib.keys()) + 1
-            n_doublelayers = max(int(dl) for dl_dict in calib.values() for dl in dl_dict.keys()) + 1
-            calib_array = np.zeros((n_systems, n_doublelayers))
-            for system, doublelayer_dict in calib.items():
-                for doublelayer, interval in doublelayer_dict.items():
-                    calib_array[int(system), int(doublelayer)] = interval
+            n_gdls = max(int(gdl) for gdl in calib.keys()) + 1
+            calib_array = np.zeros(n_gdls)
+            for gdl, interval in calib.items():
+                calib_array[int(gdl)] = interval
             self.calibs[feature] = calib_array
 
 
@@ -84,29 +80,24 @@ class MDCalibrator:
             "md_dr",
         ]
         self.sequential = sequential
-        self.system = "md_system"
-        self.doublelayer = "md_doublelayer"
+        self.gdl = "md_gdoublelayer"
         self.detectable = "md_detectable"
         self.groupby = [
-            self.system,
-            self.doublelayer,
+            self.gdl,
         ]
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating MDs {self.features}")
         logger.info(f"len(doublets) = {len(doublets)}")
-        logger.info(f"Systems: {self.df[self.system].unique()}")
-        logger.info(f"Doublelayers: {self.df[self.doublelayer].unique()}")
+        logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
 
 
     def calibrate(self, update_calib: bool = True) -> None:
         for (cols, group) in self.df.groupby(self.groupby):
             mask = group[self.detectable]
             for feature in self.features:
-                (system, doublelayer) = [str(col) for col in cols]
-                if system not in self.calib[feature]:
-                    self.calib[feature][system] = {}
+                (gdl,) = [str(col) for col in cols]
                 interval = np.percentile(np.abs(group[mask][feature]), self.percentile)
-                self.calib[feature][system][doublelayer] = format_interval(interval, feature=feature)
+                self.calib[feature][gdl] = format_interval(interval, feature=feature)
                 if self.sequential:
                     mask &= (np.abs(group[feature]) < interval)
         if update_calib:
@@ -132,19 +123,16 @@ class T2Calibrator:
             "t2_chi2_sz",
         ]
         self.sequential = sequential
-        self.system = "t2_system"
-        self.doublelayer = "t2_doublelayer"
+        self.gdl = "t2_gdoublelayer"
         self.detectable = "t2_detectable"
         self.groupby = [
-            self.system,
-            self.doublelayer,
+            self.gdl,
         ]
         self.calib = {feature: {} for feature in self.features}
         logger.info(f"Calibrating T2 {self.features}")
         logger.info(f"len(t2s) = {len(t2s)}")
         if len(t2s) > 0:
-            logger.info(f"Systems: {self.df[self.system].unique()}")
-            logger.info(f"Doublelayers: {self.df[self.doublelayer].unique()}")
+            logger.info(f"Global doublelayers: {self.df[self.gdl].unique()}")
 
 
     def calibrate(self, update_calib: bool = True) -> None:
@@ -154,11 +142,9 @@ class T2Calibrator:
         for (cols, group) in self.df.groupby(self.groupby):
             mask = group[self.detectable]
             for feature in self.features:
-                (system, doublelayer) = [str(col) for col in cols]
-                if system not in self.calib[feature]:
-                    self.calib[feature][system] = {}
+                (gdl,) = [str(col) for col in cols]
                 interval = np.percentile(np.abs(group[mask][feature]), self.percentile)
-                self.calib[feature][system][doublelayer] = format_interval(interval)
+                self.calib[feature][gdl] = format_interval(interval)
                 if self.sequential:
                     mask &= (np.abs(group[feature]) < interval)
         if update_calib:
@@ -287,17 +273,9 @@ def update_calibration(old_calib: dict, new_calib: dict) -> dict:
     for feature in new_calib:
         if feature not in old_calib:
             old_calib[feature] = {}
-        # mds and t2s are calibrated per system and doublelayer
-        if feature.startswith("md_") or feature.startswith("t2_"):
-            for system, doublelayer_dict in new_calib[feature].items():
-                if system not in old_calib[feature]:
-                    old_calib[feature][system] = {}
-                for doublelayer, perc in doublelayer_dict.items():
-                    old_calib[feature][system][doublelayer] = perc
-        # the rest are calibrated per global doublelayer
-        else:
-            for global_doublelayer, perc in new_calib[feature].items():
-                old_calib[feature][global_doublelayer] = perc
+        # everything is calibrated per global doublelayer
+        for global_doublelayer, perc in new_calib[feature].items():
+            old_calib[feature][global_doublelayer] = perc
     return old_calib
 
 

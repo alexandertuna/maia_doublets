@@ -13,19 +13,6 @@ Calib::Calib(const std::string& path) {
   _json = nlohmann::json::parse(file);
 }
 
-float Calib::get(const std::string& feature, int system, int doublelayer) const {
-  if (!_json.contains(feature)) {
-    return 0;
-  }
-  const auto& by_system = _json[feature];
-  const std::string sy = std::to_string(system);
-  const std::string dl = std::to_string(doublelayer);
-  if (!by_system.contains(sy) || !by_system[sy].contains(dl)) {
-    return 0;
-  }
-  return by_system[sy][dl].get<float>();
-}
-
 float Calib::get(const std::string& feature, int gdoublelayer) const {
   if (!_json.contains(feature)) {
     return 0;

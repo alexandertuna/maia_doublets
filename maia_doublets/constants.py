@@ -69,15 +69,9 @@ N_LAYERS_IN_T8 = 16
 CUT_MISSING = np.zeros((10, 10))
 
 #
-# np.arrays below are indexed by (system, doublelayer)
-# i.e.:
-#   [dl0, dl1, dl2, dl3], # NOT_USED
-#   [dl0, dl1, dl2, dl3], # VERTEX_TRACKER_BARREL
-#   [dl0, dl1, dl2, dl3], # VERTEX_TRACKER_ENDCAP
-#   [dl0, dl1, dl2, dl3], # INNER_TRACKER_BARREL
-#   [dl0, dl1, dl2, dl3], # INNER_TRACKER_ENDCAP
-#   [dl0, dl1, dl2, dl3], # OUTER_TRACKER_BARREL
-#   [dl0, dl1, dl2, dl3], # OUTER_TRACKER_ENDCAP
+# Cut arrays (calib.py) are indexed by global doublelayer (gdl):
+#   md_* and t2_*: [gdl]
+#   t4_* and t8_*: [gdl_lower, gdl_upper]
 #
 
 REQ_PASSTHROUGH = "no cuts"
@@ -113,7 +107,10 @@ NICKNAME_TO_SYSTEM = {
     value: key for key, value in NICKNAMES.items()
 }
 
-# For converting system layer to global layer
+# For converting system layer to global layer: glayer = layer + LAYER_OFFSET[system],
+# and global doublelayer = glayer // 2 (IT is 0-3, OT is 4-7).
+# NB: only the IT and OT barrels have distinct offsets. Adding endcaps needs new offsets,
+# or their global (double)layers would collide with the barrels'.
 LAYER_OFFSET = np.array([
     0, # NOT_USED
     0, # VERTEX_TRACKER_BARREL
