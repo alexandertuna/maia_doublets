@@ -70,8 +70,6 @@ class T8Maker:
         cols = [
             "file",
             "i_event",
-            "t4_system_lower",
-            "t4_system_upper",
             "t4_gdoublelayer",
         ]
         self.t4s = self.t4s.sort_values(by=cols).reset_index(drop=True)

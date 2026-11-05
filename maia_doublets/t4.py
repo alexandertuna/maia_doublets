@@ -66,7 +66,6 @@ class T4Maker:
         cols = [
             "file",
             "i_event",
-            "t2_system",
             "t2_gdoublelayer",
         ]
         self.t2s = self.t2s.sort_values(by=cols).reset_index(drop=True)

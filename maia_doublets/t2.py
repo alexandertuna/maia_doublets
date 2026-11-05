@@ -59,7 +59,6 @@ class T2Maker:
         cols = [
             "file",
             "i_event",
-            "md_system",
             "md_gdoublelayer",
             "md_sensor",
             "md_module",
