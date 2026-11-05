@@ -31,8 +31,8 @@ apptainer exec /cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-ubunt
 ## `neutrinoGunN`
 
 `neutrinoGunN` is a neutrinoGun sample overlaid with N percent of the nominal BIB.
-For example, `neutrinoGun10` has 10% BIB and `neutrinoGun120` has 120% BIB ("overdrive").
-The bare `neutrinoGun` (no N) has 100% BIB, i.e. the nominal amount.
+For example, `neutrinoGun10` has 10% BIB, `neutrinoGun100` has the nominal BIB,
+and `neutrinoGun120` has 120% BIB ("overdrive").
 
 In the [maia_datasets](https://github.com/alexandertuna/maia_datasets) productions, this is
 set by `--overlayMixNumberBackground`, at roughly 16.7 BIB events per percent

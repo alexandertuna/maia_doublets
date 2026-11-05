@@ -12,7 +12,7 @@ source env.sh
 
 GEO=${MAIA_DETECTOR:-v06}
 SMEAR=${MAIA_RESOLUTION:-10um}
-DATASET=${MAIA_DATASET:-neutrinoGun}
+DATASET=${MAIA_DATASET:-neutrinoGun100}
 PKL_DIR=../output/${GEO}_${DATASET}_digi_${SMEAR}
 mkdir -p ${PKL_DIR}
 

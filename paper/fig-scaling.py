@@ -21,7 +21,7 @@ NEUTRINOGUNS = {
     70: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun70_digi_10um",
     80: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun80_digi_10um",
     90: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun90_digi_10um",
-    100: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun_digi_10um",
+    100: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun100_digi_10um",
     110: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun110_digi_10um",
     120: "/ceph/users/atuna/work/maia/maia_doublets/output/v06_neutrinoGun120_digi_10um",
 }

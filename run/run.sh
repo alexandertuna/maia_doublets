@@ -69,10 +69,10 @@ done
 # How to plot the 0-10 GeV muonGun sample
 # maia_doublets --geo v01 -i "/ceph/users/atuna/work/maia/maia_noodling/samples/v01/muonGun_pT_0_10/10um/muonGun_pT_0_10_digi_3*" --digi --smear 10um --cut-mds --cut-t2s --cut-t4s --cut-t8s --plot
 
-# How to run background neutrinoGun
+# How to run background neutrinoGun100
 GEO="v06"
 SMEAR="10um"
-DATASET="neutrinoGun"
+DATASET="neutrinoGun100"
 PKL_DIR=${OUTPUT_DIR}/${GEO}_${DATASET}_digi_${SMEAR}
 mkdir -p ${PKL_DIR}
 maia_doublets \

@@ -24,7 +24,7 @@ MAIA_DETECTOR=v07 MAIA_RESOLUTION=50um ./run_efficiency.sh
 |---|---|---|
 | `run_calibrate.sh` | Measure cut thresholds, rewriting `maia_doublets/calibs/*.json` | `muonGun_pT_2p0_2p1` |
 | `run_plot_signal.sh` | Write pickles, cutflow, and plots | `muonGun_pT_2p0_2p1` |
-| `run_plot_background.sh` | Write pickles, cutflow, and plots (with `--fast-mds`) | `neutrinoGun` |
+| `run_plot_background.sh` | Write pickles, cutflow, and plots (with `--fast-mds`) | `neutrinoGun100` |
 | `run_mds.sh` | Write uncut MDs, two layers at a time | `neutrinoGun10` |
 | `run_efficiency.sh` | Apply all cuts and make plots | `muonGun_pT_2p0_2p1` |
 
