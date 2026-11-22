@@ -31,10 +31,10 @@ SMEAR=${MAIA_RESOLUTION:-10um}
 CONTAINER=/cvmfs/unpacked.cern.ch/ghcr.io/muoncollidersoft/mucoll-sim-ubuntu24:v2.9.8-amd64
 SCAN_LOG=../output/doublets_scan.log
 
-# Biggest first.
+# Biggest first
 DATASETS="neutrinoGun120 neutrinoGun110 neutrinoGun100 neutrinoGun90 neutrinoGun80 neutrinoGun70
           neutrinoGun60 neutrinoGun50 neutrinoGun40 neutrinoGun30 neutrinoGun20 neutrinoGun10"
-WINDOWS="none wide maia"
+WINDOWS="none"
 
 # One line per job: DATASET WINDOW FILE
 list_jobs() {
